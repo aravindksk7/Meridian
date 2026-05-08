@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Mermaid Generator</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* Input focus */
+#smartInput { transition: border-color .15s, box-shadow .15s; }
+#smartInput:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.25); }
+
+/* Entity badge pills */
+.badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;
+         font-size:11px;font-weight:600;cursor:pointer;border:1px solid transparent;
+         transition:opacity .15s;user-select:none; }
+.badge:hover { opacity:.72; }
+.badge-env       { background:#dbeafe;color:#1e40af;border-color:#93c5fd; }
+.badge-app       { background:#dcfce7;color:#166534;border-color:#86efac; }
+.badge-db        { background:#fef3c7;color:#92400e;border-color:#fcd34d; }
+.badge-server    { background:#f3e8ff;color:#6b21a8;border-color:#d8b4fe; }
+.badge-instance  { background:#ffe4e6;color:#9f1239;border-color:#fda4af; }
+.badge-interface { background:#cffafe;color:#155e75;border-color:#67e8f9; }
+.badge-config    { background:#fef9c3;color:#713f12;border-color:#fde68a; }
+
+/* Template buttons */
+.tpl-btn { transition:background .15s; }
+.tpl-btn:hover { background:#374151 !important; }
+
+/* Zoom controls */
+.zoom-btn { display:inline-flex;align-items:center;justify-content:center;
+            width:22px;height:22px;border-radius:4px;font-size:14px;font-weight:700;
+            cursor:pointer;user-select:none;transition:background .15s;
+            background:#f3f4f6;color:#374151;border:1px solid #d1d5db; }
+.zoom-btn:hover { background:#e5e7eb; }
+
+/* Resizer */
+#resizer { width:4px;flex-shrink:0;background:#1f2937;cursor:col-resize;
+           transition:background .15s;position:relative;z-index:10; }
+#resizer:hover, #resizer.dragging { background:#6366f1; }
+
+/* Copy dropdown */
+.copy-menu { position:absolute;right:0;top:calc(100% + 4px);background:#1f2937;border:1px solid #374151;
+             border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:50;min-width:180px;overflow:hidden; }
+.copy-menu button { display:block;width:100%;text-align:left;padding:8px 12px;font-size:12px;
+                    color:#d1d5db;transition:background .1s; }
+.copy-menu button:hover { background:#374151; }
+
+/* Keyboard shortcut chip */
+kbd { background:#374151;color:#9ca3af;border:1px solid #4b5563;border-radius:3px;
+      padding:1px 5px;font-size:10px;font-family:monospace; }
+
+/* SVG zoom wrapper */
+#zoomWrapper { transform-origin: top left; transition: transform .15s ease; display:inline-block; }
+
+/* Syntax highlight colors */
+.sy-kw   { color:#c792ea;font-weight:600; }
+.sy-dir  { color:#89ddff; }
+.sy-edge { color:#89ddff; }
+.sy-lbl  { color:#c3e88d; }
+.sy-prop { color:#f78c6c; }
+.sy-cmt  { color:#546e7a;font-style:italic; }
+
+/* Generated code panel */
+pre#codeOutput { margin:0; }
+::-webkit-scrollbar { width:5px;height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:#4b5563;border-radius:3px; }
+
+/* Fullscreen preview */
+body.fullscreen-preview #leftPanel,
+body.fullscreen-preview #resizer { display:none !important; }
+body.fullscreen-preview #rightPanel { width:100% !important; }
+
+/* Toast notification */
+#toast { position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(8px);
+         background:#1f2937;border:1px solid #374151;color:#d1d5db;padding:8px 16px;
+         border-radius:8px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.4);
+         opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:100; }
+#toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+</style>
+</head>
+<body class="bg-gray-950 text-gray-100 h-screen flex flex-col overflow-hidden">
+
+<!-- ── Toast ── -->
+<div id="toast"></div>
+
+<!-- ── Header ── -->
+<header class="bg-gray-900 border-b border-gray-800 px-3 py-2 flex items-center gap-2 flex-shrink-0">
+  <div class="flex items-center gap-2 mr-2">
+    <div class="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center font-bold text-xs">M</div>
+    <span class="text-sm font-semibold text-white whitespace-nowrap">Smart Mermaid</span>
+  </div>
+
+  <div class="flex items-center gap-1.5 flex-wrap">
+    <!-- Diagram type -->
+    <select id="diagramType" title="Diagram type"
+      class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+      <option value="LR">Flowchart ⟶</option>
+      <option value="TD">Flowchart ↓</option>
+      <option value="sequence">Sequence</option>
+      <option value="class">Class</option>
+    </select>
+
+    <!-- Theme -->
+    <select id="mermaidTheme" title="Diagram theme"
+      class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
+      <option value="default">☀️ Light</option>
+      <option value="dark">🌙 Dark</option>
+      <option value="forest">🌲 Forest</option>
+      <option value="neutral">⬜ Neutral</option>
+      <option value="base">🎨 Base</option>
+    </select>
+  </div>
+
+  <!-- Spacer -->
+  <div class="flex-1"></div>
+
+  <!-- Action buttons -->
+  <div class="flex items-center gap-1.5">
+    <button id="shareBtn" title="Share via URL (Ctrl+Shift+S)"
+      class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
+      <span>🔗</span> Share
+    </button>
+    <button id="clearBtn" title="Clear input"
+      class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition">
+      Clear
+    </button>
+    <!-- Copy button with dropdown -->
+    <div class="relative" id="copyWrapper">
+      <div class="flex rounded overflow-hidden border border-indigo-600">
+        <button id="copyBtn" title="Copy generated code (Ctrl+Shift+C)"
+          class="bg-indigo-600 hover:bg-indigo-500 px-2.5 py-1 text-xs text-white font-medium transition flex items-center gap-1">
+          <svg class="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          Copy
+        </button>
+        <button id="copyDropBtn" title="More copy options"
+          class="bg-indigo-700 hover:bg-indigo-600 px-1.5 py-1 text-xs text-white transition border-l border-indigo-500">▾</button>
+      </div>
+      <div id="copyMenu" class="copy-menu hidden">
+        <button onclick="doCopy('plain')">Copy code</button>
+        <button onclick="doCopy('fences')">Copy with ```mermaid fences</button>
+        <button onclick="doCopy('markdown')">Copy as markdown block</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── Toolbar ── -->
+<div class="bg-gray-900 border-b border-gray-800 px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0 overflow-x-auto">
+  <span class="text-xs text-gray-600 mr-1 whitespace-nowrap flex-shrink-0">Insert:</span>
+  <button class="badge badge-env       flex-shrink-0" onclick="insertPrefix('env:')"       title="Environment">🌐 env:</button>
+  <button class="badge badge-app       flex-shrink-0" onclick="insertPrefix('app:')"       title="Application">📦 app:</button>
+  <button class="badge badge-db        flex-shrink-0" onclick="insertPrefix('db:')"        title="Database">🗄️ db:</button>
+  <button class="badge badge-server    flex-shrink-0" onclick="insertPrefix('server:')"    title="Server">🖥️ server:</button>
+  <button class="badge badge-instance  flex-shrink-0" onclick="insertPrefix('instance:')"  title="Instance/Container">⚙️ instance:</button>
+  <button class="badge badge-interface flex-shrink-0" onclick="insertPrefix('interface:')" title="Interface/API">🔌 interface:</button>
+  <button class="badge badge-config    flex-shrink-0" onclick="insertPrefix('config:')"    title="Config/Setting">📋 config:</button>
+  <div class="w-px h-4 bg-gray-700 mx-1.5 flex-shrink-0"></div>
+  <span class="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">Templates:</span>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('microservices')">Microservices</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('threeTier')">3-Tier App</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cicd')">CI/CD Pipeline</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cloud')">Cloud Infra</button>
+</div>
+
+<!-- ── Main split layout ── -->
+<div class="flex-1 flex overflow-hidden" id="mainContainer">
+
+  <!-- Left panel -->
+  <div id="leftPanel" class="flex flex-col overflow-hidden" style="width:45%;min-width:220px">
+
+    <!-- Smart input -->
+    <div class="flex-shrink-0 p-3 border-b border-gray-800">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Smart Input</span>
+        <span id="parseIndicator" class="text-xs text-gray-600"></span>
+      </div>
+      <textarea id="smartInput"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-gray-200 placeholder-gray-600 resize-none leading-relaxed"
+        rows="9" spellcheck="false" autocomplete="off"
+        placeholder="// Single-line env block&#10;env:Prod { app:UserAPI db:PostgreSQL }&#10;&#10;// Multi-line env block&#10;env:Staging {&#10;  app:WebServer&#10;  db:MySQL&#10;}&#10;&#10;// Arrows&#10;server:Nginx --HTTPS--> app:UserAPI&#10;app:UserAPI -> db:PostgreSQL&#10;app:A <--> app:B&#10;&#10;// Natural language&#10;UserAPI connects to PostgreSQL"
+      ></textarea>
+      <p class="mt-1.5 text-xs text-gray-600">
+        <span class="text-gray-500">Syntax:</span>
+        <code class="text-indigo-400 mx-1">prefix:Name</code>·
+        <code class="text-indigo-400 mx-1">A --label--> B</code>·
+        <code class="text-indigo-400 mx-1">A &lt;--&gt; B</code>·
+        <code class="text-indigo-400 mx-1">env:X&nbsp;{&nbsp;…&nbsp;}</code>·
+        <kbd>Ctrl+Enter</kbd> re-render
+      </p>
+    </div>
+
+    <!-- Generated code -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-3 py-2 border-b border-gray-800 flex-shrink-0">
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Generated Mermaid</span>
+        <span id="entityCount" class="text-xs text-gray-600"></span>
+      </div>
+      <div class="flex-1 overflow-auto select-text" style="background:rgba(17,24,39,.5)">
+        <pre id="codeOutput" class="p-3 text-xs font-mono text-gray-300 leading-relaxed whitespace-pre"></pre>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Drag resizer -->
+  <div id="resizer" title="Drag to resize"></div>
+
+  <!-- Right panel – preview -->
+  <div id="rightPanel" class="flex flex-col bg-white overflow-hidden" style="width:55%;min-width:200px">
+
+    <!-- Preview header -->
+    <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
+      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Live Preview</span>
+      <span id="previewStatus" class="text-xs ml-1"></span>
+      <div class="flex-1"></div>
+
+      <!-- Zoom controls -->
+      <div class="flex items-center gap-1" title="Zoom (Ctrl+scroll or Ctrl+± )">
+        <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+-)">−</button>
+        <span id="zoomDisplay" class="text-xs text-gray-500 w-10 text-center font-mono select-none">100%</span>
+        <button class="zoom-btn" id="zoomIn"  title="Zoom in (Ctrl++)">+</button>
+        <button class="zoom-btn text-xs" id="zoomFit" title="Fit to window">⊞</button>
+      </div>
+
+      <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+
+      <!-- Export -->
+      <button id="downloadSvg" class="text-xs bg-white hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-gray-600 transition" title="Download SVG">↓ SVG</button>
+      <button id="downloadPng" class="text-xs bg-white hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-gray-600 transition" title="Download PNG (2×)">↓ PNG</button>
+
+      <!-- Fullscreen -->
+      <button id="fullscreenBtn" class="zoom-btn" title="Toggle fullscreen preview (Ctrl+Shift+F)">⛶</button>
+    </div>
+
+    <!-- Preview scroll area -->
+    <div id="previewScroll" class="flex-1 overflow-auto p-4"
+         style="background: repeating-linear-gradient(45deg,#f9fafb 0,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)">
+      <div id="zoomWrapper">
+        <div id="mermaidOutput" class="inline-block min-w-full">
+          <div style="text-align:center;padding:48px 24px">
+            <div style="font-size:40px;margin-bottom:12px;opacity:.15">&#9651;</div>
+            <p style="color:#6b7280;font-size:14px">Start typing to generate a diagram</p>
+            <p style="color:#9ca3af;font-size:12px;margin-top:4px">or pick a template above</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Status bar ── -->
+<div class="bg-gray-900 border-t border-gray-800 px-4 py-0.5 flex items-center justify-between text-xs text-gray-600 flex-shrink-0 select-none">
+  <span id="statusLeft">Ready · Start typing or choose a template</span>
+  <span class="flex items-center gap-2">
+    <span id="storageDot" title="Autosaved to localStorage" class="hidden">💾</span>
+    <kbd>Ctrl+Enter</kbd> render ·
+    <kbd>Ctrl+±</kbd> zoom ·
+    <kbd>Ctrl+Shift+C</kbd> copy ·
+    <kbd>Ctrl+Shift+F</kbd> fullscreen
+    <span class="ml-2">v2.0</span>
+  </span>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════════════════════════════
+const BASE_MERMAID_CONFIG = {
+  startOnLoad: false,
+  flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
+  sequence:   { useMaxWidth: true },
+  securityLevel: 'loose',
+  fontSize: 14,
+};
+
+mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: 'default' });
+
+// ════════════════════════════════════════════════════════════════
+//  TEMPLATES
+// ════════════════════════════════════════════════════════════════
+const TEMPLATES = {
+  microservices: `// Microservices Architecture
+env:Production {
+  app:API_Gateway
+  app:User_Service
+  app:Auth_Service
+  app:Order_Service
+}
+env:Data_Layer {
+  db:UserDB
+  db:OrderDB
+  instance:Redis_Cache
+}
+server:Nginx --HTTPS--> app:API_Gateway
+app:API_Gateway --REST--> app:User_Service
+app:API_Gateway --REST--> app:Auth_Service
+app:API_Gateway --REST--> app:Order_Service
+app:User_Service --> db:UserDB
+app:Order_Service --> db:OrderDB
+app:User_Service --cache--> instance:Redis_Cache
+app:Auth_Service --JWT verify--> app:API_Gateway`,
+
+  threeTier: `// 3-Tier Web Application
+env:Frontend {
+  server:Load_Balancer
+  app:Web_Frontend
+}
+env:Backend {
+  app:App_Server
+  instance:Docker_Container
+}
+env:Data {
+  db:PostgreSQL
+  instance:Redis_Session
+}
+interface:REST_API
+config:Port_443
+config:Port_8080
+config:Port_5432
+
+config:Port_443 --> server:Load_Balancer
+server:Load_Balancer --HTTPS--> app:Web_Frontend
+app:Web_Frontend --via REST_API--> app:App_Server
+app:App_Server --SQL--> db:PostgreSQL
+app:App_Server --session--> instance:Redis_Session
+config:Port_8080 --> app:App_Server
+config:Port_5432 --> db:PostgreSQL
+instance:Docker_Container --> app:App_Server`,
+
+  cicd: `// CI/CD Pipeline
+app:GitHub_Repo
+instance:CI_Runner
+app:Test_Suite
+app:Docker_Registry
+env:Staging {
+  app:Staging_App
+  db:Staging_DB
+}
+env:Production {
+  app:Prod_App
+  db:Prod_DB
+}
+config:YAML_Pipeline
+interface:Webhook
+
+app:GitHub_Repo --push--> interface:Webhook
+interface:Webhook --> instance:CI_Runner
+config:YAML_Pipeline --> instance:CI_Runner
+instance:CI_Runner --runs--> app:Test_Suite
+instance:CI_Runner --push image--> app:Docker_Registry
+app:Docker_Registry --deploy--> env:Staging
+env:Staging --approve & promote--> env:Production`,
+
+  cloud: `// Cloud Infrastructure
+env:VPC_us_east_1 {
+  server:ALB
+  instance:EC2_Web_1
+  instance:EC2_Web_2
+  app:ECS_Cluster
+  db:RDS_Primary
+}
+instance:CloudFront
+app:S3_Static_Assets
+db:ElastiCache
+instance:Lambda_fn
+config:SSL_Cert
+config:Env_Vars
+
+instance:CloudFront --static assets--> app:S3_Static_Assets
+instance:CloudFront --dynamic--> server:ALB
+config:SSL_Cert --> server:ALB
+server:ALB --round robin--> instance:EC2_Web_1
+server:ALB --round robin--> instance:EC2_Web_2
+instance:EC2_Web_1 --> app:ECS_Cluster
+app:ECS_Cluster --> db:RDS_Primary
+app:ECS_Cluster --session--> db:ElastiCache
+config:Env_Vars --> instance:Lambda_fn
+instance:Lambda_fn --> db:RDS_Primary`,
+};
+
+// ════════════════════════════════════════════════════════════════
+//  PARSER
+// ════════════════════════════════════════════════════════════════
+class SmartParser {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.entities      = new Map(); // id → {type, label, id}
+    this.relationships = [];        // [{from, to, label, bidir}]
+    this.environments  = new Map(); // envId → [childIds]
+  }
+
+  // ── Pre-process: join multi-line env blocks into single lines ──
+  preprocess(input) {
+    const out   = [];
+    let inBlock = false;
+    let bName   = '';
+    let bKids   = [];
+
+    for (const raw of input.split('\n')) {
+      const line = raw.trim();
+
+      if (inBlock) {
+        if (line === '}') {
+          out.push(`env:${bName} { ${bKids.join(' ')} }`);
+          inBlock = false; bName = ''; bKids = [];
+        } else if (line && !line.startsWith('//') && !line.startsWith('#')) {
+          bKids.push(...line.split(/[\s,]+/).filter(Boolean));
+        }
+        // else: blank line or comment inside block — skip
+      } else {
+        // Multi-line opener: env:X {
+        const opener = line.match(/^env:\s*([^\s{]+)\s*\{$/);
+        if (opener) {
+          inBlock = true;
+          bName   = opener[1];
+        } else {
+          out.push(raw);
+        }
+      }
+    }
+    // Unclosed block: emit what we have
+    if (inBlock) out.push(`env:${bName} { ${bKids.join(' ')} }`);
+
+    return out.join('\n');
+  }
+
+  makeId(type, label) {
+    const safe = label.replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'node';
+    return `${type.toUpperCase()}_${safe}`;
+  }
+
+  addEntity(type, label) {
+    const id = this.makeId(type, label);
+    if (!this.entities.has(id)) this.entities.set(id, { type, label, id });
+    return id;
+  }
+
+  addRel(fromId, toId, label = '', bidir = false) {
+    const dup = this.relationships.find(r =>
+      r.from === fromId && r.to === toId && r.label === label && r.bidir === bidir
+    );
+    if (!dup) this.relationships.push({ from: fromId, to: toId, label, bidir });
+  }
+
+  autoType(token) {
+    const t = token.toLowerCase();
+    if (/\b(prod|production|staging|stage|dev|develop|development|test|qa|sandbox|uat|preprod)\b/.test(t)) return 'env';
+    if (/\b(postgres|postgresql|mysql|mariadb|redis|mongodb|mongo|dynamodb|cassandra|sqlite|mssql|oracle|elasticsearch|aurora|rds|elasticache|memcached)\b/.test(t)) return 'db';
+    if (/\b(nginx|apache|haproxy|caddy|traefik|iis|tomcat|alb|nlb|lb|loadbalancer|cloudfront|proxy|gateway)\b/.test(t)) return 'server';
+    if (/\b(ec2|container|docker|pod|kubernetes|k8s|vm|lambda|fargate|ecs|eks|instance|runner|agent|worker)\b/.test(t)) return 'instance';
+    if (/\b(rest|grpc|graphql|websocket|ws|http|https|rpc|soap|amqp|mqtt|kafka|rabbitmq|pubsub|webhook|queue|bus)\b/.test(t)) return 'interface';
+    if (/\b(port|yaml|json|toml|ini|config|configuration|setting|ssl|tls|cert|certificate|secret|env_var|envvar)\b/.test(t)) return 'config';
+    return 'app';
+  }
+
+  parseToken(token) {
+    token = (token || '').trim();
+    if (!token) return null;
+    // Skip structural punctuation and stop-words
+    if (/^[{}|\\]$/.test(token)) return null;
+    if (/^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
+
+    // Explicit prefix: type:Label
+    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf):\s*(.+)$/i);
+    if (pm) {
+      const MAP = {
+        env:'env', app:'app', db:'db', database:'db',
+        server:'server', srv:'server',
+        instance:'instance', inst:'instance',
+        interface:'interface', iface:'interface',
+        config:'config', cfg:'config', conf:'config',
+      };
+      const type  = MAP[pm[1].toLowerCase()];
+      const label = pm[2].replace(/["']/g, '').trim();
+      return { type, label, id: this.addEntity(type, label) };
+    }
+
+    // Auto-detect
+    const label = token.replace(/["']/g, '').trim();
+    if (!label) return null;
+    const type = this.autoType(label);
+    return { type, label, id: this.addEntity(type, label) };
+  }
+
+  parseLine(line) {
+    line = line.trim();
+    if (!line || /^[/#]/.test(line)) return;
+
+    // Single-line env block: env:X { child … }
+    const envBlock = line.match(/^env:\s*([^\s{]+)\s*\{([^}]*)\}/i);
+    if (envBlock) {
+      const envId   = this.addEntity('env', envBlock[1]);
+      const childIds = envBlock[2].trim().split(/[\s,]+/).filter(Boolean)
+        .map(k => this.parseToken(k)?.id).filter(Boolean);
+      this.environments.set(envId, childIds);
+      return;
+    }
+
+    // Bidirectional arrow: A <--> B  or  A <-> B
+    const biRe = /^(.+?)\s*<-+>\s*(.+)$/;
+    const bi   = line.match(biRe);
+    if (bi) {
+      const from = this.parseToken(bi[1].trim());
+      const to   = this.parseToken(bi[2].trim());
+      if (from && to) this.addRel(from.id, to.id, '', true);
+      return;
+    }
+
+    // Arrow: A --label--> B  |  A --> B  |  A -> B
+    const arrowRe = /^(.+?)\s+(--[^>]*-->?|-->|-+>)\s+(?:\[([^\]]*)\]\s*-+>\s*)?(.+)$/;
+    const am = line.match(arrowRe);
+    if (am) {
+      let label  = am[3] ? am[3].trim() : '';
+      if (!label) {
+        const il = am[2].match(/^--([^-]+)-->/);
+        if (il) label = il[1].trim();
+      }
+      const from = this.parseToken(am[1].trim());
+      const to   = this.parseToken(am[4].trim());
+      if (from && to) this.addRel(from.id, to.id, label);
+      return;
+    }
+
+    // Natural language connectors
+    const NL = [
+      { re: /\bconnects?\s+to\b/i,          label: 'connects to' },
+      { re: /\bcalls?\b/i,                  label: 'calls' },
+      { re: /\bqueries\b/i,                 label: 'queries' },
+      { re: /\breads?\s+from\b/i,           label: 'reads from' },
+      { re: /\bwrites?\s+to\b/i,            label: 'writes to' },
+      { re: /\bdepends?\s+on\b/i,           label: 'depends on' },
+      { re: /\bsends?\s+(?:data\s+)?to\b/i, label: 'sends to' },
+      { re: /\btalks?\s+to\b/i,             label: 'talks to' },
+      { re: /\buses?\b/i,                   label: 'uses' },
+      { re: /\bforwards?\s+to\b/i,          label: 'forwards to' },
+      { re: /\bpublishes?\s+to\b/i,         label: 'publishes to' },
+      { re: /\bsubscribes?\s+to\b/i,        label: 'subscribes to' },
+    ];
+    for (const { re, label } of NL) {
+      if (re.test(line)) {
+        const parts = line.split(re);
+        if (parts.length >= 2) {
+          const from = this.parseToken(parts[0].trim());
+          const to   = this.parseToken(parts[1].trim());
+          if (from && to) { this.addRel(from.id, to.id, label); return; }
+        }
+      }
+    }
+
+    // Bare declarations
+    line.split(/[\s,]+/).filter(Boolean).forEach(t => this.parseToken(t));
+  }
+
+  // ── Output helpers ───────────────────────────────────────────
+  safeLabel(label) {
+    return label.replace(/"/g, "'").replace(/[[\]{}|<>]/g, '');
+  }
+
+  nodeShape(type, label) {
+    const l = this.safeLabel(label);
+    switch (type) {
+      case 'env':       return `["🌐 ${l}"]`;
+      case 'app':       return `["📦 ${l}"]`;
+      case 'db':        return `[("🗄️ ${l}")]`;
+      case 'server':    return `[["🖥️ ${l}"]]`;
+      case 'instance':  return `("⚙️ ${l}")`;
+      case 'interface': return `{{"🔌 ${l}"}}`;
+      case 'config':    return `["📋 ${l}"]`;
+      default:          return `["${l}"]`;
+    }
+  }
+
+  // ── Flowchart ────────────────────────────────────────────────
+  toFlowchart(dir) {
+    if (!this.entities.size) return '';
+    const L = [];
+
+    L.push(`flowchart ${dir}`);
+    L.push('    classDef env       fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e3a8a');
+    L.push('    classDef app       fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#14532d');
+    L.push('    classDef db        fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f');
+    L.push('    classDef server    fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#4a1d96');
+    L.push('    classDef instance  fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#881337');
+    L.push('    classDef interface fill:#cffafe,stroke:#0891b2,stroke-width:2px,color:#164e63');
+    L.push('    classDef config    fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12');
+    L.push('');
+
+    const inEnv = new Set([...this.environments.values()].flat());
+
+    // Subgraphs
+    for (const [envId, kids] of this.environments) {
+      const env = this.entities.get(envId);
+      if (!env) continue;
+      L.push(`    subgraph ${envId}["🌐 ${this.safeLabel(env.label)}"]`);
+      for (const kid of kids) {
+        const e = this.entities.get(kid);
+        if (e) L.push(`        ${kid}${this.nodeShape(e.type, e.label)}`);
+      }
+      L.push('    end');
+      L.push('');
+    }
+
+    // Standalone nodes
+    for (const [id, e] of this.entities) {
+      if (!inEnv.has(id) && !this.environments.has(id)) {
+        L.push(`    ${id}${this.nodeShape(e.type, e.label)}`);
+      }
+    }
+
+    // Relationships
+    if (this.relationships.length) {
+      L.push('');
+      for (const r of this.relationships) {
+        if (r.bidir) {
+          L.push(`    ${r.from} <--> ${r.to}`);
+        } else if (r.label) {
+          L.push(`    ${r.from} -->|"${this.safeLabel(r.label)}"| ${r.to}`);
+        } else {
+          L.push(`    ${r.from} --> ${r.to}`);
+        }
+      }
+    }
+
+    // Class assignments (skip env nodes used as subgraphs)
+    L.push('');
+    for (const [id, e] of this.entities) {
+      if (!this.environments.has(id)) L.push(`    class ${id} ${e.type}`);
+    }
+
+    return L.join('\n');
+  }
+
+  // ── Sequence ─────────────────────────────────────────────────
+  toSequence() {
+    if (!this.entities.size) return '';
+    // Only emit participants that appear in at least one relationship
+    const used = new Set(this.relationships.flatMap(r => [r.from, r.to]));
+    const L = ['sequenceDiagram'];
+    for (const [id, e] of this.entities) {
+      if (used.has(id) || this.relationships.length === 0) {
+        L.push(`    participant ${id} as ${this.safeLabel(e.label)}`);
+      }
+    }
+    if (this.relationships.length) {
+      L.push('');
+      for (const r of this.relationships) {
+        const arrow = r.bidir ? '<<->>' : '->>';
+        L.push(`    ${r.from} ${arrow} ${r.to}: ${r.label || 'calls'}`);
+      }
+    }
+    return L.join('\n');
+  }
+
+  // ── Class diagram ─────────────────────────────────────────────
+  toClassDiagram() {
+    if (!this.entities.size) return '';
+    const L = ['classDiagram'];
+
+    const STEREO = {
+      env:'Environment', app:'Application', db:'Database',
+      server:'Server', instance:'Instance', interface:'Interface', config:'Config'
+    };
+
+    for (const [id, e] of this.entities) {
+      if (!this.environments.has(id)) {
+        L.push(`    class ${id}["${this.safeLabel(e.label)}"] {`);
+        L.push(`        <<${STEREO[e.type] || e.type}>>`);
+        L.push('    }');
+      }
+    }
+
+    if (this.relationships.length) {
+      L.push('');
+      for (const r of this.relationships) {
+        const arrow = r.bidir ? '<-->' : '-->';
+        const note  = r.label ? ` : ${this.safeLabel(r.label)}` : '';
+        L.push(`    ${r.from} ${arrow} ${r.to}${note}`);
+      }
+    }
+
+    return L.join('\n');
+  }
+
+  // ── Main parse entry ─────────────────────────────────────────
+  parse(input, type) {
+    this.reset();
+    const processed = this.preprocess(input);
+    processed.split('\n').forEach(line => this.parseLine(line));
+
+    switch (type) {
+      case 'sequence': return this.toSequence();
+      case 'class':    return this.toClassDiagram();
+      default:         return this.toFlowchart(type); // LR or TD
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  APP STATE
+// ════════════════════════════════════════════════════════════════
+const parser     = new SmartParser();
+let lastCode     = '';
+let renderTimer  = null;
+let zoom         = 1;
+let isFullscreen = false;
+
+const $input    = document.getElementById('smartInput');
+const $code     = document.getElementById('codeOutput');
+const $preview  = document.getElementById('mermaidOutput');
+const $wrapper  = document.getElementById('zoomWrapper');
+const $indic    = document.getElementById('parseIndicator');
+const $count    = document.getElementById('entityCount');
+const $status   = document.getElementById('statusLeft');
+const $pstatus  = document.getElementById('previewStatus');
+const $zoomDisp = document.getElementById('zoomDisplay');
+
+// ════════════════════════════════════════════════════════════════
+//  ZOOM
+// ════════════════════════════════════════════════════════════════
+function setZoom(val) {
+  zoom = Math.round(Math.max(0.25, Math.min(4, val)) * 100) / 100;
+  $wrapper.style.transform = `scale(${zoom})`;
+  $wrapper.style.transformOrigin = 'top left';
+  $zoomDisp.textContent = Math.round(zoom * 100) + '%';
+}
+
+function fitZoom() {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+  const scroll   = document.getElementById('previewScroll');
+  const availW   = scroll.clientWidth  - 32;
+  const availH   = scroll.clientHeight - 32;
+  const svgW     = svg.getBoundingClientRect().width  / zoom;
+  const svgH     = svg.getBoundingClientRect().height / zoom;
+  const fit = Math.min(1, availW / svgW, availH / svgH);
+  setZoom(fit);
+}
+
+document.getElementById('zoomIn').addEventListener('click',  () => setZoom(zoom + 0.25));
+document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoom - 0.25));
+document.getElementById('zoomFit').addEventListener('click', fitZoom);
+
+document.getElementById('previewScroll').addEventListener('wheel', (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    setZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1));
+  }
+}, { passive: false });
+
+// ════════════════════════════════════════════════════════════════
+//  SYNTAX HIGHLIGHT
+// ════════════════════════════════════════════════════════════════
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function highlight(code) {
+  return esc(code)
+    .replace(/\b(flowchart|sequenceDiagram|classDiagram|subgraph|end|classDef|class|participant|direction)\b/g,
+      '<span class="sy-kw">$1</span>')
+    .replace(/\b(LR|TD|RL|BT)\b/g,
+      '<span class="sy-dir">$1</span>')
+    .replace(/(--&gt;\|"[^"]*"\|)/g,
+      '<span class="sy-lbl">$1</span>')
+    .replace(/--&gt;(?!\|)/g,
+      '<span class="sy-edge">--&gt;</span>')
+    .replace(/&lt;--&gt;/g,
+      '<span class="sy-edge">&lt;--&gt;</span>')
+    .replace(/(fill:[^,\n]+|stroke:[^,\n]+|color:[^,\n]+)/g,
+      '<span class="sy-prop">$1</span>')
+    .replace(/(\/\/[^\n]*)/g,
+      '<span class="sy-cmt">$1</span>');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════════════════════════════
+function showPlaceholder() {
+  $preview.innerHTML = `
+    <div style="text-align:center;padding:48px 24px">
+      <div style="font-size:40px;margin-bottom:12px;opacity:.15">&#9651;</div>
+      <p style="color:#6b7280;font-size:14px">Start typing to generate a diagram</p>
+      <p style="color:#9ca3af;font-size:12px;margin-top:4px">or pick a template above</p>
+    </div>`;
+}
+
+async function renderDiagram(code) {
+  if (!code.trim()) { showPlaceholder(); return; }
+  try {
+    const id = 'mg_' + Date.now();
+    const currentTheme = document.getElementById('mermaidTheme').value;
+    mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: currentTheme });
+    const { svg } = await mermaid.render(id, code);
+    $preview.innerHTML = svg;
+    // Ensure SVG fills wrapper nicely
+    const svgEl = $preview.querySelector('svg');
+    if (svgEl) { svgEl.style.display = 'block'; svgEl.style.maxWidth = '100%'; }
+    $pstatus.textContent = '✓ OK';
+    $pstatus.style.color = '#16a34a';
+    $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${[...parser.environments.keys()].length} groups`;
+  } catch (err) {
+    $preview.innerHTML = `
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:8px;font-size:12px">
+        <div style="color:#dc2626;font-weight:600;margin-bottom:6px">⚠️ Render Error</div>
+        <pre style="color:#b91c1c;white-space:pre-wrap;margin:0;font-family:monospace;font-size:11px">${esc(err.message || String(err))}</pre>
+      </div>`;
+    $pstatus.textContent = '⚠️ Error';
+    $pstatus.style.color = '#dc2626';
+    $status.textContent  = 'Render error — check generated Mermaid code';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  MAIN INPUT HANDLER
+// ════════════════════════════════════════════════════════════════
+function onInput() {
+  const input = $input.value;
+
+  if (!input.trim()) {
+    $code.innerHTML = '';
+    $indic.textContent = '';
+    $count.textContent = '';
+    $status.textContent = 'Ready · Start typing or choose a template';
+    showPlaceholder();
+    lastCode = '';
+    saveToStorage();
+    return;
+  }
+
+  const type = document.getElementById('diagramType').value;
+  lastCode = parser.parse(input, type);
+
+  $code.innerHTML    = highlight(lastCode);
+  const ec = parser.entities.size;
+  const rc = parser.relationships.length;
+  const gc = [...parser.environments.keys()].length;
+  $indic.textContent = ec ? `${ec} entities` : '';
+  $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
+
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => renderDiagram(lastCode), 280);
+
+  saveToStorage();
+}
+
+$input.addEventListener('input', onInput);
+document.getElementById('diagramType').addEventListener('change', onInput);
+document.getElementById('mermaidTheme').addEventListener('change', () => {
+  if (lastCode) renderDiagram(lastCode);
+});
+
+// ════════════════════════════════════════════════════════════════
+//  COPY
+// ════════════════════════════════════════════════════════════════
+function doCopy(mode = 'plain') {
+  if (!lastCode) return;
+  let text = lastCode;
+  if (mode === 'fences')   text = '```mermaid\n' + lastCode + '\n```';
+  if (mode === 'markdown') text = '```mermaid\n' + lastCode + '\n```\n\n> Generated by Smart Mermaid Generator';
+
+  navigator.clipboard.writeText(text).then(() => {
+    toast('Copied to clipboard!');
+  }).catch(() => {
+    const ta = Object.assign(document.createElement('textarea'), { value: text });
+    Object.assign(ta.style, { position:'fixed', opacity:'0' });
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Copied!');
+  });
+
+  document.getElementById('copyMenu').classList.add('hidden');
+}
+
+document.getElementById('copyBtn').addEventListener('click', () => doCopy('plain'));
+
+document.getElementById('copyDropBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('copyMenu').classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => {
+  document.getElementById('copyMenu').classList.add('hidden');
+});
+
+// ════════════════════════════════════════════════════════════════
+//  EXPORT
+// ════════════════════════════════════════════════════════════════
+document.getElementById('downloadSvg').addEventListener('click', () => {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+  const blob = new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'diagram.svg' });
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  toast('SVG downloaded');
+});
+
+document.getElementById('downloadPng').addEventListener('click', () => {
+  const svg = $preview.querySelector('svg');
+  if (!svg) { toast('Render the diagram first'); return; }
+
+  const svgData = new XMLSerializer().serializeToString(svg);
+  const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+  const url     = URL.createObjectURL(svgBlob);
+  const img     = new Image();
+  img.onload = () => {
+    const SCALE  = 2; // retina
+    const canvas = document.createElement('canvas');
+    canvas.width  = img.width  * SCALE;
+    canvas.height = img.height * SCALE;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.scale(SCALE, SCALE);
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+    const a = Object.assign(document.createElement('a'), {
+      href: canvas.toDataURL('image/png'),
+      download: 'diagram.png',
+    });
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    toast('PNG downloaded (2× resolution)');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('PNG export failed — try SVG'); };
+  img.src = url;
+});
+
+// ════════════════════════════════════════════════════════════════
+//  FULLSCREEN
+// ════════════════════════════════════════════════════════════════
+document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+
+function toggleFullscreen() {
+  isFullscreen = !isFullscreen;
+  document.body.classList.toggle('fullscreen-preview', isFullscreen);
+  document.getElementById('fullscreenBtn').textContent = isFullscreen ? '⊠' : '⛶';
+  document.getElementById('fullscreenBtn').title = isFullscreen
+    ? 'Exit fullscreen (Ctrl+Shift+F)' : 'Fullscreen preview (Ctrl+Shift+F)';
+  if (!isFullscreen) {
+    // Restore panel widths
+    document.getElementById('leftPanel').style.width  = '45%';
+    document.getElementById('rightPanel').style.width = '55%';
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  RESIZABLE PANELS
+// ════════════════════════════════════════════════════════════════
+(function initResizer() {
+  const resizer = document.getElementById('resizer');
+  let dragging = false, startX = 0, startLeftW = 0;
+
+  resizer.addEventListener('mousedown', (e) => {
+    if (isFullscreen) return;
+    dragging = true;
+    startX = e.clientX;
+    startLeftW = document.getElementById('leftPanel').offsetWidth;
+    resizer.classList.add('dragging');
+    document.body.style.cursor    = 'col-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const container = document.getElementById('mainContainer');
+    const dx  = e.clientX - startX;
+    const min = 220;
+    const max = container.offsetWidth - 4 - 200;
+    const newW = Math.max(min, Math.min(max, startLeftW + dx));
+    const pct  = (newW / container.offsetWidth * 100).toFixed(2);
+    document.getElementById('leftPanel').style.width  = pct + '%';
+    document.getElementById('rightPanel').style.width = (100 - parseFloat(pct) - 0.5) + '%';
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    resizer.classList.remove('dragging');
+    document.body.style.cursor    = '';
+    document.body.style.userSelect = '';
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+//  URL SHARING
+// ════════════════════════════════════════════════════════════════
+function encodeState(input, type, theme) {
+  const data = JSON.stringify({ i: input, t: type, th: theme });
+  // Unicode-safe base64
+  const bytes = new TextEncoder().encode(data);
+  const b64   = btoa(String.fromCharCode(...bytes));
+  return b64;
+}
+
+function decodeState(b64) {
+  try {
+    const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch { return null; }
+}
+
+document.getElementById('shareBtn').addEventListener('click', () => {
+  const state   = encodeState(
+    $input.value,
+    document.getElementById('diagramType').value,
+    document.getElementById('mermaidTheme').value
+  );
+  const url = location.origin + location.pathname + '#d:' + state;
+  navigator.clipboard.writeText(url).then(() => toast('Share URL copied to clipboard!'))
+    .catch(() => { prompt('Copy this URL:', url); });
+  history.replaceState(null, '', '#d:' + state);
+});
+
+function loadFromHash() {
+  const hash = location.hash;
+  if (!hash.startsWith('#d:')) return false;
+  const state = decodeState(hash.slice(3));
+  if (!state) return false;
+  if (state.i)  $input.value = state.i;
+  if (state.t)  document.getElementById('diagramType').value = state.t;
+  if (state.th) document.getElementById('mermaidTheme').value = state.th;
+  return true;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  LOCAL STORAGE AUTOSAVE
+// ════════════════════════════════════════════════════════════════
+const LS_KEY = 'smartMermaid_v2';
+
+function saveToStorage() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      input: $input.value,
+      type:  document.getElementById('diagramType').value,
+      theme: document.getElementById('mermaidTheme').value,
+    }));
+    document.getElementById('storageDot').classList.remove('hidden');
+  } catch (_) {}
+}
+
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return false;
+    const s = JSON.parse(raw);
+    if (s.input) $input.value = s.input;
+    if (s.type)  document.getElementById('diagramType').value = s.type;
+    if (s.theme) document.getElementById('mermaidTheme').value = s.theme;
+    return true;
+  } catch { return false; }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CLEAR
+// ════════════════════════════════════════════════════════════════
+document.getElementById('clearBtn').addEventListener('click', () => {
+  $input.value = '';
+  onInput();
+  toast('Input cleared');
+});
+
+// ════════════════════════════════════════════════════════════════
+//  QUICK INSERT
+// ════════════════════════════════════════════════════════════════
+function insertPrefix(prefix) {
+  const start = $input.selectionStart;
+  const pre   = $input.value.slice(0, start);
+  const post  = $input.value.slice($input.selectionEnd);
+  const nl    = start > 0 && !pre.endsWith('\n') ? '\n' : '';
+  const ins   = nl + prefix;
+  $input.value = pre + ins + post;
+  $input.selectionStart = $input.selectionEnd = start + ins.length;
+  $input.focus();
+  onInput();
+}
+
+function loadTemplate(name) {
+  $input.value = TEMPLATES[name] || '';
+  $input.focus();
+  onInput();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', (e) => {
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl) return;
+
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    clearTimeout(renderTimer);
+    renderDiagram(lastCode);
+    toast('Re-rendered');
+    return;
+  }
+  if (e.shiftKey && e.key === 'C') {
+    e.preventDefault();
+    doCopy('plain');
+    return;
+  }
+  if (e.shiftKey && e.key === 'F') {
+    e.preventDefault();
+    toggleFullscreen();
+    return;
+  }
+  if (e.shiftKey && e.key === 'S') {
+    e.preventDefault();
+    document.getElementById('shareBtn').click();
+    return;
+  }
+  if (e.key === '=' || e.key === '+') {
+    e.preventDefault();
+    setZoom(zoom + 0.25);
+    return;
+  }
+  if (e.key === '-') {
+    e.preventDefault();
+    setZoom(zoom - 0.25);
+    return;
+  }
+  if (e.key === '0') {
+    e.preventDefault();
+    setZoom(1);
+    return;
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════════════════════════════
+let toastTimer;
+function toast(msg, duration = 2200) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  BOOT
+// ════════════════════════════════════════════════════════════════
+(function boot() {
+  // Priority: URL hash > localStorage > default template
+  if (!loadFromHash()) {
+    if (!loadFromStorage()) {
+      loadTemplate('microservices');
+      return; // loadTemplate calls onInput
+    }
+  }
+  onInput();
+})();
+</script>
+</body>
+</html>
