@@ -26,6 +26,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .badge-instance  { background:#ffe4e6;color:#9f1239;border-color:#fda4af; }
 .badge-interface { background:#cffafe;color:#155e75;border-color:#67e8f9; }
 .badge-config    { background:#fef9c3;color:#713f12;border-color:#fde68a; }
+.badge-batch     { background:#ccfbf1;color:#134e4a;border-color:#5eead4; }
+.badge-watcher   { background:#ede9fe;color:#4c1d95;border-color:#c4b5fd; }
+.badge-ftp       { background:#fce7f3;color:#831843;border-color:#f9a8d4; }
+.badge-net-ext   { background:#fee2e2;color:#7f1d1d;border-color:#fca5a5; }
+.badge-net-int   { background:#eff6ff;color:#1e3a8a;border-color:#93c5fd; }
 
 /* Template buttons */
 .tpl-btn { transition:background .15s; }
@@ -163,12 +168,20 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
   <button class="badge badge-instance  flex-shrink-0" onclick="insertPrefix('instance:')"  title="Instance/Container">⚙️ instance:</button>
   <button class="badge badge-interface flex-shrink-0" onclick="insertPrefix('interface:')" title="Interface/API">🔌 interface:</button>
   <button class="badge badge-config    flex-shrink-0" onclick="insertPrefix('config:')"    title="Config/Setting">📋 config:</button>
+  <button class="badge badge-batch     flex-shrink-0" onclick="insertPrefix('batch:')"     title="Batch Job / ETL">🔄 batch:</button>
+  <button class="badge badge-watcher   flex-shrink-0" onclick="insertPrefix('watcher:')"   title="File Watcher / Monitor">👁️ watcher:</button>
+  <button class="badge badge-ftp       flex-shrink-0" onclick="insertPrefix('ftp:')"       title="FTP / SFTP Server">📁 ftp:</button>
+  <button class="badge badge-net-ext   flex-shrink-0" onclick="insertPrefix('net:External\n  ')" title="External network zone">🌍 net:Ext</button>
+  <button class="badge badge-net-int   flex-shrink-0" onclick="insertPrefix('net:Internal\n  ')" title="Internal network zone">🔒 net:Int</button>
   <div class="w-px h-4 bg-gray-700 mx-1.5 flex-shrink-0"></div>
   <span class="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">Templates:</span>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('microservices')">Microservices</button>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('threeTier')">3-Tier App</button>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cicd')">CI/CD Pipeline</button>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cloud')">Cloud Infra</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('etlPipeline')">ETL Pipeline</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('fileProcessing')">File Processing</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('networkArch')">Network Arch</button>
 </div>
 
 <!-- ── Main split layout ── -->
@@ -194,6 +207,9 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
         <code class="text-indigo-400 mx-1">A --label--> B</code>·
         <code class="text-indigo-400 mx-1">A &lt;--&gt; B</code>·
         <code class="text-indigo-400 mx-1">env:X&nbsp;{&nbsp;…&nbsp;}</code>·
+        <code class="text-teal-400 mx-1">batch:A >> batch:B</code>·
+        <code class="text-teal-400 mx-1">--pre--></code>·
+        <code class="text-teal-400 mx-1">net:External&nbsp;{&nbsp;…&nbsp;}</code>·
         <kbd>Ctrl+Enter</kbd> re-render
       </p>
     </div>
@@ -361,6 +377,81 @@ instance:CI_Runner --push image--> app:Docker_Registry
 app:Docker_Registry --deploy--> env:Staging
 env:Staging --approve & promote--> env:Production`,
 
+  etlPipeline: `// ETL Batch Pipeline with Pre/Post Dependencies
+env:Orchestrator {
+  app:Airflow_Scheduler
+  instance:Worker_Node
+}
+ftp:Source_FTP
+watcher:Drop_Folder
+batch:Extract_Job
+batch:Transform_Job
+batch:Load_Job
+db:Staging_DB
+db:Data_Warehouse
+config:Cron_Schedule
+config:Batch_Config
+
+config:Cron_Schedule --> app:Airflow_Scheduler
+ftp:Source_FTP --uploads to--> watcher:Drop_Folder
+watcher:Drop_Folder --file detected--> batch:Extract_Job
+batch:Extract_Job >> batch:Transform_Job >> batch:Load_Job
+batch:Extract_Job --pre--> db:Staging_DB
+batch:Transform_Job --> db:Staging_DB
+batch:Load_Job --post--> db:Data_Warehouse
+config:Batch_Config --> instance:Worker_Node
+instance:Worker_Node --> batch:Extract_Job`,
+
+  fileProcessing: `// File Processing Pipeline
+ftp:Remote_FTP
+watcher:Inbound_Folder
+batch:File_Validator
+batch:File_Processor
+batch:Archive_Job
+db:Processed_DB
+app:Notification_Service
+config:Watch_Path
+config:Processing_Rules
+
+config:Watch_Path --> watcher:Inbound_Folder
+ftp:Remote_FTP --SFTP upload--> watcher:Inbound_Folder
+watcher:Inbound_Folder --file detected--> batch:File_Validator
+batch:File_Validator >> batch:File_Processor >> batch:Archive_Job
+batch:File_Processor --> db:Processed_DB
+batch:File_Processor --post--> app:Notification_Service
+config:Processing_Rules --> batch:File_Processor`,
+
+  networkArch: `// Network Architecture — Internal / External / DMZ
+net:External {
+  instance:Client_Browser
+  ftp:Public_FTP
+  server:CDN
+}
+net:DMZ {
+  server:WAF
+  server:Reverse_Proxy
+  app:API_Gateway
+}
+net:Internal {
+  app:App_Server
+  db:PostgreSQL
+  db:Redis_Cache
+  instance:Internal_Worker
+}
+config:Firewall_Rules
+config:SSL_Cert
+
+instance:Client_Browser --HTTPS--> server:CDN
+server:CDN --> server:WAF
+server:WAF --> server:Reverse_Proxy
+server:Reverse_Proxy --> app:API_Gateway
+app:API_Gateway --> app:App_Server
+app:App_Server --> db:PostgreSQL
+app:App_Server --session--> db:Redis_Cache
+ftp:Public_FTP --SFTP--> instance:Internal_Worker
+config:Firewall_Rules --> server:WAF
+config:SSL_Cert --> server:Reverse_Proxy`,
+
   cloud: `// Cloud Infrastructure
 env:VPC_us_east_1 {
   server:ALB
@@ -396,41 +487,42 @@ class SmartParser {
 
   reset() {
     this.entities      = new Map(); // id → {type, label, id}
-    this.relationships = [];        // [{from, to, label, bidir}]
+    this.relationships = [];        // [{from, to, label, bidir, style}]
     this.environments  = new Map(); // envId → [childIds]
+    this.netZones      = new Map(); // envId → 'external'|'internal'|'dmz'
   }
 
-  // ── Pre-process: join multi-line env blocks into single lines ──
+  // ── Pre-process: join multi-line env/net blocks into single lines ──
   preprocess(input) {
-    const out   = [];
-    let inBlock = false;
-    let bName   = '';
-    let bKids   = [];
+    const out    = [];
+    let inBlock  = false;
+    let bPrefix  = 'env'; // 'env' or 'net'
+    let bName    = '';
+    let bKids    = [];
 
     for (const raw of input.split('\n')) {
       const line = raw.trim();
 
       if (inBlock) {
         if (line === '}') {
-          out.push(`env:${bName} { ${bKids.join(' ')} }`);
-          inBlock = false; bName = ''; bKids = [];
+          out.push(`${bPrefix}:${bName} { ${bKids.join(' ')} }`);
+          inBlock = false; bPrefix = 'env'; bName = ''; bKids = [];
         } else if (line && !line.startsWith('//') && !line.startsWith('#')) {
           bKids.push(...line.split(/[\s,]+/).filter(Boolean));
         }
-        // else: blank line or comment inside block — skip
       } else {
-        // Multi-line opener: env:X {
-        const opener = line.match(/^env:\s*([^\s{]+)\s*\{$/);
+        // Multi-line opener: env:X {  or  net:X {
+        const opener = line.match(/^(env|net):\s*([^\s{]+)\s*\{$/i);
         if (opener) {
           inBlock = true;
-          bName   = opener[1];
+          bPrefix = opener[1].toLowerCase();
+          bName   = opener[2];
         } else {
           out.push(raw);
         }
       }
     }
-    // Unclosed block: emit what we have
-    if (inBlock) out.push(`env:${bName} { ${bKids.join(' ')} }`);
+    if (inBlock) out.push(`${bPrefix}:${bName} { ${bKids.join(' ')} }`);
 
     return out.join('\n');
   }
@@ -446,11 +538,11 @@ class SmartParser {
     return id;
   }
 
-  addRel(fromId, toId, label = '', bidir = false) {
+  addRel(fromId, toId, label = '', bidir = false, style = 'normal') {
     const dup = this.relationships.find(r =>
       r.from === fromId && r.to === toId && r.label === label && r.bidir === bidir
     );
-    if (!dup) this.relationships.push({ from: fromId, to: toId, label, bidir });
+    if (!dup) this.relationships.push({ from: fromId, to: toId, label, bidir, style });
   }
 
   autoType(token) {
@@ -461,6 +553,12 @@ class SmartParser {
     if (/\b(ec2|container|docker|pod|kubernetes|k8s|vm|lambda|fargate|ecs|eks|instance|runner|agent|worker)\b/.test(t)) return 'instance';
     if (/\b(rest|grpc|graphql|websocket|ws|http|https|rpc|soap|amqp|mqtt|kafka|rabbitmq|pubsub|webhook|queue|bus)\b/.test(t)) return 'interface';
     if (/\b(port|yaml|json|toml|ini|config|configuration|setting|ssl|tls|cert|certificate|secret|env_var|envvar)\b/.test(t)) return 'config';
+    // New types
+    if (/\b(etl|batch|cron|job|pipeline|scheduler|airflow|luigi|prefect|spark|hadoop|dagster|dbt|glue)\b/.test(t)) return 'batch';
+    if (/\b(watcher|watch|fswatch|inotify|observer|listener|filewatcher|monitor|file.monitor|event.listener)\b/.test(t)) return 'watcher';
+    if (/\b(ftp|sftp|ftps|vsftpd|filezilla|winscp|ftpd|file.transfer)\b/.test(t)) return 'ftp';
+    if (/\b(external|internet|public|wan|internet.facing|ingress)\b/.test(t)) return 'net';
+    if (/\b(internal|intranet|private|lan|dmz|demilitarized)\b/.test(t)) return 'net';
     return 'app';
   }
 
@@ -472,7 +570,7 @@ class SmartParser {
     if (/^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
 
     // Explicit prefix: type:Label
-    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf):\s*(.+)$/i);
+    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone):\s*(.+)$/i);
     if (pm) {
       const MAP = {
         env:'env', app:'app', db:'db', database:'db',
@@ -480,6 +578,10 @@ class SmartParser {
         instance:'instance', inst:'instance',
         interface:'interface', iface:'interface',
         config:'config', cfg:'config', conf:'config',
+        batch:'batch', btch:'batch',
+        watcher:'watcher', watch:'watcher',
+        ftp:'ftp', sftp:'ftp', ftps:'ftp',
+        net:'net', network:'net', zone:'net',
       };
       const type  = MAP[pm[1].toLowerCase()];
       const label = pm[2].replace(/["']/g, '').trim();
@@ -497,14 +599,39 @@ class SmartParser {
     line = line.trim();
     if (!line || /^[/#]/.test(line)) return;
 
-    // Single-line env block: env:X { child … }
-    const envBlock = line.match(/^env:\s*([^\s{]+)\s*\{([^}]*)\}/i);
+    // Single-line env/net block: env:X { … }  or  net:X { … }
+    const envBlock = line.match(/^(env|net):\s*([^\s{]+)\s*\{([^}]*)\}/i);
     if (envBlock) {
-      const envId   = this.addEntity('env', envBlock[1]);
-      const childIds = envBlock[2].trim().split(/[\s,]+/).filter(Boolean)
+      const blockType = envBlock[1].toLowerCase();
+      const blockName = envBlock[2];
+      const childIds  = envBlock[3].trim().split(/[\s,]+/).filter(Boolean)
         .map(k => this.parseToken(k)?.id).filter(Boolean);
-      this.environments.set(envId, childIds);
+
+      if (blockType === 'net') {
+        const netId = this.addEntity('net', blockName);
+        this.environments.set(netId, childIds);
+        const lo = blockName.toLowerCase();
+        const zt = lo.includes('ext') || lo.includes('wan') || lo.includes('public') || lo.includes('internet') ? 'external'
+                 : lo.includes('dmz') || lo.includes('demil') ? 'dmz'
+                 : 'internal';
+        this.netZones.set(netId, zt);
+      } else {
+        const envId = this.addEntity('env', blockName);
+        this.environments.set(envId, childIds);
+      }
       return;
+    }
+
+    // Sequential batch chain: A >> B >> C
+    if (line.includes('>>') && !line.includes('->')) {
+      const parts = line.split(/\s*>>\s*/).map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        const ents = parts.map(p => this.parseToken(p)).filter(Boolean);
+        for (let i = 0; i < ents.length - 1; i++) {
+          this.addRel(ents[i].id, ents[i + 1].id, 'triggers', false, 'post');
+        }
+        return;
+      }
     }
 
     // Bidirectional arrow: A <--> B  or  A <-> B
@@ -528,7 +655,15 @@ class SmartParser {
       }
       const from = this.parseToken(am[1].trim());
       const to   = this.parseToken(am[4].trim());
-      if (from && to) this.addRel(from.id, to.id, label);
+      if (from && to) {
+        // Detect pre/post dependency style from label
+        const lbl = label.toLowerCase().trim();
+        const style =
+          (lbl === 'pre'  || lbl.startsWith('pre ')  || lbl.startsWith('pre-')  || lbl === 'prerequisite' || lbl === 'requires' || lbl === 'before') ? 'pre'  :
+          (lbl === 'post' || lbl.startsWith('post ') || lbl.startsWith('post-') || lbl === 'triggers'     || lbl === 'then'     || lbl === 'after')  ? 'post' :
+          'normal';
+        this.addRel(from.id, to.id, label, false, style);
+      }
       return;
     }
 
@@ -577,6 +712,11 @@ class SmartParser {
       case 'instance':  return `("⚙️ ${l}")`;
       case 'interface': return `{{"🔌 ${l}"}}`;
       case 'config':    return `["📋 ${l}"]`;
+      // New types
+      case 'batch':     return `[/"🔄 ${l}"/]`;     // parallelogram — process shape
+      case 'watcher':   return `{"👁️ ${l}"}`;        // rhombus — decision/monitor
+      case 'ftp':       return `(["📁 ${l}"])`;       // stadium — file transfer
+      case 'net':       return `["🌐 ${l}"]`;         // rectangle (fallback for standalone net nodes)
       default:          return `["${l}"]`;
     }
   }
@@ -594,20 +734,34 @@ class SmartParser {
     L.push('    classDef instance  fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#881337');
     L.push('    classDef interface fill:#cffafe,stroke:#0891b2,stroke-width:2px,color:#164e63');
     L.push('    classDef config    fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12');
+    L.push('    classDef batch     fill:#ccfbf1,stroke:#0d9488,stroke-width:2px,color:#134e4a');
+    L.push('    classDef watcher   fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#4c1d95');
+    L.push('    classDef ftp       fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843');
+    L.push('    classDef net       fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e');
     L.push('');
 
     const inEnv = new Set([...this.environments.values()].flat());
 
-    // Subgraphs
+    // Subgraphs (env: blocks + net: zone blocks)
+    const NET_ICONS   = { external: '🌍', internal: '🔒', dmz: '🛡️' };
+    const NET_STYLES  = {
+      external: 'fill:#fee2e2,stroke:#dc2626,color:#7f1d1d',
+      internal: 'fill:#eff6ff,stroke:#1d4ed8,color:#1e3a8a',
+      dmz:      'fill:#fff7ed,stroke:#ea580c,color:#7c2d12',
+    };
+
     for (const [envId, kids] of this.environments) {
       const env = this.entities.get(envId);
       if (!env) continue;
-      L.push(`    subgraph ${envId}["🌐 ${this.safeLabel(env.label)}"]`);
+      const zt   = this.netZones.get(envId);        // undefined for env: blocks
+      const icon = zt ? (NET_ICONS[zt] || '🌐') : '🌐';
+      L.push(`    subgraph ${envId}["${icon} ${this.safeLabel(env.label)}"]`);
       for (const kid of kids) {
         const e = this.entities.get(kid);
         if (e) L.push(`        ${kid}${this.nodeShape(e.type, e.label)}`);
       }
       L.push('    end');
+      if (zt && NET_STYLES[zt]) L.push(`    style ${envId} ${NET_STYLES[zt]}`);
       L.push('');
     }
 
@@ -622,8 +776,23 @@ class SmartParser {
     if (this.relationships.length) {
       L.push('');
       for (const r of this.relationships) {
+        const lbl = r.label ? `|"${this.safeLabel(r.label)}"| ` : ' ';
         if (r.bidir) {
-          L.push(`    ${r.from} <--> ${r.to}`);
+          L.push(`    ${r.from} <-->${lbl}${r.to}`);
+        } else if (r.style === 'pre') {
+          // Dashed arrow — prerequisite / must-run-before
+          // Mermaid dotted label syntax: A -. text .-> B
+          const lp = r.label ? this.safeLabel(r.label).replace(/"/g, '') : '';
+          L.push(lp
+            ? `    ${r.from} -. ${lp} .-> ${r.to}`
+            : `    ${r.from} -.-> ${r.to}`);
+        } else if (r.style === 'post') {
+          // Thick arrow — triggers / on-completion
+          // Mermaid thick label syntax: A == text ==> B
+          const lp = r.label ? this.safeLabel(r.label).replace(/"/g, '') : '';
+          L.push(lp
+            ? `    ${r.from} == ${lp} ==> ${r.to}`
+            : `    ${r.from} ==> ${r.to}`);
         } else if (r.label) {
           L.push(`    ${r.from} -->|"${this.safeLabel(r.label)}"| ${r.to}`);
         } else {
@@ -655,7 +824,7 @@ class SmartParser {
     if (this.relationships.length) {
       L.push('');
       for (const r of this.relationships) {
-        const arrow = r.bidir ? '<<->>' : '->>';
+        const arrow = r.bidir ? '<<->>' : r.style === 'pre' ? '-->>' : '->>';
         L.push(`    ${r.from} ${arrow} ${r.to}: ${r.label || 'calls'}`);
       }
     }
@@ -669,7 +838,8 @@ class SmartParser {
 
     const STEREO = {
       env:'Environment', app:'Application', db:'Database',
-      server:'Server', instance:'Instance', interface:'Interface', config:'Config'
+      server:'Server', instance:'Instance', interface:'Interface', config:'Config',
+      batch:'BatchJob', watcher:'FileWatcher', ftp:'FTPServer', net:'NetworkZone'
     };
 
     for (const [id, e] of this.entities) {
