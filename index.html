@@ -887,7 +887,7 @@ class SmartParser {
   }
 
   autoType(token) {
-    const t = token.toLowerCase();
+    const t = token.toLowerCase().replace(/_/g, ' ').replace(/-/g, ' ');
     if (/\b(prod|production|staging|stage|dev|develop|development|test|qa|sandbox|uat|preprod)\b/.test(t)) return 'env';
     if (/\b(postgres|postgresql|mysql|mariadb|redis|mongodb|mongo|dynamodb|cassandra|sqlite|mssql|oracle|elasticsearch|aurora|rds|elasticache|memcached)\b/.test(t)) return 'db';
     if (/\b(nginx|apache|haproxy|caddy|traefik|iis|tomcat|alb|nlb|lb|loadbalancer|cloudfront|proxy|gateway)\b/.test(t)) return 'server';
@@ -1586,15 +1586,21 @@ function decodeState(b64) {
 }
 
 document.getElementById('shareBtn').addEventListener('click', () => {
-  const state   = encodeState(
+  const state = encodeState(
     $input.value,
     document.getElementById('diagramType').value,
     document.getElementById('mermaidTheme').value
   );
   const url = location.origin + location.pathname + '#d:' + state;
-  navigator.clipboard.writeText(url).then(() => toast('Share URL copied to clipboard!'))
-    .catch(() => { prompt('Copy this URL:', url); });
+  // Always update URL hash first, then attempt clipboard
   history.replaceState(null, '', '#d:' + state);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => toast('Share URL copied to clipboard!'))
+      .catch(() => { prompt('Copy this URL:', url); });
+  } else {
+    prompt('Copy this URL:', url);
+  }
 });
 
 function loadFromHash() {
