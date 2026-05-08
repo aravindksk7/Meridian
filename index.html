@@ -82,6 +82,32 @@ body.fullscreen-preview #leftPanel,
 body.fullscreen-preview #resizer { display:none !important; }
 body.fullscreen-preview #rightPanel { width:100% !important; }
 
+/* Help modal */
+.help-nav { display:block;width:100%;text-align:left;padding:6px 10px;border-radius:6px;
+            font-size:12px;color:#9ca3af;transition:background .1s,color .1s;cursor:pointer;border:none;background:none; }
+.help-nav:hover { background:#1f2937;color:#d1d5db; }
+.help-nav.active { background:#1f2937;color:#e5e7eb;font-weight:600; }
+.help-section { display:none; }
+.help-section.active { display:block; }
+.help-h2 { font-size:18px;font-weight:700;color:#f9fafb;margin-bottom:4px; }
+.help-sub { font-size:12px;color:#6b7280;margin-bottom:18px;line-height:1.5; }
+.help-h3 { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+           color:#4b5563;margin:20px 0 8px; }
+.help-tbl { width:100%;border-collapse:collapse;font-size:12px; }
+.help-tbl th { text-align:left;padding:6px 10px;font-size:10px;font-weight:700;
+               text-transform:uppercase;letter-spacing:.05em;color:#6b7280;
+               border-bottom:1px solid #374151; }
+.help-tbl td { padding:8px 10px;border-bottom:1px solid #1f2937;color:#d1d5db;vertical-align:top;line-height:1.5; }
+.help-tbl tr:hover td { background:#111827; }
+.help-tbl code { background:#1f2937;padding:1px 6px;border-radius:4px;color:#93c5fd;font-size:11px;font-family:monospace; }
+.help-ex { background:#111827;border:1px solid #374151;border-radius:8px;padding:12px 16px;
+           font-size:12px;font-family:monospace;color:#c3e88d;white-space:pre;overflow-x:auto;
+           margin-bottom:16px;line-height:1.7; }
+.help-pill { display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;margin:2px; }
+.hkbd { background:#374151;color:#9ca3af;border:1px solid #4b5563;border-radius:3px;
+        padding:1px 6px;font-size:11px;font-family:monospace; }
+.hcode { background:#1f2937;padding:1px 6px;border-radius:4px;color:#93c5fd;font-size:11px;font-family:monospace; }
+
 /* Toast notification */
 #toast { position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(8px);
          background:#1f2937;border:1px solid #374151;color:#d1d5db;padding:8px 16px;
@@ -94,6 +120,268 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 
 <!-- ── Toast ── -->
 <div id="toast"></div>
+
+<!-- ── Help Modal ── -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 flex items-start justify-center" style="padding:2rem 1rem;background:rgba(0,0,0,.7)">
+  <div id="helpBackdrop" class="absolute inset-0"></div>
+  <div class="relative bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-full max-w-5xl flex overflow-hidden" style="max-height:calc(100vh - 4rem);z-index:1">
+
+    <!-- Sidebar nav -->
+    <div class="flex-shrink-0 bg-gray-950 border-r border-gray-800 p-3 flex flex-col gap-0.5 overflow-y-auto" style="width:11rem">
+      <div class="text-xs font-bold text-gray-600 uppercase tracking-wider px-2 py-1 mb-1">Smart Mermaid</div>
+      <button class="help-nav active" data-section="quickstart">🚀 Quick Start</button>
+      <button class="help-nav" data-section="entities">🏷️ Entity Types</button>
+      <button class="help-nav" data-section="arrows">→ Arrows</button>
+      <button class="help-nav" data-section="grouping">⬡ Grouping</button>
+      <button class="help-nav" data-section="natural">💬 Natural Language</button>
+      <button class="help-nav" data-section="shortcuts">⌨️ Shortcuts</button>
+    </div>
+
+    <!-- Content area -->
+    <div class="flex-1 overflow-y-auto p-7" style="min-width:0">
+
+      <!-- ── Quick Start ── -->
+      <div id="hs-quickstart" class="help-section active">
+        <div class="help-h2">Quick Start</div>
+        <div class="help-sub">Type shorthand in the Smart Input panel — the diagram updates live. No special knowledge of Mermaid.js required.</div>
+
+        <div class="help-h3">Basic example</div>
+        <div class="help-ex">// Group services in a deployment environment
+env:Production {
+  app:WebServer
+  db:PostgreSQL
+  instance:Redis_Cache
+}
+
+// Connect with arrows  —  A --label--> B
+app:WebServer --SQL--> db:PostgreSQL
+app:WebServer --session--> instance:Redis_Cache</div>
+
+        <div class="help-h3">Mark business ownership</div>
+        <div class="help-ex">// domain: colours nodes without changing their position
+domain:Platform {
+  app:WebServer
+  instance:Redis_Cache
+}
+// WebServer and Redis_Cache stay inside env:Production
+// but are tinted with Platform's colour</div>
+
+        <div class="help-h3">Tips</div>
+        <ul class="text-sm text-gray-400 space-y-1.5 list-disc pl-5">
+          <li>Use underscores for spaces: <span class="hcode">app:My_Service</span></li>
+          <li>Comments: lines starting with <span class="hcode">//</span> or <span class="hcode">#</span> are ignored</li>
+          <li>Multi-line blocks: open with <span class="hcode">env:Name {</span> and close with <span class="hcode">}</span> on its own line</li>
+          <li>Switch views with the Diagram type dropdown — Flowchart, Sequence, Class</li>
+          <li>Click any template button to load a working example instantly</li>
+        </ul>
+      </div>
+
+      <!-- ── Entity Types ── -->
+      <div id="hs-entities" class="help-section">
+        <div class="help-h2">Entity Types</div>
+        <div class="help-sub">Prefix any name to assign a type — this sets shape, colour, and icon. Without a prefix the parser auto-detects common keywords.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Prefix</th><th>Aliases</th><th>Icon</th><th>Shape</th><th>Auto-detected keywords</th></tr></thead>
+          <tbody>
+            <tr><td><code>env:</code></td><td>—</td><td>🌐</td><td>Rectangle</td><td>prod, production, staging, dev, qa, uat, sandbox</td></tr>
+            <tr><td><code>app:</code></td><td>—</td><td>📦</td><td>Rectangle</td><td><em class="text-gray-500">default fallback</em></td></tr>
+            <tr><td><code>db:</code></td><td><code>database:</code></td><td>🗄️</td><td>Cylinder</td><td>postgres, mysql, redis, mongo, rds, aurora, elasticsearch, dynamodb</td></tr>
+            <tr><td><code>server:</code></td><td><code>srv:</code></td><td>🖥️</td><td>Subroutine</td><td>nginx, apache, haproxy, alb, traefik, cloudfront, gateway, proxy</td></tr>
+            <tr><td><code>instance:</code></td><td><code>inst:</code></td><td>⚙️</td><td>Rounded rect</td><td>ec2, docker, lambda, k8s, fargate, container, runner, worker, pod</td></tr>
+            <tr><td><code>interface:</code></td><td><code>iface:</code></td><td>🔌</td><td>Double hexagon</td><td>rest, grpc, graphql, kafka, rabbitmq, webhook, websocket, queue</td></tr>
+            <tr><td><code>config:</code></td><td><code>cfg:, conf:</code></td><td>📋</td><td>Rectangle</td><td>port, yaml, ssl, cert, secret, env_var, json, toml</td></tr>
+            <tr><td><code>batch:</code></td><td><code>btch:</code></td><td>🔄</td><td>Parallelogram</td><td>etl, cron, job, airflow, spark, dagster, dbt, glue, pipeline, scheduler</td></tr>
+            <tr><td><code>watcher:</code></td><td><code>watch:</code></td><td>👁️</td><td>Diamond</td><td>fswatch, inotify, observer, listener, monitor, filewatcher</td></tr>
+            <tr><td><code>ftp:</code></td><td><code>sftp:, ftps:</code></td><td>📁</td><td>Stadium</td><td>sftp, ftps, vsftpd, filezilla, winscp, ftpd</td></tr>
+            <tr><td><code>net:</code></td><td><code>network:, zone:</code></td><td>🌍/🔒/🛡️</td><td>Subgraph</td><td>Colour by zone name — External, DMZ, Internal</td></tr>
+            <tr><td><code>domain:</code></td><td><code>dom:, team:, biz:, bu:</code></td><td>🏢</td><td>Subgraph</td><td>Auto-colour per domain from palette</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ── Arrows ── -->
+      <div id="hs-arrows" class="help-section">
+        <div class="help-h2">Arrows &amp; Relationships</div>
+        <div class="help-sub">Connect any two entities with arrow syntax. Labels go between the dashes.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Syntax</th><th>Arrow type</th><th>Best for</th></tr></thead>
+          <tbody>
+            <tr><td><code>A --> B</code></td><td>→ Normal</td><td>Basic flow or dependency</td></tr>
+            <tr><td><code>A --label--> B</code></td><td>→ Labelled</td><td>Named relationship e.g. <code>--HTTPS--></code></td></tr>
+            <tr><td><code>A &lt;--&gt; B</code></td><td>↔ Bidirectional</td><td>Two-way communication</td></tr>
+            <tr><td><code>A --pre--> B</code></td><td>- - → Dashed</td><td>Prerequisite / must run before</td></tr>
+            <tr><td><code>A --requires--> B</code></td><td>- - → Dashed</td><td>Same as <code>--pre--></code></td></tr>
+            <tr><td><code>A --post--> B</code></td><td>═══▶ Thick</td><td>Triggers on completion</td></tr>
+            <tr><td><code>A --triggers--> B</code></td><td>═══▶ Thick</td><td>Same as <code>--post--></code></td></tr>
+            <tr><td><code>batch:A >> batch:B >> batch:C</code></td><td>═══▶ Chain</td><td>Sequential batch pipeline</td></tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">Pre / post label keywords (auto-select style)</div>
+        <p class="text-xs text-gray-400 mb-1"><strong class="text-gray-300">Dashed (prerequisite):</strong> <span class="hcode">pre</span> <span class="hcode">pre-</span> <span class="hcode">prerequisite</span> <span class="hcode">requires</span> <span class="hcode">before</span></p>
+        <p class="text-xs text-gray-400 mb-4"><strong class="text-gray-300">Thick (on-completion):</strong> <span class="hcode">post</span> <span class="hcode">post-</span> <span class="hcode">triggers</span> <span class="hcode">then</span> <span class="hcode">after</span></p>
+
+        <div class="help-h3">Example</div>
+        <div class="help-ex">// Batch pipeline
+batch:Extract >> batch:Transform >> batch:Load
+
+// Pre/post dependencies
+batch:Extract --pre--> db:StagingDB
+batch:Load --post--> app:NotificationService
+
+// Bidirectional
+app:Frontend &lt;--&gt; app:Backend</div>
+      </div>
+
+      <!-- ── Grouping ── -->
+      <div id="hs-grouping" class="help-section">
+        <div class="help-h2">Grouping Blocks</div>
+        <div class="help-sub">Three independent block types create visual subgraphs. They can be mixed freely on the same diagram.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Block</th><th>Purpose</th><th>Visual</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>env:Name { … }</code></td>
+              <td>Deployment environment<br><span class="text-gray-500 text-xs">Production, Staging, Dev…</span></td>
+              <td>Solid 2px blue border</td>
+            </tr>
+            <tr>
+              <td><code>net:External { … }</code></td>
+              <td>External / internet-facing zone</td>
+              <td>Solid red border</td>
+            </tr>
+            <tr>
+              <td><code>net:DMZ { … }</code></td>
+              <td>Demilitarised zone</td>
+              <td>Solid orange border</td>
+            </tr>
+            <tr>
+              <td><code>net:Internal { … }</code></td>
+              <td>Private / internal zone</td>
+              <td>Solid blue border</td>
+            </tr>
+            <tr>
+              <td><code>domain:BU { … }</code></td>
+              <td>Business domain / team ownership boundary</td>
+              <td>Dashed 3px coloured border<br><span class="text-gray-500 text-xs">auto-colour per domain</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">Multi-line block syntax</div>
+        <div class="help-ex">env:Production {
+  app:WebServer
+  db:PostgreSQL
+  instance:Redis
+}
+
+net:DMZ {
+  server:WAF
+  server:ReverseProxy
+}
+
+domain:Platform {
+  server:API_Gateway
+  app:Auth_Service
+}</div>
+
+        <div class="help-h3">Hybrid mode — env + domain on the same entities</div>
+        <p class="text-xs text-gray-400 mb-3">Entities in both an <span class="hcode">env:</span> block and a <span class="hcode">domain:</span> block stay inside the env subgraph spatially, but their fill colour changes to the domain's palette colour — showing deployment topology and ownership simultaneously.</p>
+        <div class="help-ex">env:Production {
+  app:PaymentService   // stays inside Production subgraph
+  app:AuthService
+}
+domain:Finance {
+  app:PaymentService   // tints node with Finance colour (fuchsia)
+}</div>
+
+        <div class="help-h3">Domain colour palette (cycles every 8 domains)</div>
+        <div class="flex flex-wrap gap-2 mt-2">
+          <span class="help-pill" style="background:#fdf4ff;color:#701a75;border:1px solid #c026d3">1 · fuchsia</span>
+          <span class="help-pill" style="background:#fff7ed;color:#c2410c;border:1px solid #f97316">2 · orange</span>
+          <span class="help-pill" style="background:#ecfdf5;color:#064e3b;border:1px solid #059669">3 · emerald</span>
+          <span class="help-pill" style="background:#eff6ff;color:#1e3a8a;border:1px solid #1d4ed8">4 · blue</span>
+          <span class="help-pill" style="background:#fef2f2;color:#b91c1c;border:1px solid #ef4444">5 · red</span>
+          <span class="help-pill" style="background:#fffbeb;color:#713f12;border:1px solid #ca8a04">6 · golden</span>
+          <span class="help-pill" style="background:#eef2ff;color:#312e81;border:1px solid #4f46e5">7 · indigo</span>
+          <span class="help-pill" style="background:#e0f2fe;color:#0c4a6e;border:1px solid #0284c7">8 · sky</span>
+        </div>
+      </div>
+
+      <!-- ── Natural Language ── -->
+      <div id="hs-natural" class="help-section">
+        <div class="help-h2">Natural Language</div>
+        <div class="help-sub">Plain English connector phrases are automatically parsed into labelled arrows — no special syntax needed.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Phrase</th><th>Rendered arrow label</th></tr></thead>
+          <tbody>
+            <tr><td><code>A connects to B</code></td><td>connects to</td></tr>
+            <tr><td><code>A calls B</code></td><td>calls</td></tr>
+            <tr><td><code>A queries B</code></td><td>queries</td></tr>
+            <tr><td><code>A reads from B</code></td><td>reads from</td></tr>
+            <tr><td><code>A writes to B</code></td><td>writes to</td></tr>
+            <tr><td><code>A depends on B</code></td><td>depends on</td></tr>
+            <tr><td><code>A sends data to B</code></td><td>sends to</td></tr>
+            <tr><td><code>A talks to B</code></td><td>talks to</td></tr>
+            <tr><td><code>A uses B</code></td><td>uses</td></tr>
+            <tr><td><code>A forwards to B</code></td><td>forwards to</td></tr>
+            <tr><td><code>A publishes to B</code></td><td>publishes to</td></tr>
+            <tr><td><code>A subscribes to B</code></td><td>subscribes to</td></tr>
+          </tbody>
+        </table>
+        <div class="help-h3">Example</div>
+        <div class="help-ex">UserAPI connects to PostgreSQL
+AuthService calls UserAPI
+BatchJob reads from db:Staging
+BatchJob writes to db:Warehouse</div>
+
+        <p class="text-xs text-gray-500 mt-2">Entity names are auto-typed by keywords — "PostgreSQL" becomes a db, "BatchJob" becomes a batch node. You can still use explicit prefixes to override.</p>
+      </div>
+
+      <!-- ── Shortcuts ── -->
+      <div id="hs-shortcuts" class="help-section">
+        <div class="help-h2">Keyboard Shortcuts</div>
+        <div class="help-sub">All shortcuts work from anywhere in the app unless noted.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td><kbd class="hkbd">Ctrl+Enter</kbd></td><td>Force re-render the diagram immediately</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl++</kbd> / <kbd class="hkbd">Ctrl+-</kbd></td><td>Zoom preview in / out</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+0</kbd></td><td>Reset zoom to 100%</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Scroll</kbd></td><td>Zoom (while hovering the preview panel)</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Shift+C</kbd></td><td>Copy generated Mermaid code</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Shift+F</kbd></td><td>Toggle fullscreen preview</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Shift+S</kbd></td><td>Copy share URL to clipboard</td></tr>
+            <tr><td><kbd class="hkbd">?</kbd> or <kbd class="hkbd">F1</kbd></td><td>Open this help panel (when not typing)</td></tr>
+            <tr><td><kbd class="hkbd">Escape</kbd></td><td>Close help panel</td></tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">Export &amp; sharing</div>
+        <table class="help-tbl">
+          <thead><tr><th>Control</th><th>Action</th></tr></thead>
+          <tbody>
+            <tr><td>↓ SVG</td><td>Download the diagram as a scalable SVG file</td></tr>
+            <tr><td>↓ PNG</td><td>Download at 2× (retina) resolution</td></tr>
+            <tr><td>Copy ▾</td><td>Copy code · copy with ```mermaid fences · copy as markdown block</td></tr>
+            <tr><td>🔗 Share</td><td>Encode full diagram state into a shareable URL</td></tr>
+            <tr><td>⊞ Fit</td><td>Auto-fit zoom to the preview window</td></tr>
+            <tr><td>⛶ Fullscreen</td><td>Expand preview panel to full width</td></tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">Panel layout</div>
+        <p class="text-xs text-gray-400">Drag the vertical divider bar between the input and preview panels to resize them. The layout is saved automatically.</p>
+      </div>
+
+    </div><!-- /content -->
+
+    <!-- Close button -->
+    <button id="helpClose" title="Close (Escape)"
+      class="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition text-sm font-bold">✕</button>
+
+  </div><!-- /modal card -->
+</div><!-- /helpModal -->
 
 <!-- ── Header ── -->
 <header class="bg-gray-900 border-b border-gray-800 px-3 py-2 flex items-center gap-2 flex-shrink-0">
@@ -128,6 +416,10 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 
   <!-- Action buttons -->
   <div class="flex items-center gap-1.5">
+    <button id="helpBtn" title="Help (? or F1)"
+      class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
+      <span>?</span> Help
+    </button>
     <button id="shareBtn" title="Share via URL (Ctrl+Shift+S)"
       class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
       <span>🔗</span> Share
@@ -1431,6 +1723,42 @@ function toast(msg, duration = 2200) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
+
+// ════════════════════════════════════════════════════════════════
+//  HELP MODAL
+// ════════════════════════════════════════════════════════════════
+function openHelp(section) {
+  document.getElementById('helpModal').classList.remove('hidden');
+  showHelpSection(section || 'quickstart');
+}
+
+function closeHelp() {
+  document.getElementById('helpModal').classList.add('hidden');
+}
+
+function showHelpSection(name) {
+  document.querySelectorAll('.help-nav').forEach(b =>
+    b.classList.toggle('active', b.dataset.section === name));
+  document.querySelectorAll('.help-section').forEach(s =>
+    s.classList.toggle('active', s.id === 'hs-' + name));
+}
+
+document.getElementById('helpBtn').addEventListener('click', () => openHelp('quickstart'));
+document.getElementById('helpClose').addEventListener('click', closeHelp);
+document.getElementById('helpBackdrop').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('helpBackdrop')) closeHelp();
+});
+document.querySelectorAll('.help-nav').forEach(btn =>
+  btn.addEventListener('click', () => showHelpSection(btn.dataset.section)));
+
+// ? and F1 open help; Escape closes it
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeHelp(); return; }
+  if ((e.key === '?' || e.key === 'F1') && document.activeElement !== $input) {
+    e.preventDefault();
+    if (document.getElementById('helpModal').classList.contains('hidden')) openHelp('quickstart');
+  }
+});
 
 // ════════════════════════════════════════════════════════════════
 //  BOOT
