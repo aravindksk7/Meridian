@@ -31,6 +31,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .badge-ftp       { background:#fce7f3;color:#831843;border-color:#f9a8d4; }
 .badge-net-ext   { background:#fee2e2;color:#7f1d1d;border-color:#fca5a5; }
 .badge-net-int   { background:#eff6ff;color:#1e3a8a;border-color:#93c5fd; }
+.badge-domain    { background:#fdf4ff;color:#701a75;border-color:#e879f9; }
 
 /* Template buttons */
 .tpl-btn { transition:background .15s; }
@@ -173,6 +174,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
   <button class="badge badge-ftp       flex-shrink-0" onclick="insertPrefix('ftp:')"       title="FTP / SFTP Server">📁 ftp:</button>
   <button class="badge badge-net-ext   flex-shrink-0" onclick="insertPrefix('net:External\n  ')" title="External network zone">🌍 net:Ext</button>
   <button class="badge badge-net-int   flex-shrink-0" onclick="insertPrefix('net:Internal\n  ')" title="Internal network zone">🔒 net:Int</button>
+  <button class="badge badge-domain    flex-shrink-0" onclick="insertPrefix('domain:')"           title="Business domain / team ownership">🏢 domain:</button>
   <div class="w-px h-4 bg-gray-700 mx-1.5 flex-shrink-0"></div>
   <span class="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">Templates:</span>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('microservices')">Microservices</button>
@@ -182,6 +184,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('etlPipeline')">ETL Pipeline</button>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('fileProcessing')">File Processing</button>
   <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('networkArch')">Network Arch</button>
+  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('enterpriseDomains')">Enterprise Domains</button>
 </div>
 
 <!-- ── Main split layout ── -->
@@ -210,6 +213,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
         <code class="text-teal-400 mx-1">batch:A >> batch:B</code>·
         <code class="text-teal-400 mx-1">--pre--></code>·
         <code class="text-teal-400 mx-1">net:External&nbsp;{&nbsp;…&nbsp;}</code>·
+        <code class="text-fuchsia-400 mx-1" style="color:#c026d3">domain:BU&nbsp;{&nbsp;…&nbsp;}</code>·
         <kbd>Ctrl+Enter</kbd> re-render
       </p>
     </div>
@@ -283,7 +287,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
     <kbd>Ctrl+±</kbd> zoom ·
     <kbd>Ctrl+Shift+C</kbd> copy ·
     <kbd>Ctrl+Shift+F</kbd> fullscreen
-    <span class="ml-2">v2.0</span>
+    <span class="ml-2">v4.0</span>
   </span>
 </div>
 
@@ -452,6 +456,50 @@ ftp:Public_FTP --SFTP--> instance:Internal_Worker
 config:Firewall_Rules --> server:WAF
 config:SSL_Cert --> server:Reverse_Proxy`,
 
+  enterpriseDomains: `// Enterprise Domain Architecture
+// Each domain:BU group colours entities by business ownership
+
+domain:Finance {
+  app:Payment_Service
+  app:Billing_API
+  db:Transactions_DB
+  app:Reporting_Tool
+}
+
+domain:Operations {
+  app:Inventory_System
+  db:Warehouse_DB
+  batch:Stock_Sync
+  ftp:Supplier_FTP
+}
+
+domain:Platform {
+  server:API_Gateway
+  app:Auth_Service
+  db:User_DB
+  config:JWT_Config
+  instance:K8s_Cluster
+}
+
+domain:Analytics {
+  batch:ETL_Pipeline
+  db:Data_Warehouse
+  app:BI_Dashboard
+  watcher:Event_Collector
+}
+
+// Cross-domain flows
+server:API_Gateway --> app:Payment_Service
+server:API_Gateway --> app:Inventory_System
+app:Payment_Service --> app:Auth_Service
+app:Inventory_System --> app:Auth_Service
+app:Billing_API --> db:Transactions_DB
+app:Payment_Service --events--> batch:ETL_Pipeline
+app:Inventory_System --events--> batch:ETL_Pipeline
+batch:ETL_Pipeline --> db:Data_Warehouse
+app:BI_Dashboard --> db:Data_Warehouse
+ftp:Supplier_FTP --SFTP--> watcher:Event_Collector`,
+
   cloud: `// Cloud Infrastructure
 env:VPC_us_east_1 {
   server:ALB
@@ -490,6 +538,7 @@ class SmartParser {
     this.relationships = [];        // [{from, to, label, bidir, style}]
     this.environments  = new Map(); // envId → [childIds]
     this.netZones      = new Map(); // envId → 'external'|'internal'|'dmz'
+    this.domains       = new Map(); // domainId → [childIds]  (business domain ownership)
   }
 
   // ── Pre-process: join multi-line env/net blocks into single lines ──
@@ -511,8 +560,8 @@ class SmartParser {
           bKids.push(...line.split(/[\s,]+/).filter(Boolean));
         }
       } else {
-        // Multi-line opener: env:X {  or  net:X {
-        const opener = line.match(/^(env|net):\s*([^\s{]+)\s*\{$/i);
+        // Multi-line opener: env:X {  or  net:X {  or  domain:X {
+        const opener = line.match(/^(env|net|domain):\s*([^\s{]+)\s*\{$/i);
         if (opener) {
           inBlock = true;
           bPrefix = opener[1].toLowerCase();
@@ -570,7 +619,7 @@ class SmartParser {
     if (/^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
 
     // Explicit prefix: type:Label
-    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone):\s*(.+)$/i);
+    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu):\s*(.+)$/i);
     if (pm) {
       const MAP = {
         env:'env', app:'app', db:'db', database:'db',
@@ -582,6 +631,7 @@ class SmartParser {
         watcher:'watcher', watch:'watcher',
         ftp:'ftp', sftp:'ftp', ftps:'ftp',
         net:'net', network:'net', zone:'net',
+        domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
       };
       const type  = MAP[pm[1].toLowerCase()];
       const label = pm[2].replace(/["']/g, '').trim();
@@ -599,8 +649,8 @@ class SmartParser {
     line = line.trim();
     if (!line || /^[/#]/.test(line)) return;
 
-    // Single-line env/net block: env:X { … }  or  net:X { … }
-    const envBlock = line.match(/^(env|net):\s*([^\s{]+)\s*\{([^}]*)\}/i);
+    // Single-line env/net/domain block: env:X { … } | net:X { … } | domain:X { … }
+    const envBlock = line.match(/^(env|net|domain):\s*([^\s{]+)\s*\{([^}]*)\}/i);
     if (envBlock) {
       const blockType = envBlock[1].toLowerCase();
       const blockName = envBlock[2];
@@ -615,6 +665,9 @@ class SmartParser {
                  : lo.includes('dmz') || lo.includes('demil') ? 'dmz'
                  : 'internal';
         this.netZones.set(netId, zt);
+      } else if (blockType === 'domain') {
+        const domId = this.addEntity('domain', blockName);
+        this.domains.set(domId, childIds);
       } else {
         const envId = this.addEntity('env', blockName);
         this.environments.set(envId, childIds);
@@ -717,6 +770,7 @@ class SmartParser {
       case 'watcher':   return `{"👁️ ${l}"}`;        // rhombus — decision/monitor
       case 'ftp':       return `(["📁 ${l}"])`;       // stadium — file transfer
       case 'net':       return `["🌐 ${l}"]`;         // rectangle (fallback for standalone net nodes)
+      case 'domain':    return `["🏢 ${l}"]`;         // rectangle (fallback for standalone domain nodes)
       default:          return `["${l}"]`;
     }
   }
@@ -738,11 +792,35 @@ class SmartParser {
     L.push('    classDef watcher   fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#4c1d95');
     L.push('    classDef ftp       fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843');
     L.push('    classDef net       fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e');
+    L.push('    classDef domain    fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75');
     L.push('');
 
-    const inEnv = new Set([...this.environments.values()].flat());
+    // ── Domain colour palette (auto-assigned per domain, cycles every 8) ──────
+    const DOMAIN_PALETTE = [
+      { fill: '#fdf4ff', stroke: '#c026d3', color: '#701a75' },  // fuchsia
+      { fill: '#fff7ed', stroke: '#f97316', color: '#c2410c' },  // orange
+      { fill: '#ecfdf5', stroke: '#059669', color: '#064e3b' },  // emerald
+      { fill: '#eff6ff', stroke: '#1d4ed8', color: '#1e3a8a' },  // royal blue
+      { fill: '#fef2f2', stroke: '#ef4444', color: '#b91c1c' },  // red
+      { fill: '#fffbeb', stroke: '#ca8a04', color: '#713f12' },  // golden
+      { fill: '#eef2ff', stroke: '#4f46e5', color: '#312e81' },  // indigo
+      { fill: '#e0f2fe', stroke: '#0284c7', color: '#0c4a6e' },  // sky blue
+    ];
 
-    // Subgraphs (env: blocks + net: zone blocks)
+    // Build per-entity domain lookup: entityId → palette index
+    const domainPalOf  = new Map(); // entityId → palette index
+    let   domIdx = 0;
+    for (const [domId, kids] of this.domains) {
+      kids.forEach(kid => domainPalOf.set(kid, domIdx));
+      domIdx++;
+    }
+
+    const inEnv        = new Set([...this.environments.values()].flat());
+    const inDomainAny  = new Set([...this.domains.values()].flat());
+    // Entities that live ONLY in a domain (not also in an env/net subgraph)
+    const inDomainOnly = new Set([...inDomainAny].filter(id => !inEnv.has(id)));
+
+    // ── Subgraphs: env + net zone blocks ─────────────────────────────────────
     const NET_ICONS   = { external: '🌍', internal: '🔒', dmz: '🛡️' };
     const NET_STYLES  = {
       external: 'fill:#fee2e2,stroke:#dc2626,color:#7f1d1d',
@@ -753,7 +831,7 @@ class SmartParser {
     for (const [envId, kids] of this.environments) {
       const env = this.entities.get(envId);
       if (!env) continue;
-      const zt   = this.netZones.get(envId);        // undefined for env: blocks
+      const zt   = this.netZones.get(envId);
       const icon = zt ? (NET_ICONS[zt] || '🌐') : '🌐';
       L.push(`    subgraph ${envId}["${icon} ${this.safeLabel(env.label)}"]`);
       for (const kid of kids) {
@@ -765,14 +843,36 @@ class SmartParser {
       L.push('');
     }
 
-    // Standalone nodes
+    // ── Subgraphs: domain blocks (dashed coloured boundary) ──────────────────
+    domIdx = 0;
+    for (const [domId, kids] of this.domains) {
+      const dom = this.entities.get(domId);
+      if (!dom) { domIdx++; continue; }
+      const pal      = DOMAIN_PALETTE[domIdx % DOMAIN_PALETTE.length];
+      // Only include children NOT already inside an env/net subgraph
+      const ownKids  = kids.filter(k => !inEnv.has(k));
+      if (ownKids.length > 0) {
+        L.push(`    subgraph ${domId}["🏢 ${this.safeLabel(dom.label)}"]`);
+        for (const kid of ownKids) {
+          const e = this.entities.get(kid);
+          if (e) L.push(`        ${kid}${this.nodeShape(e.type, e.label)}`);
+        }
+        L.push('    end');
+        L.push(`    style ${domId} fill:${pal.fill},stroke:${pal.stroke},stroke-width:3px,stroke-dasharray:6 3,color:${pal.color}`);
+        L.push('');
+      }
+      domIdx++;
+    }
+
+    // ── Standalone nodes (not in any subgraph) ────────────────────────────────
     for (const [id, e] of this.entities) {
-      if (!inEnv.has(id) && !this.environments.has(id)) {
+      const isContainer = this.environments.has(id) || this.domains.has(id);
+      if (!isContainer && !inEnv.has(id) && !inDomainOnly.has(id)) {
         L.push(`    ${id}${this.nodeShape(e.type, e.label)}`);
       }
     }
 
-    // Relationships
+    // ── Relationships ─────────────────────────────────────────────────────────
     if (this.relationships.length) {
       L.push('');
       for (const r of this.relationships) {
@@ -780,19 +880,11 @@ class SmartParser {
         if (r.bidir) {
           L.push(`    ${r.from} <-->${lbl}${r.to}`);
         } else if (r.style === 'pre') {
-          // Dashed arrow — prerequisite / must-run-before
-          // Mermaid dotted label syntax: A -. text .-> B
           const lp = r.label ? this.safeLabel(r.label).replace(/"/g, '') : '';
-          L.push(lp
-            ? `    ${r.from} -. ${lp} .-> ${r.to}`
-            : `    ${r.from} -.-> ${r.to}`);
+          L.push(lp ? `    ${r.from} -. ${lp} .-> ${r.to}` : `    ${r.from} -.-> ${r.to}`);
         } else if (r.style === 'post') {
-          // Thick arrow — triggers / on-completion
-          // Mermaid thick label syntax: A == text ==> B
           const lp = r.label ? this.safeLabel(r.label).replace(/"/g, '') : '';
-          L.push(lp
-            ? `    ${r.from} == ${lp} ==> ${r.to}`
-            : `    ${r.from} ==> ${r.to}`);
+          L.push(lp ? `    ${r.from} == ${lp} ==> ${r.to}` : `    ${r.from} ==> ${r.to}`);
         } else if (r.label) {
           L.push(`    ${r.from} -->|"${this.safeLabel(r.label)}"| ${r.to}`);
         } else {
@@ -801,10 +893,26 @@ class SmartParser {
       }
     }
 
-    // Class assignments (skip env nodes used as subgraphs)
+    // ── Class assignments (skip subgraph containers) ──────────────────────────
     L.push('');
     for (const [id, e] of this.entities) {
-      if (!this.environments.has(id)) L.push(`    class ${id} ${e.type}`);
+      if (!this.environments.has(id) && !this.domains.has(id)) {
+        L.push(`    class ${id} ${e.type}`);
+      }
+    }
+
+    // ── Domain fill-colour overrides for nodes also inside env subgraphs ─────
+    // These nodes are spatially inside the env subgraph but tinted by domain.
+    domIdx = 0;
+    for (const [domId, kids] of this.domains) {
+      const pal = DOMAIN_PALETTE[domIdx % DOMAIN_PALETTE.length];
+      for (const kid of kids) {
+        if (inEnv.has(kid)) {
+          // Override just fill + add a thicker border to signal domain ownership
+          L.push(`    style ${kid} fill:${pal.fill},stroke:${pal.stroke},stroke-width:3px,color:${pal.color}`);
+        }
+      }
+      domIdx++;
     }
 
     return L.join('\n');
@@ -839,7 +947,8 @@ class SmartParser {
     const STEREO = {
       env:'Environment', app:'Application', db:'Database',
       server:'Server', instance:'Instance', interface:'Interface', config:'Config',
-      batch:'BatchJob', watcher:'FileWatcher', ftp:'FTPServer', net:'NetworkZone'
+      batch:'BatchJob', watcher:'FileWatcher', ftp:'FTPServer', net:'NetworkZone',
+      domain:'BusinessDomain'
     };
 
     for (const [id, e] of this.entities) {
