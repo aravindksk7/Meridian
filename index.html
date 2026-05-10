@@ -42,7 +42,8 @@ document.dispatchEvent(new Event('cm-ready'));
   --accent:#6366f1; --accent-hov:#4f46e5; --accent-bg:#1e1b4b; --accent-text:#a5b4fc;
   --kbd-bg:#374151; --kbd-text:#9ca3af; --kbd-border:#4b5563; --scrollbar:#4b5563;
   --code-bg:#1f2937; --code-text:#93c5fd;
-  --ok:#4ade80; --err-bg:#2d1318; --err-border:#7f1d1d; --err-title:#f87171; --err-body:#fca5a5;
+  --ok:#4ade80; --warn:#f59e0b; --warn-bg:#2b2111; --warn-border:#92400e; --warn-body:#fbbf24;
+  --err-bg:#2d1318; --err-border:#7f1d1d; --err-title:#f87171; --err-body:#fca5a5;
 }
 [data-theme="light"] {
   --surface-0:#f8fafc; --surface-1:#ffffff; --surface-2:#f1f5f9; --surface-3:#e2e8f0;
@@ -51,7 +52,8 @@ document.dispatchEvent(new Event('cm-ready'));
   --accent:#6366f1; --accent-hov:#4f46e5; --accent-bg:#e0e7ff; --accent-text:#4338ca;
   --kbd-bg:#e2e8f0; --kbd-text:#64748b; --kbd-border:#cbd5e1; --scrollbar:#cbd5e1;
   --code-bg:#f1f5f9; --code-text:#4f46e5;
-  --ok:#16a34a; --err-bg:#fef2f2; --err-border:#fecaca; --err-title:#dc2626; --err-body:#b91c1c;
+  --ok:#16a34a; --warn:#d97706; --warn-bg:#fffbeb; --warn-border:#fde68a; --warn-body:#92400e;
+  --err-bg:#fef2f2; --err-border:#fecaca; --err-title:#dc2626; --err-body:#b91c1c;
 }
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -104,6 +106,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .render-err { background:var(--err-bg);border:1px solid var(--err-border);border-radius:8px;padding:16px;margin:8px;font-size:12px; }
 .render-err h4 { color:var(--err-title);font-weight:600;margin:0 0 6px; }
 .render-err pre { color:var(--err-body);white-space:pre-wrap;margin:0;font-family:monospace;font-size:11px; }
+
+/* Semantic lint panel */
+.lint-btn { display:none;font-size:11px;background:var(--warn-bg);border:1px solid var(--warn-border);
+            color:var(--warn-body);border-radius:4px;padding:2px 7px;cursor:pointer; }
+.lint-btn.vis { display:inline-flex;align-items:center;gap:4px; }
+.lint-btn:hover { filter:brightness(1.08); }
+#lintPanel { display:none;flex-shrink:0;border-bottom:1px solid var(--warn-border);background:var(--warn-bg);
+             max-height:168px;overflow:auto;padding:6px 10px; }
+#lintPanel.vis { display:block; }
+.lint-item { display:flex;gap:8px;align-items:flex-start;padding:5px 4px;border-radius:5px;
+             font-size:11px;color:var(--warn-body);cursor:pointer; }
+.lint-item:hover { background:rgba(245,158,11,.12); }
+.lint-code { flex-shrink:0;font-family:monospace;font-size:10px;color:var(--warn);min-width:128px; }
+.lint-msg { flex:1;min-width:0; }
+.lint-line { flex-shrink:0;color:var(--text-dim);font-family:monospace;font-size:10px; }
 
 /* Resizer */
 #resizer { width:4px;flex-shrink:0;background:var(--border);cursor:col-resize;
@@ -351,12 +368,12 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 .ip-empty { grid-column:1/-1;text-align:center;padding:24px;font-size:12px;color:var(--text-faint); }
 
 /* ── Template picker dropdown ── */
-#tplPicker {
+#tplPicker, #viewPicker {
   position:fixed;display:none;z-index:100;width:220px;
   background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
   padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.6);
 }
-#tplPicker.vis { display:block; }
+#tplPicker.vis, #viewPicker.vis { display:block; }
 .tpl-item {
   display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;
   background:none;border:none;border-radius:6px;text-align:left;cursor:pointer;
@@ -390,6 +407,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 [data-theme="light"] #iconPickerBtn  { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
 [data-theme="light"] #shapePickerBtn { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
 [data-theme="light"] #tplPickerBtn   { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
+[data-theme="light"] #viewPickerBtn  { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
 /* helpClose hover: Tailwind hover: variant can't be overridden by plain class selectors */
 [data-theme="light"] #helpClose       { background:#e2e8f0 !important; color:#64748b !important; }
 [data-theme="light"] #helpClose:hover { background:#cbd5e1 !important; color:#1e293b !important; }
@@ -463,6 +481,7 @@ input[type="range"].diag-slider { flex:1;accent-color:var(--accent);height:4px; 
       <button class="help-nav" data-section="arrows">→ Arrows</button>
       <button class="help-nav" data-section="grouping">⬡ Grouping</button>
       <button class="help-nav" data-section="natural">💬 Natural Language</button>
+      <button class="help-nav" data-section="linting">Linting</button>
       <button class="help-nav" data-section="toolbar">🛠️ Toolbar</button>
       <button class="help-nav" data-section="shortcuts">⌨️ Shortcuts</button>
     </div>
@@ -670,16 +689,33 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-500 mt-2">Entity names are auto-typed by keywords — "PostgreSQL" becomes a db, "BatchJob" becomes a batch node. You can still use explicit prefixes to override.</p>
       </div>
 
+      <!-- ── Linting ── -->
+      <div id="hs-linting" class="help-section">
+        <div class="help-h2">Semantic Linting</div>
+        <div class="help-sub">Warnings appear beside the preview status and as wavy underlines in Smart Input. Click the warning pill to review issues, then click an issue to jump to its source line.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Warning</th><th>What it catches</th></tr></thead>
+          <tbody>
+            <tr><td><code>ORPHAN_NODE</code></td><td>An entity is declared but not connected by any relationship.</td></tr>
+            <tr><td><code>DUPLICATE_LABEL</code></td><td>The same label appears under different entity types, such as <code>app:User</code> and <code>db:User</code>.</td></tr>
+            <tr><td><code>UNKNOWN_PREFIX</code></td><td>A prefix is not one of Meridian's supported entity types.</td></tr>
+            <tr><td><code>INVALID_ARROW</code></td><td>Arrow-like text does not match supported syntax like <code>A --&gt; B</code> or <code>A --label--&gt; B</code>.</td></tr>
+            <tr><td><code>EMPTY_GROUP</code></td><td>An <code>env:</code>, <code>net:</code>, or <code>domain:</code> block has no valid child entities.</td></tr>
+            <tr><td><code>RELATIONSHIP_TO_CONTAINER</code></td><td>A relationship targets a container block instead of a concrete node inside it.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- ── Toolbar ── -->
       <div id="hs-toolbar" class="help-section">
         <div class="help-h2">Toolbar &amp; Pickers</div>
         <div class="help-sub">The toolbar above the Smart Input gives quick access to entity insertion, templates, cloud service icons, and app settings.</div>
 
         <div class="help-h3">🏷️ Entities ▾</div>
-        <p class="text-xs text-gray-400 mb-3">Opens a grid of all 13 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
+        <p class="text-xs text-gray-400 mb-3">Opens a grid of all 12 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
 
         <div class="help-h3">📋 Templates ▾</div>
-        <p class="text-xs text-gray-400 mb-3">Ten pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
+        <p class="text-xs text-gray-400 mb-3">Eight pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
         <table class="help-tbl" style="margin-bottom:12px">
           <thead><tr><th>Template</th><th>What it shows</th></tr></thead>
           <tbody>
@@ -691,10 +727,11 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>📁 File Processing</td><td>FTP / watcher / batch processing pipeline</td></tr>
             <tr><td>🌐 Network Arch</td><td>External, DMZ, and internal net zones</td></tr>
             <tr><td>🏢 Enterprise Domains</td><td>Multi-domain ownership with env grouping</td></tr>
-            <tr><td>🔗 ER Diagram</td><td>Entity-relationship schema with CUSTOMER, ORDER, LINE_ITEM, ADDRESS — switches diagram type automatically</td></tr>
-            <tr><td>📅 Gantt Chart</td><td>Project roadmap across Discovery / Design / Development / Release phases — switches diagram type automatically</td></tr>
           </tbody>
         </table>
+
+        <div class="help-h3">Views ▾</div>
+        <p class="text-xs text-gray-400 mb-3">Loads focused architecture presets for system context, container, deployment, and domain ownership views. Each preset uses the same Smart Input syntax and can be edited like any other diagram.</p>
 
         <div class="help-h3">☁️ Icons ▾ — cloud service icon picker</div>
         <p class="text-xs text-gray-400 mb-2">Browse 140+ named cloud services across four provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
@@ -774,6 +811,8 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>↓ PNG</td><td>Download at 2× (retina) resolution</td></tr>
             <tr><td>Copy ▾</td><td>Copy code · copy with ```mermaid fences · copy as markdown block · copy embed &lt;iframe&gt;</td></tr>
             <tr><td>🔗 Share</td><td>Encode full diagram state into a shareable URL</td></tr>
+            <tr><td>Import</td><td>Load a <code>.meridian.json</code> project, Meridian <code>.mmd</code> bundle, or plain <code>.mmd</code> input file</td></tr>
+            <tr><td>Export ▾</td><td>Download a complete project bundle with input, type, theme, settings, layout, and saved node positions</td></tr>
             <tr><td>Copy embed &lt;iframe&gt;</td><td>Generates an <code>&lt;iframe&gt;</code> snippet pointing to the current diagram in read-only embed mode — paste into any HTML page or Notion/Confluence block</td></tr>
             <tr><td>⊞ Fit</td><td>Auto-fit zoom to the preview window</td></tr>
             <tr><td>⛶ Fullscreen</td><td>Expand preview panel to full width</td></tr>
@@ -787,7 +826,7 @@ BatchJob writes to db:Warehouse</div>
           <tbody>
             <tr><td>Click a node</td><td>Scrolls Smart Input to that entity's definition line and briefly highlights the textarea border. Also opens the node context panel.</td></tr>
             <tr><td>Double-click a node</td><td>Opens the node context panel and immediately activates the rename input — type the new label and press Enter to confirm.</td></tr>
-            <tr><td>Drag a node</td><td>Repositions the node and redraws connected edges in real time. Position is visual only — re-rendering resets layout.</td></tr>
+            <tr><td>Drag a node</td><td>Repositions the node and redraws connected edges in real time. Positions survive re-rendering, page reloads, and project export/import.</td></tr>
             <tr><td>Hover a node → drag the <strong>↗</strong> handle</td><td>Draws a dashed line to a target node; releasing over another node creates an arrow relationship and inserts it into the Smart Input.</td></tr>
             <tr><td>Node context panel → <em>Add node</em></td><td>Opens a form to create a new entity and immediately connect it to the selected node.</td></tr>
             <tr><td>Node context panel → <em>Connect to…</em></td><td>Lists all existing entities; click one to draw an arrow from the selected node.</td></tr>
@@ -938,8 +977,6 @@ BatchJob writes to db:Warehouse</div>
       <option value="TD">Flowchart ↓</option>
       <option value="sequence">Sequence</option>
       <option value="class">Class</option>
-      <option value="er">ER Diagram</option>
-      <option value="gantt">Gantt</option>
     </select>
 
     <!-- Theme -->
@@ -982,6 +1019,21 @@ BatchJob writes to db:Warehouse</div>
       class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
       <span>🔗</span> Share
     </button>
+    <button id="importProjectBtn" title="Import project (.meridian.json or .mmd)"
+      class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
+      Import
+    </button>
+    <div class="relative" id="projectExportWrapper">
+      <button id="exportProjectBtn" title="Export project bundle"
+        class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
+        Export ▾
+      </button>
+      <div id="projectExportMenu" class="copy-menu hidden">
+        <button data-project-export="json">Export .meridian.json</button>
+        <button data-project-export="mmd">Export .mmd bundle</button>
+      </div>
+    </div>
+    <input id="projectFileInput" class="hidden" type="file" accept=".meridian.json,.json,.mmd,application/json,text/plain">
     <button id="undoBtn" title="Undo (Ctrl+Z)" disabled
       class="ur-btn bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
       ↩ Undo
@@ -1060,9 +1112,16 @@ BatchJob writes to db:Warehouse</div>
       <button class="tpl-item" onclick="loadTemplate('fileProcessing');toggleTplPicker(true)"><span class="tpl-item-icon">📁</span>File Processing</button>
       <button class="tpl-item" onclick="loadTemplate('networkArch');toggleTplPicker(true)"><span class="tpl-item-icon">🌐</span>Network Arch</button>
       <button class="tpl-item" onclick="loadTemplate('enterpriseDomains');toggleTplPicker(true)"><span class="tpl-item-icon">🏢</span>Enterprise Domains</button>
-      <div class="tpl-divider"></div>
-      <button class="tpl-item" onclick="loadTemplate('erDiagram');toggleTplPicker(true)"><span class="tpl-item-icon">🔗</span>ER Diagram</button>
-      <button class="tpl-item" onclick="loadTemplate('ganttChart');toggleTplPicker(true)"><span class="tpl-item-icon">📅</span>Gantt Chart</button>
+    </div>
+  </div>
+  <div id="viewPickerWrap" class="flex-shrink-0">
+    <button id="viewPickerBtn" onclick="toggleViewPicker()"
+      class="badge flex-shrink-0" style="background:#1f2937;border-color:#4b5563;color:#9ca3af;" title="Load an architecture view preset">Views ▾</button>
+    <div id="viewPicker">
+      <button class="tpl-item" onclick="loadArchitectureView('systemContext');toggleViewPicker(true)"><span class="tpl-item-icon">S</span>System Context</button>
+      <button class="tpl-item" onclick="loadArchitectureView('container');toggleViewPicker(true)"><span class="tpl-item-icon">C4</span>Container</button>
+      <button class="tpl-item" onclick="loadArchitectureView('deployment');toggleViewPicker(true)"><span class="tpl-item-icon">D</span>Deployment</button>
+      <button class="tpl-item" onclick="loadArchitectureView('domainOwnership');toggleViewPicker(true)"><span class="tpl-item-icon">O</span>Domain Ownership</button>
     </div>
   </div>
 </div>
@@ -1107,6 +1166,7 @@ BatchJob writes to db:Warehouse</div>
     <div id="previewHeader" class="flex items-center gap-2 px-3 py-2 flex-shrink-0">
       <span class="text-xs font-semibold prev-title uppercase tracking-wider">Live Preview</span>
       <span id="previewStatus" class="text-xs ml-1"></span>
+      <button id="lintBtn" class="lint-btn" title="Show semantic warnings"></button>
       <div class="flex-1"></div>
 
       <!-- Zoom controls -->
@@ -1138,6 +1198,8 @@ BatchJob writes to db:Warehouse</div>
       <span style="font-size:10px;color:var(--text-faint);white-space:nowrap">↵ next · ⇧↵ prev · Esc close</span>
       <button onclick="closeNodeFind()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0;line-height:1">✕</button>
     </div>
+
+    <div id="lintPanel"></div>
 
     <!-- Preview scroll area -->
     <div id="previewScroll" class="flex-1 overflow-auto p-4">
@@ -1231,7 +1293,7 @@ const BASE_MERMAID_CONFIG = {
   startOnLoad: false,
   flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
   sequence:   { useMaxWidth: true },
-  securityLevel: 'strict',
+  securityLevel: 'antiscript',
   fontSize: 14,
 };
 
@@ -1395,10 +1457,6 @@ function buildMeridianLanguage(CM) {
       if (stream.eat('{')) { state.inBlock = true;  return 'bracket'; }
       if (stream.eat('}')) { state.inBlock = false; return 'bracket'; }
 
-      // ER / Gantt pass-through keywords
-      if (stream.match(/^(erDiagram|gantt|section|dateFormat|excludes)\b/)) return 'keyword';
-      if (stream.match(/^:(done|active|crit|milestone)\b/)) return 'keyword';
-
       // Arrow operators (order matters — longest first)
       if (stream.match(/^(->>|>>|-\->|<-->|-->|->|--)/)) return 'operator';
 
@@ -1484,6 +1542,7 @@ function buildMeridianEditorTheme(CM) {
     '.cm-tooltip-autocomplete > ul > li[aria-selected]':
       { background: 'var(--accent-bg)', color: 'var(--text-em)' },
     '.cm-lintRange-error': { textDecoration: 'underline wavy var(--err-title)' },
+    '.cm-lintRange-warning': { textDecoration: 'underline wavy var(--warn)' },
   }, { dark: p.dark !== false });
 }
 
@@ -1505,26 +1564,48 @@ function meridianCompletion(context) {
 }
 
 // Lint source — marks render errors in the editor
-let _cmLintDiag = [];
-function meridianLintSource() { return _cmLintDiag; }
+let _cmRenderDiag = [];
+let _cmSemanticDiag = [];
+function meridianLintSource() { return [..._cmSemanticDiag, ..._cmRenderDiag]; }
 
-// Called from renderDiagram error path to highlight the offending line
-function setCmLintError(msg, lineNum) {
+function dispatchCmDiagnostics() {
   if (!_cmView) return;
   const { setDiagnostics } = window.__CM || {};
   if (!setDiagnostics) return;
+  _cmView.dispatch(setDiagnostics(_cmView.state, meridianLintSource()));
+}
+
+function makeCmDiagnostic(issue) {
+  if (!_cmView) return null;
   try {
-    const line = _cmView.state.doc.line(Math.max(1, lineNum || 1));
-    _cmView.dispatch(setDiagnostics(_cmView.state, [{
+    const safeLine = Math.min(_cmView.state.doc.lines, Math.max(1, issue.line || 1));
+    const line = _cmView.state.doc.line(safeLine);
+    return {
       from: line.from, to: line.to,
-      severity: 'error', message: msg,
-    }]));
-  } catch {}
+      severity: issue.severity || 'warning',
+      message: issue.code ? `${issue.code}: ${issue.message}` : issue.message,
+    };
+  } catch { return null; }
+}
+
+// Called from renderDiagram error path to highlight the offending line
+function setCmLintError(msg, lineNum) {
+  const diag = makeCmDiagnostic({ severity: 'error', message: msg, line: lineNum });
+  _cmRenderDiag = diag ? [diag] : [];
+  dispatchCmDiagnostics();
 }
 function clearCmLintError() {
-  if (!_cmView) return;
-  const { setDiagnostics } = window.__CM || {};
-  if (setDiagnostics) _cmView.dispatch(setDiagnostics(_cmView.state, []));
+  _cmRenderDiag = [];
+  dispatchCmDiagnostics();
+}
+function setCmSemanticIssues(issues) {
+  _cmSemanticDiag = issues.map(makeCmDiagnostic).filter(Boolean);
+  dispatchCmDiagnostics();
+}
+function clearAllCmDiagnostics() {
+  _cmRenderDiag = [];
+  _cmSemanticDiag = [];
+  dispatchCmDiagnostics();
 }
 
 // Module-level reference to the EditorView (set in initCM)
@@ -1589,7 +1670,8 @@ config:Port_5432
 
 config:Port_443 --> server:Load_Balancer
 server:Load_Balancer --HTTPS--> app:Web_Frontend
-app:Web_Frontend --via REST_API--> app:App_Server
+app:Web_Frontend --via--> interface:REST_API
+interface:REST_API --> app:App_Server
 app:App_Server --SQL--> db:PostgreSQL
 app:App_Server --session--> instance:Redis_Session
 config:Port_8080 --> app:App_Server
@@ -1617,8 +1699,10 @@ interface:Webhook --> instance:CI_Runner
 config:YAML_Pipeline --> instance:CI_Runner
 instance:CI_Runner --runs--> app:Test_Suite
 instance:CI_Runner --push image--> app:Docker_Registry
-app:Docker_Registry --deploy--> env:Staging
-env:Staging --approve & promote--> env:Production`,
+app:Docker_Registry --deploy--> app:Staging_App
+app:Staging_App --> db:Staging_DB
+app:Staging_App --approve & promote--> app:Prod_App
+app:Prod_App --> db:Prod_DB`,
 
   etlPipeline: `// ETL Batch Pipeline with Pre/Post Dependencies
 env:Orchestrator {
@@ -1728,16 +1812,22 @@ domain:Analytics {
 }
 
 // Cross-domain flows
+instance:K8s_Cluster --> server:API_Gateway
+config:JWT_Config --> app:Auth_Service
+app:Auth_Service --> db:User_DB
 server:API_Gateway --> app:Payment_Service
 server:API_Gateway --> app:Inventory_System
 app:Payment_Service --> app:Auth_Service
 app:Inventory_System --> app:Auth_Service
 app:Billing_API --> db:Transactions_DB
+app:Reporting_Tool --> db:Transactions_DB
 app:Payment_Service --events--> batch:ETL_Pipeline
 app:Inventory_System --events--> batch:ETL_Pipeline
 batch:ETL_Pipeline --> db:Data_Warehouse
 app:BI_Dashboard --> db:Data_Warehouse
-ftp:Supplier_FTP --SFTP--> watcher:Event_Collector`,
+ftp:Supplier_FTP --SFTP--> watcher:Event_Collector
+ftp:Supplier_FTP --feeds--> batch:Stock_Sync
+batch:Stock_Sync --> db:Warehouse_DB`,
 
   cloud: `// Cloud Infrastructure
 env:VPC_us_east_1 {
@@ -1764,63 +1854,136 @@ app:ECS_Cluster --> db:RDS_Primary
 app:ECS_Cluster --session--> db:ElastiCache
 config:Env_Vars --> instance:Lambda_fn
 instance:Lambda_fn --> db:RDS_Primary`,
-
-  erDiagram: `erDiagram
-  CUSTOMER {
-    int    id      PK
-    string name
-    string email
-    string phone
-  }
-  ORDER {
-    int    id      PK
-    date   placed
-    string status
-    float  total
-  }
-  LINE_ITEM {
-    int    id       PK
-    int    quantity
-    float  price
-    string product
-  }
-  ADDRESS {
-    int    id     PK
-    string street
-    string city
-    string country
-  }
-  CUSTOMER ||--o{ ORDER      : "places"
-  ORDER    ||--|{ LINE_ITEM  : "contains"
-  CUSTOMER ||--o{ ADDRESS    : "has"`,
-
-  ganttChart: `gantt
-  title Project Roadmap
-  dateFormat YYYY-MM-DD
-  excludes weekends
-
-  section Discovery
-    Stakeholder interviews   :done,    d1, 2024-01-08, 5d
-    Requirements doc         :done,    d2, after d1,   4d
-    Tech spike               :done,    d3, after d2,   3d
-
-  section Design
-    Wireframes               :done,    s1, 2024-01-22, 6d
-    UI mockups               :active,  s2, after s1,   8d
-    Design review            :         s3, after s2,   2d
-
-  section Development
-    API layer                :         p1, after s3,  14d
-    Frontend                 :         p2, after s3,  18d
-    Integration tests        :         p3, after p1,   5d
-
-  section Release
-    Staging deploy           :         r1, after p3,   2d
-    UAT sign-off             :         r2, after r1,   3d
-    Production release       :crit,    r3, after r2,   1d`,
 };
 
-const PASSTHROUGH_TYPES = new Set(['er', 'gantt']);
+const ARCHITECTURE_VIEWS = {
+  systemContext: `// Architecture View: System Context
+domain:Customer_Channels {
+  app:Web_App
+  app:Mobile_App
+}
+domain:Core_Platform {
+  app:Meridian_Platform
+  interface:Public_API
+  app:Admin_Portal
+}
+domain:External_Systems {
+  app:Identity_Provider
+  app:Payment_Gateway
+  interface:Partner_API
+  watcher:Monitoring_Service
+}
+
+app:Web_App --> interface:Public_API
+app:Mobile_App --> interface:Public_API
+interface:Public_API --> app:Meridian_Platform
+app:Admin_Portal --> app:Meridian_Platform
+app:Meridian_Platform --auth--> app:Identity_Provider
+app:Meridian_Platform --payments--> app:Payment_Gateway
+app:Meridian_Platform --sync--> interface:Partner_API
+watcher:Monitoring_Service --> app:Meridian_Platform`,
+
+  container: `// Architecture View: Container
+env:Application {
+  app:Web_UI
+  app:Admin_UI
+  interface:API_Gateway
+  app:Core_Service
+  app:Billing_Service
+  batch:Worker_Service
+}
+env:Data {
+  db:Operational_DB
+  db:Analytics_DB
+  instance:Redis_Cache
+  interface:Event_Bus
+}
+config:OIDC_Config
+watcher:Observability
+
+app:Web_UI --> interface:API_Gateway
+app:Admin_UI --> interface:API_Gateway
+interface:API_Gateway --> app:Core_Service
+interface:API_Gateway --> app:Billing_Service
+config:OIDC_Config --> interface:API_Gateway
+app:Core_Service --> db:Operational_DB
+app:Core_Service --cache--> instance:Redis_Cache
+app:Billing_Service --> db:Operational_DB
+app:Core_Service --events--> interface:Event_Bus
+interface:Event_Bus --> batch:Worker_Service
+batch:Worker_Service --> db:Analytics_DB
+watcher:Observability --> app:Core_Service`,
+
+  deployment: `// Architecture View: Deployment
+net:External {
+  instance:Browser
+  server:CDN
+}
+net:DMZ {
+  server:WAF
+  server:Load_Balancer
+}
+net:Internal {
+  instance:K8s_Cluster
+  app:API_Pods
+  batch:Worker_Pods
+  db:Postgres_Primary
+  instance:Redis
+}
+config:TLS_Certificate
+config:K8s_Secrets
+watcher:Log_Agent
+
+instance:Browser --HTTPS--> server:CDN
+server:CDN --> server:WAF
+server:WAF --> server:Load_Balancer
+config:TLS_Certificate --> server:Load_Balancer
+server:Load_Balancer --> app:API_Pods
+instance:K8s_Cluster --> app:API_Pods
+instance:K8s_Cluster --> batch:Worker_Pods
+config:K8s_Secrets --> app:API_Pods
+app:API_Pods --> db:Postgres_Primary
+app:API_Pods --cache--> instance:Redis
+app:API_Pods --jobs--> batch:Worker_Pods
+watcher:Log_Agent --> instance:K8s_Cluster`,
+
+  domainOwnership: `// Architecture View: Domain Ownership
+domain:Identity {
+  app:Auth_Service
+  db:User_DB
+  config:OIDC_Config
+}
+domain:Commerce {
+  app:Checkout_Service
+  app:Payment_Service
+  db:Orders_DB
+}
+domain:Fulfillment {
+  app:Inventory_Service
+  batch:Allocation_Job
+  db:Stock_DB
+}
+domain:Data_Platform {
+  interface:Event_Stream
+  batch:ETL_Pipeline
+  db:Warehouse
+  app:BI_Dashboard
+}
+
+config:OIDC_Config --> app:Auth_Service
+app:Auth_Service --> db:User_DB
+app:Checkout_Service --> app:Auth_Service
+app:Checkout_Service --> app:Payment_Service
+app:Checkout_Service --> db:Orders_DB
+app:Checkout_Service --> app:Inventory_Service
+app:Inventory_Service --> db:Stock_DB
+app:Inventory_Service --> batch:Allocation_Job
+app:Checkout_Service --events--> interface:Event_Stream
+app:Payment_Service --events--> interface:Event_Stream
+interface:Event_Stream --> batch:ETL_Pipeline
+batch:ETL_Pipeline --> db:Warehouse
+app:BI_Dashboard --> db:Warehouse`,
+};
 
 // ════════════════════════════════════════════════════════════════
 //  PARSER
@@ -1828,6 +1991,19 @@ const PASSTHROUGH_TYPES = new Set(['er', 'gantt']);
 const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu';
 const _pfxTest  = new RegExp(`^(?:${_PFX_STR}):`, 'i');
 const _splitRe  = new RegExp(`\\s*,\\s*|\\s+(?=(?:${_PFX_STR}):)`, 'i');
+const TYPE_ALIAS_MAP = {
+  env:'env', app:'app', db:'db', database:'db',
+  server:'server', srv:'server',
+  instance:'instance', inst:'instance',
+  interface:'interface', iface:'interface',
+  config:'config', cfg:'config', conf:'config',
+  batch:'batch', btch:'batch',
+  watcher:'watcher', watch:'watcher',
+  ftp:'ftp', sftp:'ftp', ftps:'ftp',
+  net:'net', network:'net', zone:'net',
+  domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
+};
+const CONTAINER_TYPES = new Set(['env', 'net', 'domain']);
 
 class SmartParser {
   constructor() { this.reset(); }
@@ -1838,6 +2014,10 @@ class SmartParser {
     this.environments  = new Map(); // envId → [childIds]
     this.netZones      = new Map(); // envId → 'external'|'internal'|'dmz'
     this.domains       = new Map(); // domainId → [childIds]  (business domain ownership)
+    this.entitySources = new Map(); // id -> [{ line, raw, token, prefix }]
+    this.relationshipSources = [];  // index-aligned with relationships
+    this.groupSources  = new Map(); // groupId -> { line, raw, childIds }
+    this.parseIssues   = [];        // semantic parser issues before validation
   }
 
   // ── Pre-process: join multi-line env/net blocks into single lines ──
@@ -1847,14 +2027,16 @@ class SmartParser {
     let bPrefix  = 'env'; // 'env' or 'net'
     let bName    = '';
     let bKids    = [];
+    let bLine    = 1;
 
-    for (const raw of input.split('\n')) {
+    input.split('\n').forEach((raw, idx) => {
+      const lineNo = idx + 1;
       const line = raw.trim();
 
       if (inBlock) {
         if (line === '}') {
-          out.push(`${bPrefix}:${bName} { ${bKids.join(' ')} }`);
-          inBlock = false; bPrefix = 'env'; bName = ''; bKids = [];
+          out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw });
+          inBlock = false; bPrefix = 'env'; bName = ''; bKids = []; bLine = lineNo;
         } else if (line && !line.startsWith('//') && !line.startsWith('#')) {
           bKids.push(...line.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
         }
@@ -1865,14 +2047,15 @@ class SmartParser {
           inBlock = true;
           bPrefix = opener[1].toLowerCase();
           bName   = opener[2];
+          bLine   = lineNo;
         } else {
-          out.push(raw);
+          out.push({ text: raw, line: lineNo, raw });
         }
       }
-    }
-    if (inBlock) out.push(`${bPrefix}:${bName} { ${bKids.join(' ')} }`);
+    });
+    if (inBlock) out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw: `${bPrefix}:${bName} {` });
 
-    return out.join('\n');
+    return out;
   }
 
   makeId(type, label) {
@@ -1880,17 +2063,29 @@ class SmartParser {
     return `${type.toUpperCase()}_${safe}`;
   }
 
-  addEntity(type, label) {
+  addIssue(severity, code, message, line = 1, meta = {}) {
+    this.parseIssues.push({ severity, code, message, line, ...meta });
+  }
+
+  addEntity(type, label, source = null) {
     const id = this.makeId(type, label);
     if (!this.entities.has(id)) this.entities.set(id, { type, label, id });
+    if (source) {
+      const list = this.entitySources.get(id) || [];
+      list.push({ ...source, id, type, label });
+      this.entitySources.set(id, list);
+    }
     return id;
   }
 
-  addRel(fromId, toId, label = '', bidir = false, style = 'normal') {
+  addRel(fromId, toId, label = '', bidir = false, style = 'normal', source = null) {
     const dup = this.relationships.find(r =>
       r.from === fromId && r.to === toId && r.label === label && r.bidir === bidir
     );
-    if (!dup) this.relationships.push({ from: fromId, to: toId, label, bidir, style });
+    if (!dup) {
+      this.relationships.push({ from: fromId, to: toId, label, bidir, style });
+      this.relationshipSources.push(source || {});
+    }
   }
 
   autoType(token) {
@@ -1910,7 +2105,7 @@ class SmartParser {
     return 'app';
   }
 
-  parseToken(token) {
+  parseToken(token, line = 1, raw = '') {
     token = (token || '').trim();
     if (!token) return null;
     // Skip structural punctuation and stop-words
@@ -1918,33 +2113,29 @@ class SmartParser {
     if (/^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
 
     // Explicit prefix: type:Label
-    const pm = token.match(/^(env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu):\s*(.+)$/i);
+    const unknownPrefix = token.match(/^([A-Za-z][\w-]*):/);
+    if (unknownPrefix && !TYPE_ALIAS_MAP[unknownPrefix[1].toLowerCase()]) {
+      this.addIssue('warning', 'UNKNOWN_PREFIX', `Unknown prefix "${unknownPrefix[1]}:"; treating it as plain text`, line, { token });
+      return null;
+    }
+
+    const pm = token.match(/^([A-Za-z][\w-]*):\s*(.+)$/i);
     if (pm) {
-      const MAP = {
-        env:'env', app:'app', db:'db', database:'db',
-        server:'server', srv:'server',
-        instance:'instance', inst:'instance',
-        interface:'interface', iface:'interface',
-        config:'config', cfg:'config', conf:'config',
-        batch:'batch', btch:'batch',
-        watcher:'watcher', watch:'watcher',
-        ftp:'ftp', sftp:'ftp', ftps:'ftp',
-        net:'net', network:'net', zone:'net',
-        domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
-      };
-      const type  = MAP[pm[1].toLowerCase()];
+      const prefix = pm[1].toLowerCase();
+      const type  = TYPE_ALIAS_MAP[prefix];
       const label = pm[2].replace(/["']/g, '').trim();
-      return { type, label, id: this.addEntity(type, label) };
+      return { type, label, id: this.addEntity(type, label, { line, raw, token, prefix }) };
     }
 
     // Auto-detect
     const label = token.replace(/["']/g, '').trim();
     if (!label) return null;
     const type = this.autoType(label);
-    return { type, label, id: this.addEntity(type, label) };
+    return { type, label, id: this.addEntity(type, label, { line, raw, token, prefix: '' }) };
   }
 
-  parseLine(line) {
+  parseLine(line, lineNo = 1, rawLine = line) {
+    const raw = rawLine || line;
     line = line.trim();
     if (!line || /^[/#]/.test(line)) return;
 
@@ -1954,22 +2145,25 @@ class SmartParser {
       const blockType = envBlock[1].toLowerCase();
       const blockName = envBlock[2];
       const childIds  = envBlock[3].trim().split(_splitRe).filter(Boolean)
-        .map(k => this.parseToken(k.trim())?.id).filter(Boolean);
+        .map(k => this.parseToken(k.trim(), lineNo, raw)?.id).filter(Boolean);
 
       if (blockType === 'net') {
-        const netId = this.addEntity('net', blockName);
+        const netId = this.addEntity('net', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
         this.environments.set(netId, childIds);
+        this.groupSources.set(netId, { line: lineNo, raw, childIds });
         const lo = blockName.toLowerCase();
         const zt = lo.includes('ext') || lo.includes('wan') || lo.includes('public') || lo.includes('internet') ? 'external'
                  : lo.includes('dmz') || lo.includes('demil') ? 'dmz'
                  : 'internal';
         this.netZones.set(netId, zt);
       } else if (blockType === 'domain') {
-        const domId = this.addEntity('domain', blockName);
+        const domId = this.addEntity('domain', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
         this.domains.set(domId, childIds);
+        this.groupSources.set(domId, { line: lineNo, raw, childIds });
       } else {
-        const envId = this.addEntity('env', blockName);
+        const envId = this.addEntity('env', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
         this.environments.set(envId, childIds);
+        this.groupSources.set(envId, { line: lineNo, raw, childIds });
       }
       return;
     }
@@ -1978,9 +2172,9 @@ class SmartParser {
     if (line.includes('>>') && !line.includes('->')) {
       const parts = line.split(/\s*>>\s*/).map(s => s.trim()).filter(Boolean);
       if (parts.length >= 2) {
-        const ents = parts.map(p => this.parseToken(p)).filter(Boolean);
+        const ents = parts.map(p => this.parseToken(p, lineNo, raw)).filter(Boolean);
         for (let i = 0; i < ents.length - 1; i++) {
-          this.addRel(ents[i].id, ents[i + 1].id, 'triggers', false, 'post');
+          this.addRel(ents[i].id, ents[i + 1].id, 'triggers', false, 'post', { line: lineNo, raw });
         }
         return;
       }
@@ -1990,9 +2184,9 @@ class SmartParser {
     const biRe = /^(.+?)\s*<-+>\s*(.+)$/;
     const bi   = line.match(biRe);
     if (bi) {
-      const from = this.parseToken(bi[1].trim());
-      const to   = this.parseToken(bi[2].trim());
-      if (from && to) this.addRel(from.id, to.id, '', true);
+      const from = this.parseToken(bi[1].trim(), lineNo, raw);
+      const to   = this.parseToken(bi[2].trim(), lineNo, raw);
+      if (from && to) this.addRel(from.id, to.id, '', true, 'normal', { line: lineNo, raw });
       return;
     }
 
@@ -2005,8 +2199,8 @@ class SmartParser {
         const il = am[2].match(/^--([^-]+)-->/);
         if (il) label = il[1].trim();
       }
-      const from = this.parseToken(am[1].trim());
-      const to   = this.parseToken(am[4].trim());
+      const from = this.parseToken(am[1].trim(), lineNo, raw);
+      const to   = this.parseToken(am[4].trim(), lineNo, raw);
       if (from && to) {
         // Detect pre/post dependency style from label
         const lbl = label.toLowerCase().trim();
@@ -2014,8 +2208,13 @@ class SmartParser {
           (lbl === 'pre'  || lbl.startsWith('pre ')  || lbl.startsWith('pre-')  || lbl === 'prerequisite' || lbl === 'requires' || lbl === 'before') ? 'pre'  :
           (lbl === 'post' || lbl.startsWith('post ') || lbl.startsWith('post-') || lbl === 'triggers'     || lbl === 'then'     || lbl === 'after')  ? 'post' :
           'normal';
-        this.addRel(from.id, to.id, label, false, style);
+        this.addRel(from.id, to.id, label, false, style, { line: lineNo, raw });
       }
+      return;
+    }
+
+    if (/[<=>-]{2,}|->|=>/.test(line)) {
+      this.addIssue('warning', 'INVALID_ARROW', 'Invalid or incomplete arrow syntax; use A --> B, A --label--> B, A <--> B, or A >> B', lineNo, { raw });
       return;
     }
 
@@ -2038,9 +2237,9 @@ class SmartParser {
       if (re.test(line)) {
         const parts = line.split(re);
         if (parts.length >= 2) {
-          const from = this.parseToken(parts[0].trim());
-          const to   = this.parseToken(parts[1].trim());
-          if (from && to) { this.addRel(from.id, to.id, label); return; }
+          const from = this.parseToken(parts[0].trim(), lineNo, raw);
+          const to   = this.parseToken(parts[1].trim(), lineNo, raw);
+          if (from && to) { this.addRel(from.id, to.id, label, false, 'normal', { line: lineNo, raw }); return; }
         }
       }
     }
@@ -2050,9 +2249,11 @@ class SmartParser {
     line.split(_splitRe).filter(Boolean).forEach(chunk => {
       const t = chunk.trim();
       if (_pfxTest.test(t)) {
-        this.parseToken(t);                                // multi-word prefixed label
+        this.parseToken(t, lineNo, raw);                    // multi-word prefixed label
+      } else if (/^[A-Za-z][\w-]*:/.test(t)) {
+        this.parseToken(t, lineNo, raw);                    // unsupported prefix warning
       } else {
-        t.split(/\s+/).filter(Boolean).forEach(w => this.parseToken(w)); // bare auto-type words
+        t.split(/\s+/).filter(Boolean).forEach(w => this.parseToken(w, lineNo, raw)); // bare auto-type words
       }
     });
   }
@@ -2277,10 +2478,75 @@ class SmartParser {
   }
 
   // ── Main parse entry ─────────────────────────────────────────
+  validate() {
+    const issues = [...this.parseIssues];
+    const used = new Set(this.relationships.flatMap(r => [r.from, r.to]));
+    const labelOwners = new Map();
+
+    for (const [id, e] of this.entities) {
+      const sources = this.entitySources.get(id) || [];
+      const first = sources[0] || { line: 1 };
+      const key = e.label.trim().toLowerCase().replace(/[\s_-]+/g, ' ');
+      const existing = labelOwners.get(key);
+      if (existing && existing.id !== id) {
+        issues.push({
+          severity: 'warning',
+          code: 'DUPLICATE_LABEL',
+          message: `Duplicate label "${e.label}" appears as ${existing.type} and ${e.type}`,
+          line: first.line,
+          entityId: id,
+        });
+      } else {
+        labelOwners.set(key, { id, type: e.type });
+      }
+
+      if (!CONTAINER_TYPES.has(e.type) && !used.has(id)) {
+        issues.push({
+          severity: 'warning',
+          code: 'ORPHAN_NODE',
+          message: `Node "${e.label}" has no relationships`,
+          line: first.line,
+          entityId: id,
+        });
+      }
+    }
+
+    for (const [groupId, src] of this.groupSources) {
+      if (!src.childIds || src.childIds.length === 0) {
+        const group = this.entities.get(groupId);
+        issues.push({
+          severity: 'warning',
+          code: 'EMPTY_GROUP',
+          message: `${group?.type || 'Group'} "${group?.label || groupId}" has no valid child entities`,
+          line: src.line,
+          entityId: groupId,
+        });
+      }
+    }
+
+    this.relationships.forEach((rel, idx) => {
+      const source = this.relationshipSources[idx] || { line: 1 };
+      [rel.from, rel.to].forEach(id => {
+        const e = this.entities.get(id);
+        if (e && CONTAINER_TYPES.has(e.type)) {
+          issues.push({
+            severity: 'warning',
+            code: 'RELATIONSHIP_TO_CONTAINER',
+            message: `Relationship connects to container "${e.label}"; connect to a concrete entity inside it instead`,
+            line: source.line,
+            entityId: id,
+          });
+        }
+      });
+    });
+
+    return issues.sort((a, b) => (a.line || 1) - (b.line || 1));
+  }
+
   parse(input, type) {
     this.reset();
     const processed = this.preprocess(input);
-    processed.split('\n').forEach(line => this.parseLine(line));
+    processed.forEach(entry => this.parseLine(entry.text, entry.line, entry.raw || entry.text));
 
     switch (type) {
       case 'sequence': return this.toSequence();
@@ -2300,6 +2566,25 @@ let zoom             = 1;
 let isFullscreen     = false;
 let _prevRenderEmpty  = true;
 let _lastRenderedIds  = new Set();
+let semanticIssues    = [];
+
+const DEFAULT_DIAGRAM_TYPE = 'LR';
+const SUPPORTED_DIAGRAM_TYPES = new Set(['LR', 'TD', 'sequence', 'class']);
+
+function normalizeDiagramType(type) {
+  return SUPPORTED_DIAGRAM_TYPES.has(type) ? type : DEFAULT_DIAGRAM_TYPE;
+}
+
+function isSupportedDiagramType(type) {
+  return SUPPORTED_DIAGRAM_TYPES.has(type);
+}
+
+function setDiagramType(type) {
+  const normalized = normalizeDiagramType(type);
+  const el = document.getElementById('diagramType');
+  if (el) el.value = normalized;
+  return normalized;
+}
 
 // $input is assigned to the adapter object after CM initialises (see initCM)
 let $input = null;
@@ -2310,6 +2595,8 @@ const $count    = document.getElementById('entityCount');
 const $status   = document.getElementById('statusLeft');
 const $pstatus  = document.getElementById('previewStatus');
 const $zoomDisp = document.getElementById('zoomDisplay');
+const $lintBtn  = document.getElementById('lintBtn');
+const $lintPanel = document.getElementById('lintPanel');
 
 // ════════════════════════════════════════════════════════════════
 //  UNDO / REDO  — delegated to CodeMirror 6 history extension
@@ -2403,6 +2690,16 @@ function toggleTplPicker(forceClose) {
   const open = p.classList.contains('vis');
   if (forceClose || open) { p.classList.remove('vis'); return; }
   const r = document.getElementById('tplPickerBtn').getBoundingClientRect();
+  p.style.top  = (r.bottom + 6) + 'px';
+  p.style.left = r.left + 'px';
+  p.classList.add('vis');
+}
+
+function toggleViewPicker(forceClose) {
+  const p = document.getElementById('viewPicker');
+  const open = p.classList.contains('vis');
+  if (forceClose || open) { p.classList.remove('vis'); return; }
+  const r = document.getElementById('viewPickerBtn').getBoundingClientRect();
   p.style.top  = (r.bottom + 6) + 'px';
   p.style.left = r.left + 'px';
   p.classList.add('vis');
@@ -3232,6 +3529,7 @@ document.addEventListener('click', (e) => {
   const inConnect = !!e.target.closest('#nodeConnectPanel');
   const inShape   = !!e.target.closest('#shapePickerWrap');
   const inTpl     = !!e.target.closest('#tplPickerWrap');
+  const inView    = !!e.target.closest('#viewPickerWrap');
   const inIcon    = !!e.target.closest('#iconPickerWrap');
 
   if (!inCtx)                closeNodeCtx();
@@ -3239,6 +3537,7 @@ document.addEventListener('click', (e) => {
   if (!inConnect && !inCtx)  $nodeConnect.classList.remove('vis');
   if (!inShape)              toggleShapePicker(true);
   if (!inTpl)                toggleTplPicker(true);
+  if (!inView)               toggleViewPicker(true);
   if (!inIcon)               toggleIconPicker(true);
 });
 
@@ -3309,8 +3608,48 @@ function scrollToNewNodes() {
   if (node) node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
 
+function getMermaidErrorLine(err) {
+  const msg = err?.str || err?.message || String(err || '');
+  const m = msg.match(/line\s+(\d+)/i) || msg.match(/on line\s+(\d+)/i);
+  return m ? parseInt(m[1], 10) : 1;
+}
+
+function jumpToSourceLine(lineNo) {
+  if (!_cmView || !lineNo) return;
+  const line = _cmView.state.doc.line(Math.min(_cmView.state.doc.lines, Math.max(1, lineNo)));
+  _cmView.dispatch({
+    selection: { anchor: line.from, head: line.to },
+    effects: window.__CM.EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 40 }),
+  });
+  _cmView.focus();
+}
+
+function renderSemanticIssues(issues) {
+  semanticIssues = issues || [];
+  const warningCount = semanticIssues.filter(i => i.severity !== 'error').length;
+  const errorCount = semanticIssues.filter(i => i.severity === 'error').length;
+  setCmSemanticIssues(semanticIssues);
+
+  if (!semanticIssues.length) {
+    $lintBtn.classList.remove('vis');
+    $lintBtn.textContent = '';
+    $lintPanel.classList.remove('vis');
+    $lintPanel.innerHTML = '';
+    return;
+  }
+
+  $lintBtn.classList.add('vis');
+  $lintBtn.textContent = `${errorCount ? `${errorCount} error${errorCount === 1 ? '' : 's'}` : ''}${errorCount && warningCount ? ' · ' : ''}${warningCount ? `${warningCount} warning${warningCount === 1 ? '' : 's'}` : ''}`;
+  $lintPanel.innerHTML = semanticIssues.map((issue, idx) => `
+    <div class="lint-item" data-lint-idx="${idx}">
+      <span class="lint-code">${esc(issue.code || issue.severity)}</span>
+      <span class="lint-msg">${esc(issue.message || '')}</span>
+      <span class="lint-line">L${issue.line || 1}</span>
+    </div>`).join('');
+}
+
 async function renderDiagram(code) {
-  if (!code.trim()) { showPlaceholder(); return; }
+  if (!code.trim()) { clearCmLintError(); showPlaceholder(); return; }
   try {
     const id = 'mg_' + Date.now();
     const currentTheme = document.getElementById('mermaidTheme').value;
@@ -3342,12 +3681,15 @@ async function renderDiagram(code) {
     attachDragToNodes();
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
+    clearCmLintError();
     $pstatus.textContent = '✓ OK';
     $pstatus.style.color = 'var(--ok)';
-    $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${[...parser.environments.keys()].length} groups`;
+    const warnCount = semanticIssues.length;
+    $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${[...parser.environments.keys()].length} groups${warnCount ? ` · ${warnCount} warning${warnCount === 1 ? '' : 's'}` : ''}`;
     scrollToNewNodes();
   } catch (err) {
     _prevRenderEmpty = true;
+    setCmLintError(err.message || String(err), getMermaidErrorLine(err));
     $preview.innerHTML = `<div class="render-err"><h4>⚠️ Render Error</h4><pre>${esc(err.message || String(err))}</pre></div>`;
     $pstatus.textContent = '⚠️ Error';
     $pstatus.style.color = 'var(--err-title)';
@@ -3362,6 +3704,9 @@ function onInput() {
   const input = $input.value;
 
   if (!input.trim()) {
+    parser.reset();
+    renderSemanticIssues([]);
+    clearAllCmDiagnostics();
     $indic.textContent = '';
     $count.textContent = '';
     $status.textContent = 'Ready · Start typing or choose a template';
@@ -3371,20 +3716,15 @@ function onInput() {
     return;
   }
 
-  const type = document.getElementById('diagramType').value;
+  const type = setDiagramType(document.getElementById('diagramType').value);
 
-  if (PASSTHROUGH_TYPES.has(type)) {
-    lastCode = input;
-    $indic.textContent = type === 'er' ? 'ER diagram' : 'Gantt chart';
-    $count.textContent = '';
-  } else {
-    lastCode = parser.parse(input, type);
-    const ec = parser.entities.size;
-    const rc = parser.relationships.length;
-    const gc = [...parser.environments.keys()].length;
-    $indic.textContent = ec ? `${ec} entities` : '';
-    $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
-  }
+  lastCode = parser.parse(input, type);
+  renderSemanticIssues(parser.validate());
+  const ec = parser.entities.size;
+  const rc = parser.relationships.length;
+  const gc = [...parser.environments.keys()].length;
+  $indic.textContent = ec ? `${ec} entities` : '';
+  $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
 
   clearTimeout(renderTimer);
   renderTimer = setTimeout(() => renderDiagram(lastCode), RENDER_DEBOUNCE_MS);
@@ -3454,10 +3794,20 @@ document.getElementById('mermaidTheme').addEventListener('change', () => {
 // ════════════════════════════════════════════════════════════════
 //  COPY
 // ════════════════════════════════════════════════════════════════
+$lintBtn.addEventListener('click', () => {
+  $lintPanel.classList.toggle('vis');
+});
+$lintPanel.addEventListener('click', (e) => {
+  const item = e.target.closest('.lint-item');
+  if (!item) return;
+  const issue = semanticIssues[parseInt(item.dataset.lintIdx, 10)];
+  if (issue) jumpToSourceLine(issue.line);
+});
+
 function buildShareUrl() {
   const state = encodeState(
     $input.value,
-    document.getElementById('diagramType').value,
+    normalizeDiagramType(document.getElementById('diagramType').value),
     document.getElementById('mermaidTheme').value
   );
   return location.origin + location.pathname + '#d:' + state;
@@ -3502,11 +3852,177 @@ document.getElementById('copyDropBtn').addEventListener('click', (e) => {
 
 document.addEventListener('click', () => {
   document.getElementById('copyMenu').classList.add('hidden');
+  document.getElementById('projectExportMenu').classList.add('hidden');
 });
 
 // ════════════════════════════════════════════════════════════════
 //  EXPORT
 // ════════════════════════════════════════════════════════════════
+const PROJECT_FORMAT = 'meridian.project';
+const PROJECT_VERSION = 1;
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function encodeProjectMeta(data) {
+  const json = JSON.stringify(data);
+  const bytes = new TextEncoder().encode(json);
+  return btoa(String.fromCharCode(...bytes));
+}
+
+function decodeProjectMeta(encoded) {
+  const bytes = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+  return JSON.parse(new TextDecoder().decode(bytes));
+}
+
+function cleanNodePositions(value) {
+  const out = {};
+  Object.entries(value || {}).forEach(([id, pos]) => {
+    const dx = Number(pos?.dx);
+    const dy = Number(pos?.dy);
+    if (id && Number.isFinite(dx) && Number.isFinite(dy)) out[id] = { dx, dy };
+  });
+  return out;
+}
+
+function currentProjectBundle() {
+  posLoad();
+  return {
+    format: PROJECT_FORMAT,
+    version: PROJECT_VERSION,
+    savedAt: new Date().toISOString(),
+    input: $input.value,
+    type: normalizeDiagramType(document.getElementById('diagramType').value),
+    theme: document.getElementById('mermaidTheme').value,
+    settings: {
+      editor: cloneJson(_editorSettings),
+      diagram: cloneJson(_diagramSettings),
+    },
+    layout: {
+      split: document.getElementById('leftPanel').style.width || '45%',
+      zoom,
+    },
+    nodePositions: cleanNodePositions(_nodePositions),
+  };
+}
+
+function projectFilename(ext) {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  return `meridian-project-${stamp}.${ext}`;
+}
+
+function downloadTextFile(filename, text, type) {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportProject(format = 'json') {
+  const bundle = currentProjectBundle();
+  if (format === 'mmd') {
+    const header = `%% meridian-project: ${encodeProjectMeta(bundle)} %%`;
+    downloadTextFile(projectFilename('mmd'), `${header}\n${bundle.input}\n`, 'text/plain;charset=utf-8');
+    toast('Project exported as .mmd');
+    return;
+  }
+  downloadTextFile(projectFilename('meridian.json'), JSON.stringify(bundle, null, 2), 'application/json;charset=utf-8');
+  toast('Project exported as .meridian.json');
+}
+
+function parseProjectBundle(text, fileName = '') {
+  const trimmed = text.trimStart();
+  const meta = trimmed.match(/^%%\s*meridian-project:\s*([A-Za-z0-9+/=_-]+)\s*%%/);
+  if (meta) return decodeProjectMeta(meta[1]);
+  if (/\.json$/i.test(fileName) || trimmed.startsWith('{')) return JSON.parse(text);
+  return {
+    format: PROJECT_FORMAT,
+    version: PROJECT_VERSION,
+    input: text,
+    type: normalizeDiagramType(document.getElementById('diagramType').value),
+    theme: document.getElementById('mermaidTheme').value,
+    settings: {},
+    nodePositions: {},
+  };
+}
+
+function refreshSettingsControls() {
+  document.querySelectorAll('.theme-swatch')
+    .forEach(s => s.classList.toggle('active', s.dataset.themeKey === _editorSettings.theme));
+  document.querySelectorAll('.fsz-btn')
+    .forEach(b => b.classList.toggle('active', b.textContent === `${_editorSettings.fontSize || 13}px`));
+  const ffPicker = document.getElementById('fontFamilyPicker');
+  if (ffPicker) ffPicker.value = _editorSettings.fontFamily || 'system';
+  rebuildTokenColorGrid();
+  syncDiagramSettingsUI();
+}
+
+function applyProjectBundle(bundle) {
+  if (!bundle || typeof bundle !== 'object') throw new Error('Invalid project file');
+  const input = typeof bundle.input === 'string' ? bundle.input : '';
+  const type = normalizeDiagramType(bundle.type);
+  const theme = [...document.getElementById('mermaidTheme').options].some(o => o.value === bundle.theme)
+    ? bundle.theme : 'default';
+
+  if (bundle.settings?.editor && typeof bundle.settings.editor === 'object') {
+    _editorSettings = { ..._editorSettings, ...bundle.settings.editor };
+    _editorSettings.tokenColors = { ...(bundle.settings.editor.tokenColors || {}) };
+  }
+  if (bundle.settings?.diagram && typeof bundle.settings.diagram === 'object') {
+    _diagramSettings = { ..._diagramSettings, ...bundle.settings.diagram };
+  }
+  saveSettings();
+  applyEditorTheme();
+  refreshSettingsControls();
+
+  $input.value = input;
+  _savedCursor = input.length;
+  setDiagramType(type);
+  document.getElementById('mermaidTheme').value = theme;
+
+  posLoad();
+  _nodePositions = cleanNodePositions(bundle.nodePositions || bundle.positions);
+  posSave();
+
+  if (bundle.layout?.split) document.getElementById('leftPanel').style.width = bundle.layout.split;
+  if (Number.isFinite(Number(bundle.layout?.zoom))) setZoom(Number(bundle.layout.zoom));
+
+  pushHistory($input.value);
+  onInput();
+  resetHistory();
+  saveToStorage();
+}
+
+document.getElementById('exportProjectBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  document.getElementById('projectExportMenu').classList.toggle('hidden');
+});
+document.getElementById('projectExportMenu').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-project-export]');
+  if (!btn) return;
+  exportProject(btn.dataset.projectExport);
+  document.getElementById('projectExportMenu').classList.add('hidden');
+});
+document.getElementById('importProjectBtn').addEventListener('click', () => {
+  document.getElementById('projectFileInput').click();
+});
+document.getElementById('projectFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  e.target.value = '';
+  if (!file) return;
+  try {
+    const text = await file.text();
+    applyProjectBundle(parseProjectBundle(text, file.name));
+    toast('Project imported');
+  } catch (err) {
+    toast(`Import failed: ${err.message || err}`, 5000);
+  }
+});
+
 document.getElementById('downloadSvg').addEventListener('click', () => {
   const svg = $preview.querySelector('svg');
   if (!svg) return;
@@ -3661,6 +4177,12 @@ function decodeState(b64) {
   } catch { return null; }
 }
 
+function getHashStatePayload() {
+  const hash = location.hash;
+  if (!hash.startsWith('#d:')) return '';
+  return hash.slice(3).split('&')[0];
+}
+
 document.getElementById('shareBtn').addEventListener('click', () => {
   const url = buildShareUrl();
   const state = url.split('#d:')[1];
@@ -3676,12 +4198,13 @@ document.getElementById('shareBtn').addEventListener('click', () => {
 });
 
 function loadFromHash(skipText) {
-  const hash = location.hash;
-  if (!hash.startsWith('#d:')) return false;
-  const state = decodeState(hash.slice(3));
+  const payload = getHashStatePayload();
+  if (!payload) return false;
+  const state = decodeState(payload);
   if (!state) return false;
+  if (state.t && !isSupportedDiagramType(state.t)) return false;
   if (!skipText && state.i)  $input.value = state.i;
-  if (state.t)  document.getElementById('diagramType').value = state.t;
+  setDiagramType(state.t);
   if (state.th) document.getElementById('mermaidTheme').value = state.th;
   return true;
 }
@@ -3695,7 +4218,7 @@ function saveToStorage() {
   try {
     localStorage.setItem(LS_KEY, JSON.stringify({
       input: $input.value,
-      type:  document.getElementById('diagramType').value,
+      type:  normalizeDiagramType(document.getElementById('diagramType').value),
       theme: document.getElementById('mermaidTheme').value,
       split: document.getElementById('leftPanel').style.width,
       zoom,
@@ -3709,8 +4232,9 @@ function loadFromStorage(skipText) {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
+    if (s.type && !isSupportedDiagramType(s.type)) return false;
     if (!skipText && s.input) $input.value = s.input;
-    if (s.type)  document.getElementById('diagramType').value = s.type;
+    setDiagramType(s.type);
     if (s.theme) document.getElementById('mermaidTheme').value = s.theme;
     if (s.split) document.getElementById('leftPanel').style.width = s.split;
     if (s.zoom)  setZoom(s.zoom);
@@ -3756,15 +4280,23 @@ function insertPrefix(prefix) {
 const TEMPLATE_TYPES = {
   microservices: 'LR', threeTier: 'LR', cicd: 'LR', cloud: 'LR',
   etlPipeline: 'LR', fileProcessing: 'LR', networkArch: 'LR', enterpriseDomains: 'LR',
-  erDiagram: 'er', ganttChart: 'gantt',
 };
 
 function loadTemplate(name) {
   $input.value = TEMPLATES[name] || '';
   _savedCursor = $input.value.length;
   if (TEMPLATE_TYPES[name]) {
-    document.getElementById('diagramType').value = TEMPLATE_TYPES[name];
+    setDiagramType(TEMPLATE_TYPES[name]);
   }
+  $input.focus();
+  pushHistory($input.value);
+  onInput();
+}
+
+function loadArchitectureView(name) {
+  $input.value = ARCHITECTURE_VIEWS[name] || '';
+  _savedCursor = $input.value.length;
+  setDiagramType('LR');
   $input.focus();
   pushHistory($input.value);
   onInput();
@@ -4204,8 +4736,14 @@ function renderLibList() {
     el.innerHTML = '<div class="lib-empty">No saved diagrams yet.<br>Type a name above and click <strong>Save current</strong>.</div>';
     return;
   }
-  const TYPE_ICONS = { er:'🔗', gantt:'📅', sequence:'🔁', class:'📐', LR:'⟶', TD:'↓' };
-  el.innerHTML = items.map((d, i) => {
+  const visible = items.map((d, i) => ({ ...d, _idx: i }))
+    .filter(d => SUPPORTED_DIAGRAM_TYPES.has(d.type));
+  if (!visible.length) {
+    el.innerHTML = '<div class="lib-empty">No supported saved diagrams yet.<br>Type a name above and click <strong>Save current</strong>.</div>';
+    return;
+  }
+  const TYPE_ICONS = { sequence:'🔁', class:'📐', LR:'⟶', TD:'↓' };
+  el.innerHTML = visible.map((d) => {
     const icon = TYPE_ICONS[d.type] || '📄';
     const date = new Date(d.savedAt).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
     return `<div class="lib-item">
@@ -4214,8 +4752,8 @@ function renderLibList() {
         <div class="lib-item-title">${esc(d.title)}</div>
         <div class="lib-item-meta">${d.type} · saved ${date}</div>
       </div>
-      <button class="lib-item-open" onclick="libOpen(${i})">Open</button>
-      <button class="lib-item-del" title="Delete" onclick="libDelete(${i})">✕</button>
+      <button class="lib-item-open" onclick="libOpen(${d._idx})">Open</button>
+      <button class="lib-item-del" title="Delete" onclick="libDelete(${d._idx})">✕</button>
     </div>`;
   }).join('');
 }
@@ -4224,7 +4762,7 @@ function libSaveCurrent() {
   const title = document.getElementById('libNameInput').value.trim();
   if (!title) { toast('Enter a diagram name first'); document.getElementById('libNameInput').focus(); return; }
   const items = libLoad();
-  const type  = document.getElementById('diagramType').value;
+  const type  = normalizeDiagramType(document.getElementById('diagramType').value);
   const theme = document.getElementById('mermaidTheme').value;
   const existing = items.findIndex(d => d.title.toLowerCase() === title.toLowerCase());
   const entry = { id: Date.now().toString(36), title, input: $input.value, type, theme, savedAt: Date.now() };
@@ -4239,8 +4777,13 @@ function libOpen(idx) {
   const items = libLoad();
   const d = items[idx];
   if (!d) return;
+  if (!SUPPORTED_DIAGRAM_TYPES.has(d.type)) {
+    toast('This saved diagram type is no longer supported');
+    renderLibList();
+    return;
+  }
   $input.value = d.input;
-  document.getElementById('diagramType').value = d.type;
+  setDiagramType(d.type);
   document.getElementById('mermaidTheme').value = d.theme;
   pushHistory($input.value);
   onInput();
@@ -4323,14 +4866,17 @@ function isInputFocused() {
 // Returns the initial document text without touching any UI state.
 // Used so EditorState.create() receives the real content, avoiding a history entry.
 function peekInitialDoc() {
-  const hash = location.hash;
-  if (hash.startsWith('#d:')) {
-    const state = decodeState(hash.slice(3));
-    if (state?.i) return state.i;
+  const payload = getHashStatePayload();
+  if (payload) {
+    const state = decodeState(payload);
+    if (state?.i && (!state.t || isSupportedDiagramType(state.t))) return state.i;
   }
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) { const s = JSON.parse(raw); if (s.input) return s.input; }
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s.input && (!s.type || isSupportedDiagramType(s.type))) return s.input;
+    }
   } catch {}
   return TEMPLATES.microservices || '';
 }

@@ -20,6 +20,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Compound name support** — underscore and hyphen separators handled correctly in auto-detection
 - **CodeMirror 6 editor** — line numbers, in-place syntax highlighting, undo/redo history, `Ctrl+/` comment toggle
 - **Autocomplete** — type prefixes and known entity names suggested as you type
+- **Semantic linting** — warnings for orphan nodes, duplicate labels, unknown prefixes, invalid arrows, empty groups, and relationships to containers
 - **Real-time rendering** — diagram updates as you type
 
 ### Grouping & Topology
@@ -29,10 +30,17 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Hybrid mode** — entities can appear in both `env:` and `domain:` simultaneously; domain ownership shown through fill-colour overrides
 
 ### Diagrams
-- **6 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class, ER Diagram, Gantt
+- **4 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class
 - **5 themes** — Default, Dark, Forest, Neutral, Base
-- **All arrow styles** — normal, labelled, bidirectional, pre-dashed, post-thick, chained (`>>`)
-- **12 natural language connectors** — `calls`, `sends to`, `reads from`, `writes to`, `connects to`, `depends on`, `triggers`, `subscribes to`, `publishes to`, `syncs with`, `authenticates via`, `routes to`
+- **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
+- **Arrow aliases** — `--requires-->` = dashed; `--triggers-->` = thick
+- **12 natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, `sends to`, `talks to`, `uses`, `forwards to`, `publishes to`, `subscribes to`
+
+### Cloud Service Icon Picker (☁️ Icons ▾)
+- **140+ named cloud services** across four provider tabs — AWS, GCP, Azure, General
+- **Emoji-embedded labels** — clicking an icon inserts the entity with the service's icon embedded in the diagram node
+- **Search** — filter across all icons in the active tab by service name
+- Correct type prefix inserted automatically (e.g. `instance:⚡ Lambda`, `db:🗄️ RDS`)
 
 ### Appearance Settings (⚙️)
 - **6 editor colour themes** — Meridian (default), One Dark, Dracula, Nord, Monokai, Solarized Light — hot-swapped without page reload
@@ -50,11 +58,22 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Resizable panels** — drag the divider to adjust input/preview split
 - **Fullscreen preview** — expand diagram to full viewport
 
+### Live Preview Interactions
+- **Click a node** — scrolls Smart Input to that entity's definition and briefly highlights the editor border; opens the node context panel
+- **Double-click a node** — opens node context panel and activates the rename input directly
+- **Drag a node** — repositions the node and redraws edges in real time; positions survive re-renders, page reloads, and export/import
+- **↗ drag handle** — hover a node and drag the handle to a target node to create a new arrow relationship inserted into Smart Input
+- **Node context panel** — Add node (create + connect), Connect to… (connect to any existing entity), Delete (removes entity and all its relationships), jump to arrow lines
+- **Click an arrow / edge label** — selects and highlights the corresponding arrow line in Smart Input
+- **Drag on empty canvas** — pans the preview
+
 ### Productivity
-- **10 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, ER diagram, and Gantt chart
-- **Diagram library** — save, name, and reload your own diagram snippets
+- **8 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, and enterprise domains
+- **Architecture views** — focused presets for system context, container, deployment, and domain ownership views
+- **Diagram library** — save, name, and reload your own diagram snippets (`Ctrl+Shift+L`)
 - **Persistent node positions** — drag nodes to rearrange; positions survive re-renders and page reloads
-- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, download SVG, download PNG (2×)
+- **Project import/export** — save or restore `.meridian.json` and `.mmd` bundles with input, type, theme, settings, and node positions
+- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, copy as embed `<iframe>`, download SVG, download PNG (2×)
 - **Shareable URLs** — encode full diagram state (input, type, theme) into a URL hash
 - **Help modal** — built-in reference panel (press `?` or `F1`)
 - **Auto-save** — state persisted to `localStorage`
@@ -64,12 +83,18 @@ Meridian lets you describe your architecture, data flows, or system relationship
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Enter` | Render diagram |
-| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
-| `Ctrl+/` | Toggle comment on current line |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
+| `Ctrl+/` | Toggle `//` comment on current line |
+| `Tab` / `Shift+Tab` | Indent / un-indent line |
+| `Enter` after `{` | Auto-indent + insert closing `}` |
 | `Ctrl+Shift+C` | Copy Mermaid code |
 | `Ctrl+Shift+S` | Copy share URL |
 | `Ctrl+Shift+F` | Toggle fullscreen |
+| `Ctrl+Shift+L` | Open diagram library |
 | `Ctrl++` / `Ctrl+-` | Zoom in / out |
+| `Ctrl+0` | Reset zoom to 100% |
+| `Ctrl+Scroll` | Zoom (hover preview panel) |
 | `Ctrl+F` | Open node search |
 | `?` or `F1` | Open help |
 | `Escape` | Close modal |
@@ -81,7 +106,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 Open `index.html` in any modern browser — no server, no build step required.
 
 ```
-app:Frontend --> api:Backend --> db:Postgres
+app:Frontend --> interface:Backend --> db:Postgres
 ```
 
 Add groupings:
@@ -109,31 +134,33 @@ domain:Data {
 
 ### Entity Types
 
-| Prefix | Type | Shape |
-|--------|------|-------|
-| `app:` | Application | Rounded rectangle |
-| `db:` | Database | Cylinder |
-| `server:` | Server | Rectangle |
-| `instance:` | Container / Instance | Subroutine |
-| `interface:` / `api:` | API / Interface | Parallelogram |
-| `config:` | Config / Setting | Trapezoid |
-| `batch:` | Batch Job / ETL | Hexagon |
-| `watcher:` | File Watcher / Monitor | Stadium |
-| `ftp:` | FTP / SFTP Server | Rectangle |
-| `env:` | Environment | Subgraph |
-| `net:` | Network Zone | Subgraph |
-| `domain:` | Business Domain | Subgraph |
+| Prefix | Aliases | Type | Shape | Auto-detected keywords |
+|--------|---------|------|-------|------------------------|
+| `app:` | — | Application | Rectangle | *(default fallback)* |
+| `db:` | `database:` | Database | Cylinder | postgres, mysql, redis, mongo, rds, aurora, dynamodb… |
+| `server:` | `srv:` | Server | Subroutine | nginx, apache, haproxy, alb, cloudfront, gateway, proxy… |
+| `instance:` | `inst:` | Container / Instance | Rounded rect | ec2, docker, lambda, k8s, fargate, container, runner, pod… |
+| `interface:` | `iface:` | API / Interface | Double hexagon | rest, grpc, graphql, kafka, rabbitmq, webhook, websocket, queue… |
+| `config:` | `cfg:, conf:` | Config / Setting | Rectangle | port, yaml, ssl, cert, secret, env_var, json, toml… |
+| `batch:` | `btch:` | Batch Job / ETL | Parallelogram | etl, cron, job, airflow, spark, dbt, glue, pipeline, scheduler… |
+| `watcher:` | `watch:` | File Watcher / Monitor | Diamond | fswatch, inotify, observer, listener, monitor, filewatcher… |
+| `ftp:` | `sftp:, ftps:` | FTP / SFTP Server | Stadium | sftp, ftps, vsftpd, filezilla, winscp, ftpd… |
+| `env:` | — | Environment | Subgraph | prod, production, staging, dev, qa, uat, sandbox… |
+| `net:` | `network:, zone:` | Network Zone | Subgraph | Colour by zone name — External, DMZ, Internal |
+| `domain:` | `dom:, team:, biz:, bu:` | Business Domain | Subgraph | Auto-colour per domain from palette |
 
 ### Arrow Styles
 
-| Syntax | Style |
-|--------|-------|
-| `A --> B` | Normal arrow |
-| `A --> B : label` | Labelled arrow |
-| `A <--> B` | Bidirectional |
-| `A --o B` | Pre-dashed |
-| `A ==> B` | Post-thick |
-| `A >> B >> C` | Chained arrows |
+| Syntax | Style | Best for |
+|--------|-------|----------|
+| `A --> B` | → Normal | Basic flow or dependency |
+| `A --label--> B` | → Labelled | Named relationship |
+| `A <--> B` | ↔ Bidirectional | Two-way communication |
+| `A --pre--> B` | - - → Dashed | Prerequisite / must run before |
+| `A --requires--> B` | - - → Dashed | Alias for `--pre-->` |
+| `A --post--> B` | ═══▶ Thick | Triggers on completion |
+| `A --triggers--> B` | ═══▶ Thick | Alias for `--post-->` |
+| `A >> B >> C` | ═══▶ Chain | Sequential batch pipeline |
 
 ### Grouping Blocks
 
@@ -153,18 +180,49 @@ domain:Finance {
 }
 ```
 
+#### Hybrid mode — env + domain on the same entities
+
+Entities inside an `env:` block that also appear in a `domain:` block stay inside the env subgraph spatially but have their fill colour overridden with the domain's palette colour — showing deployment topology and ownership simultaneously.
+
+```
+env:Production {
+  app:PaymentService
+  app:AuthService
+}
+domain:Finance {
+  app:PaymentService   // tinted with Finance colour, still inside Production
+}
+```
+
+#### Domain colour palette (cycles every 8 domains)
+
+fuchsia · orange · emerald · blue · red · golden · indigo · sky
+
 ### Natural Language Connectors
 
 ```
 app:Frontend calls app:Backend
 app:Backend reads from db:Postgres
 batch:ETL writes to db:Warehouse
-app:Auth authenticates via config:JWT
+app:Auth uses config:JWT
 ```
+
+### Semantic Linting
+
+Meridian warns while you type without blocking preview rendering:
+
+| Warning | Meaning |
+|---------|---------|
+| `ORPHAN_NODE` | Entity is declared but not connected by any relationship |
+| `DUPLICATE_LABEL` | Same label appears under different entity types |
+| `UNKNOWN_PREFIX` | Prefix is not one of Meridian's supported entity types |
+| `INVALID_ARROW` | Arrow-like text does not match supported arrow syntax |
+| `EMPTY_GROUP` | `env:`, `net:`, or `domain:` block contains no valid entities |
+| `RELATIONSHIP_TO_CONTAINER` | Relationship targets an `env:`, `net:`, or `domain:` container instead of a concrete entity |
 
 ### Comments
 
-Lines beginning with `//` are ignored:
+Lines beginning with `//` or `#` are ignored:
 
 ```
 // This is a comment
@@ -180,6 +238,28 @@ app:Frontend --> app:Backend
 - Domain subgraphs only render for entities not inside an `env:` block; those entities receive colour overrides instead
 - Auto-detection works on compound names: `ec2_instance` → server, `rest_api` → interface
 - Custom diagram colours (⚙️ → Diagram tab) work best when the diagram theme is set to **Base**
+- Cloud icons (☁️ Icons ▾) insert emoji-embedded labels that appear inside diagram nodes
+
+---
+
+## Project Bundles
+
+Use **Export** to download a complete project as either `.meridian.json` or `.mmd`. Bundles include the Smart Input text, diagram type, Mermaid theme, editor settings, diagram settings, layout, and saved node positions. Use **Import** to restore either format.
+
+Plain `.mmd` files without Meridian metadata can still be imported as Smart Input text.
+
+---
+
+## Architecture Views
+
+Use **Views** in the toolbar to start from a focused architecture preset:
+
+| View | Focus |
+|------|-------|
+| System Context | People-facing channels, core platform boundary, and external systems |
+| Container | UI, API, services, data stores, workers, and observability |
+| Deployment | External, DMZ, and internal runtime topology |
+| Domain Ownership | Business/domain ownership boundaries with cross-domain flows |
 
 ---
 
@@ -197,8 +277,6 @@ Press **Templates** in the toolbar to load any built-in preset:
 | 6 | File Processing Pipeline | FTP / watcher / batch processing |
 | 7 | Network Architecture | External, DMZ, and internal net zones |
 | 8 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
-| 9 | ER Diagram | Customer / Order / Line Item / Address schema |
-| 10 | Gantt Chart | Project roadmap across Discovery / Design / Dev / Release |
 
 ---
 
@@ -228,6 +306,19 @@ Switching themes resets any individual token colour overrides back to the new th
 | Background | Canvas background colour |
 
 > Custom diagram colours only take full effect when the **diagram theme** (top toolbar) is set to **🎨 Base**.
+
+---
+
+## Export & Sharing
+
+| Control | Action |
+|---------|--------|
+| ↓ SVG | Download the diagram as a scalable SVG file |
+| ↓ PNG | Download at 2× (retina) resolution |
+| Copy ▾ | Copy code · copy with ` ```mermaid ` fences · copy as Markdown · copy embed `<iframe>` |
+| 🔗 Share | Encode full diagram state into a shareable URL (`Ctrl+Shift+S`) |
+| Import | Load a `.meridian.json` project, Meridian `.mmd` bundle, or plain `.mmd` input file |
+| Export ▾ | Download a complete project bundle |
 
 ---
 
