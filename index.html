@@ -12,23 +12,24 @@ import {EditorView, keymap, drawSelection, highlightActiveLine, lineNumbers,
         highlightActiveLineGutter} from 'https://esm.sh/@codemirror/view@6';
 import {EditorState, Compartment, StateEffect, StateField} from 'https://esm.sh/@codemirror/state@6';
 import {defaultKeymap, historyKeymap, history, undo, redo,
+        undoDepth, redoDepth,
         indentWithTab} from 'https://esm.sh/@codemirror/commands@6';
 import {StreamLanguage, HighlightStyle, syntaxHighlighting,
         indentOnInput} from 'https://esm.sh/@codemirror/language@6';
 import {autocompletion, completionKeymap,
         CompletionContext} from 'https://esm.sh/@codemirror/autocomplete@6';
 import {linter, lintKeymap, setDiagnostics} from 'https://esm.sh/@codemirror/lint@6';
-import {tags} from 'https://esm.sh/@lezer/highlight@1';
+import {tags, Tag} from 'https://esm.sh/@lezer/highlight@1';
 
 window.__CM = {
   EditorView, keymap, drawSelection, highlightActiveLine, lineNumbers,
   highlightActiveLineGutter,
   EditorState, Compartment, StateEffect, StateField,
-  defaultKeymap, historyKeymap, history, undo, redo, indentWithTab,
+  defaultKeymap, historyKeymap, history, undo, redo, undoDepth, redoDepth, indentWithTab,
   StreamLanguage, HighlightStyle, syntaxHighlighting, indentOnInput,
   autocompletion, completionKeymap, CompletionContext,
   linter, lintKeymap, setDiagnostics,
-  tags,
+  tags, Tag,
 };
 document.dispatchEvent(new Event('cm-ready'));
 </script>
@@ -55,12 +56,13 @@ document.dispatchEvent(new Event('cm-ready'));
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
-/* Input focus */
-#smartInput { transition: border-color .15s, box-shadow .15s; }
-#smartInput:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.25); }
+/* CodeMirror 6 host */
+#smartInput { display:flex; flex-direction:column; }
+#smartInput .cm-editor { flex:1; min-height:0; }
+#smartInput .cm-editor.cm-focused { outline:none; }
 
-/* Entity click → code highlight flash */
-#smartInput.input-hl { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,.45) !important; transition: none !important; }
+/* Entity click → code highlight flash (applied to .cm-editor via adapter.classList) */
+#smartInput .cm-editor.input-hl { box-shadow:0 0 0 3px rgba(99,102,241,.45) inset; transition:none; }
 
 /* Entity badge pills */
 .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;
@@ -132,16 +134,6 @@ kbd { background:var(--kbd-bg);color:var(--kbd-text);border:1px solid var(--kbd-
   background: repeating-linear-gradient(45deg,#f9fafb 0,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px);
 }
 
-/* Syntax highlight colors */
-.sy-kw   { color:#c792ea;font-weight:600; }
-.sy-dir  { color:#89ddff; }
-.sy-edge { color:#89ddff; }
-.sy-lbl  { color:#c3e88d; }
-.sy-prop { color:#f78c6c; }
-.sy-cmt  { color:#546e7a;font-style:italic; }
-
-/* Generated code panel */
-pre#codeOutput { margin:0; }
 ::-webkit-scrollbar { width:5px;height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:var(--scrollbar);border-radius:3px; }
@@ -394,11 +386,6 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 [data-theme="light"] .text-gray-600        { color:#64748b !important; }
 [data-theme="light"] header span.text-white { color:#1e293b !important; }
 [data-theme="light"] select                { color:#374151 !important; }
-[data-theme="light"] pre#codeOutput        { color:#374151 !important; }
-[data-theme="light"] .flex-1.overflow-auto[style*="rgba(17,24,39"] { background:rgba(241,245,249,.7) !important; }
-/* smartInput: needs stronger value than .bg-gray-800 override */
-[data-theme="light"] #smartInput           { background:#ffffff !important; border-color:#cbd5e1 !important; color:#1e293b !important; }
-[data-theme="light"] #smartInput::placeholder { color:#94a3b8 !important; }
 /* Picker trigger buttons use inline styles — must override with !important */
 [data-theme="light"] #iconPickerBtn  { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
 [data-theme="light"] #shapePickerBtn { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
@@ -406,15 +393,56 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 /* helpClose hover: Tailwind hover: variant can't be overridden by plain class selectors */
 [data-theme="light"] #helpClose       { background:#e2e8f0 !important; color:#64748b !important; }
 [data-theme="light"] #helpClose:hover { background:#cbd5e1 !important; color:#1e293b !important; }
-/* Syntax highlight – light mode */
-[data-theme="light"] .sy-kw   { color:#7c3aed; }
-[data-theme="light"] .sy-dir  { color:#0369a1; }
-[data-theme="light"] .sy-edge { color:#0369a1; }
-[data-theme="light"] .sy-lbl  { color:#15803d; }
-[data-theme="light"] .sy-prop { color:#c2410c; }
-[data-theme="light"] .sy-cmt  { color:#94a3b8; }
 /* help-ex keeps its green syntax color in light mode */
 [data-theme="light"] .help-ex { color:#15803d !important; }
+
+/* ── Settings modal ── */
+#settingsModal { position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(2px); }
+#settingsModal.hidden { display:none; }
+#settingsCard { background:var(--surface-1);border:1px solid var(--border);border-radius:12px;width:560px;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.6); }
+.stt-hdr { padding:14px 16px 0;border-bottom:1px solid var(--border);flex-shrink:0; }
+.stt-title-row { display:flex;align-items:center;justify-content:space-between;margin-bottom:10px; }
+.stt-title { font-size:14px;font-weight:700;color:var(--text-em); }
+.stt-close-x { background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:5px;transition:background .1s; }
+.stt-close-x:hover { background:var(--surface-2);color:var(--text); }
+.stt-tabs { display:flex;gap:0;margin-bottom:-1px; }
+.stt-tab { background:none;border:none;border-bottom:2px solid transparent;padding:7px 16px;font-size:12px;font-weight:600;color:var(--text-muted);cursor:pointer;transition:color .15s,border-color .15s; }
+.stt-tab.active { color:var(--accent-text);border-bottom-color:var(--accent); }
+.stt-body { flex:1;overflow-y:auto;padding:14px 16px; }
+.stt-panel { display:none; }
+.stt-panel.active { display:block; }
+.stt-row { display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border-sub); }
+.stt-row:last-child { border-bottom:none; }
+.stt-lbl { font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;width:100px;flex-shrink:0;padding-top:5px; }
+.stt-ctrl { flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap; }
+/* Editor theme swatches */
+.theme-swatch-wrap { display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer; }
+.theme-swatch { width:34px;height:28px;border-radius:6px;border:2px solid transparent;transition:border-color .15s,transform .1s;flex-shrink:0;overflow:hidden; }
+.theme-swatch.active { border-color:var(--accent);transform:scale(1.08); }
+.theme-swatch:hover:not(.active) { border-color:var(--text-dim); }
+.swatch-name { font-size:9px;color:var(--text-dim);white-space:nowrap;text-align:center;max-width:52px;overflow:hidden;text-overflow:ellipsis; }
+/* Font size buttons */
+.fsz-btn { background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:3px 11px;font-size:11px;cursor:pointer;transition:background .1s; }
+.fsz-btn.active { background:var(--accent);border-color:var(--accent);color:#fff; }
+.fsz-btn:hover:not(.active) { background:var(--surface-3); }
+/* Token color grid */
+.token-grid { display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;width:100%; }
+.token-row { display:flex;align-items:center;gap:6px;padding:2px 0; }
+.token-lbl { font-size:11px;font-weight:600;flex:1;min-width:0;white-space:nowrap; }
+/* Color swatch input */
+input[type="color"].color-sw { width:30px;height:22px;border:1px solid var(--border);border-radius:4px;padding:1px 2px;background:var(--surface-2);cursor:pointer;flex-shrink:0; }
+input[type="color"].color-sw:disabled { opacity:.35;cursor:not-allowed; }
+/* Diagram controls */
+input[type="range"].diag-slider { flex:1;accent-color:var(--accent);height:4px; }
+.color-enable { width:14px;height:14px;flex-shrink:0;accent-color:var(--accent);cursor:pointer; }
+.color-val-lbl { font-size:11px;color:var(--text-muted);width:36px; }
+/* Footer */
+.stt-footer { padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-shrink:0; }
+.stt-reset-all { background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer; }
+.stt-reset-all:hover { background:var(--surface-3);color:var(--text); }
+.stt-done { background:var(--accent);border:none;color:#fff;border-radius:6px;padding:5px 16px;font-size:12px;font-weight:600;cursor:pointer; }
+.stt-done:hover { background:var(--accent-hov); }
+[data-theme="light"] #settingsCard select { color:#374151 !important; }
 </style>
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen flex flex-col overflow-hidden">
@@ -681,6 +709,34 @@ BatchJob writes to db:Warehouse</div>
         </table>
         <p class="text-xs text-gray-500 mb-4">Use the search box at the top of the picker to filter by service name across all items in the active tab. The inserted entity uses the correct type prefix automatically (e.g. <span class="hcode">instance:⚡ Lambda</span>, <span class="hcode">db:🗄️ RDS</span>).</p>
 
+        <div class="help-h3">⚙️ Appearance settings</div>
+        <p class="text-xs text-gray-400 mb-3">Opens the Appearance panel with two tabs.</p>
+        <table class="help-tbl" style="margin-bottom:10px">
+          <thead><tr><th>Tab</th><th>Settings</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Editor</strong></td>
+              <td>
+                <strong>Theme</strong> — 6 colour presets: Meridian, One Dark, Dracula, Nord, Monokai, Solarized.<br>
+                <strong>Font size</strong> — 11 / 13 / 15 / 17 px.<br>
+                <strong>Font family</strong> — System mono, Fira Code, Cascadia Code, JetBrains Mono.<br>
+                <strong>Token colours</strong> — individual colour pickers for every entity type prefix (env:, app:, db: …). Switching theme resets overrides to the new theme's defaults.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Diagram</strong></td>
+              <td>
+                <strong>Font size</strong> — slider 10–28 px (enable checkbox to activate).<br>
+                <strong>Node fill / border</strong> — primary fill and border colours.<br>
+                <strong>Edge color</strong> — arrow and connector line colour.<br>
+                <strong>Background</strong> — canvas background colour.<br>
+                <em class="text-gray-500">Custom diagram colours work best with the <strong>🎨 Base</strong> diagram theme.</em>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-gray-500 mb-4">All settings are saved to <code>localStorage</code> automatically. <strong>Reset all</strong> restores every setting to its default value.</p>
+
         <div class="help-h3">🌙 / ☀️ Theme toggle</div>
         <p class="text-xs text-gray-400">Switches the app between dark and light themes. The preference is saved to <code>localStorage</code> and restored on next open.</p>
       </div>
@@ -771,6 +827,102 @@ BatchJob writes to db:Warehouse</div>
   </div>
 </div>
 
+<!-- ── Settings Modal ── -->
+<div id="settingsModal" class="hidden">
+  <div id="settingsCard">
+    <div class="stt-hdr">
+      <div class="stt-title-row">
+        <span class="stt-title">⚙️ Appearance</span>
+        <button class="stt-close-x" id="settingsCloseX" title="Close">✕</button>
+      </div>
+      <div class="stt-tabs">
+        <button class="stt-tab active" data-stt="editor">Editor</button>
+        <button class="stt-tab" data-stt="diagram">Diagram</button>
+      </div>
+    </div>
+
+    <div class="stt-body">
+      <!-- ── Editor panel ── -->
+      <div id="stt-editor" class="stt-panel active">
+        <div class="stt-row">
+          <div class="stt-lbl">Theme</div>
+          <div class="stt-ctrl" id="editorThemeSwatches"></div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Font size</div>
+          <div class="stt-ctrl" id="fontSizeBtns"></div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Font family</div>
+          <div class="stt-ctrl">
+            <select id="fontFamilyPicker" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;outline:none;cursor:pointer;">
+              <option value="system">System mono</option>
+              <option value="fira">Fira Code</option>
+              <option value="cascadia">Cascadia Code</option>
+              <option value="jetbrains">JetBrains Mono</option>
+            </select>
+          </div>
+        </div>
+        <div class="stt-row" style="align-items:flex-start">
+          <div class="stt-lbl">Token colors</div>
+          <div class="stt-ctrl"><div class="token-grid" id="tokenColorGrid"></div></div>
+        </div>
+      </div>
+
+      <!-- ── Diagram panel ── -->
+      <div id="stt-diagram" class="stt-panel">
+        <div class="stt-row">
+          <div class="stt-lbl">Font size</div>
+          <div class="stt-ctrl">
+            <input type="range" id="diagFontSize" class="diag-slider" min="10" max="28" step="1" value="16">
+            <span id="diagFontSizeVal" class="color-val-lbl">16px</span>
+            <label style="font-size:11px;color:var(--text-dim);margin-left:4px">
+              <input type="checkbox" class="color-enable" id="diagFontSizeEnable"> enable
+            </label>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Node fill</div>
+          <div class="stt-ctrl">
+            <input type="checkbox" class="color-enable" id="diagPrimaryColorEnable">
+            <input type="color" class="color-sw" id="diagPrimaryColor" value="#6366f1" disabled>
+            <span style="font-size:11px;color:var(--text-dim)">Primary node fill</span>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Node border</div>
+          <div class="stt-ctrl">
+            <input type="checkbox" class="color-enable" id="diagBorderColorEnable">
+            <input type="color" class="color-sw" id="diagBorderColor" value="#4f46e5" disabled>
+            <span style="font-size:11px;color:var(--text-dim)">Primary border</span>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Edge color</div>
+          <div class="stt-ctrl">
+            <input type="checkbox" class="color-enable" id="diagLineColorEnable">
+            <input type="color" class="color-sw" id="diagLineColor" value="#4b5563" disabled>
+            <span style="font-size:11px;color:var(--text-dim)">Arrows &amp; edges</span>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Background</div>
+          <div class="stt-ctrl">
+            <input type="checkbox" class="color-enable" id="diagBackgroundEnable">
+            <input type="color" class="color-sw" id="diagBackground" value="#1f2937" disabled>
+            <span style="font-size:11px;color:var(--text-dim)">Canvas background</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stt-footer">
+      <button class="stt-reset-all" id="settingsResetAll">Reset all</button>
+      <button class="stt-done" id="settingsCloseBtn">Done</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Header ── -->
 <header class="bg-gray-900 border-b border-gray-800 px-3 py-2 flex items-center gap-2 flex-shrink-0">
   <div class="flex items-center gap-2 mr-2">
@@ -800,6 +952,12 @@ BatchJob writes to db:Warehouse</div>
       <option value="base">🎨 Base</option>
     </select>
   </div>
+
+  <!-- Settings button -->
+  <button id="settingsBtn" title="Appearance settings"
+    class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2 py-1 text-xs text-gray-400 transition flex items-center gap-1 select-none">
+    ⚙️
+  </button>
 
   <!-- App theme toggle -->
   <button id="themeToggle" title="Toggle app theme (light / dark)"
@@ -1010,7 +1168,7 @@ BatchJob writes to db:Warehouse</div>
     <kbd>Ctrl+F</kbd> find node ·
     <kbd>Tab</kbd> indent ·
     <kbd>Ctrl+/</kbd> comment
-    <span class="ml-2">v5.7</span>
+    <span class="ml-2">v5.8</span>
   </span>
 </div>
 
@@ -1079,9 +1237,122 @@ const BASE_MERMAID_CONFIG = {
 
 mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: 'default' });
 
+// ════════════════════════════════════════════════════════════════
+//  APPEARANCE SETTINGS
+// ════════════════════════════════════════════════════════════════
+const LS_SETTINGS_KEY = 'meridian_settings';
+
+const EDITOR_THEMES = {
+  meridian: {
+    name: 'Meridian', dark: true,
+    bg: '#1f2937', fg: '#d1d5db', gutBg: '#1f2937', gutFg: '#4b5563',
+    act: 'rgba(255,255,255,.03)', sel: 'rgba(99,102,241,.28)',
+    cmt: '#546e7a', kw: '#c792ea', op: '#89ddff', str: '#c3e88d',
+    num: '#f78c6c', br: '#89ddff', id: '#d1d5db',
+    types: { env:'#60a5fa',app:'#4ade80',db:'#fbbf24',server:'#c084fc',
+             instance:'#f87171',interface:'#22d3ee',config:'#fde68a',
+             batch:'#5eead4',watcher:'#a78bfa',ftp:'#f9a8d4',net:'#fb923c',domain:'#e879f9' },
+  },
+  onedark: {
+    name: 'One Dark', dark: true,
+    bg: '#282c34', fg: '#abb2bf', gutBg: '#21252b', gutFg: '#636d83',
+    act: 'rgba(255,255,255,.04)', sel: 'rgba(56,78,114,.4)',
+    cmt: '#5c6370', kw: '#c678dd', op: '#56b6c2', str: '#98c379',
+    num: '#d19a66', br: '#56b6c2', id: '#abb2bf',
+    types: { env:'#61afef',app:'#98c379',db:'#e5c07b',server:'#c678dd',
+             instance:'#e06c75',interface:'#56b6c2',config:'#e5c07b',
+             batch:'#56b6c2',watcher:'#c678dd',ftp:'#e06c75',net:'#d19a66',domain:'#c678dd' },
+  },
+  dracula: {
+    name: 'Dracula', dark: true,
+    bg: '#282a36', fg: '#f8f8f2', gutBg: '#21222c', gutFg: '#6272a4',
+    act: 'rgba(255,255,255,.04)', sel: 'rgba(68,71,90,.7)',
+    cmt: '#6272a4', kw: '#ff79c6', op: '#8be9fd', str: '#f1fa8c',
+    num: '#bd93f9', br: '#8be9fd', id: '#f8f8f2',
+    types: { env:'#8be9fd',app:'#50fa7b',db:'#f1fa8c',server:'#bd93f9',
+             instance:'#ff5555',interface:'#8be9fd',config:'#f1fa8c',
+             batch:'#50fa7b',watcher:'#bd93f9',ftp:'#ffb86c',net:'#ff79c6',domain:'#bd93f9' },
+  },
+  nord: {
+    name: 'Nord', dark: true,
+    bg: '#2e3440', fg: '#d8dee9', gutBg: '#272c36', gutFg: '#4c566a',
+    act: 'rgba(255,255,255,.03)', sel: 'rgba(67,76,94,.5)',
+    cmt: '#616e88', kw: '#81a1c1', op: '#88c0d0', str: '#a3be8c',
+    num: '#b48ead', br: '#88c0d0', id: '#d8dee9',
+    types: { env:'#88c0d0',app:'#a3be8c',db:'#ebcb8b',server:'#81a1c1',
+             instance:'#bf616a',interface:'#88c0d0',config:'#ebcb8b',
+             batch:'#8fbcbb',watcher:'#b48ead',ftp:'#d08770',net:'#5e81ac',domain:'#b48ead' },
+  },
+  monokai: {
+    name: 'Monokai', dark: true,
+    bg: '#272822', fg: '#f8f8f2', gutBg: '#1e1f1c', gutFg: '#75715e',
+    act: 'rgba(255,255,255,.04)', sel: 'rgba(73,72,62,.7)',
+    cmt: '#75715e', kw: '#f92672', op: '#66d9e8', str: '#e6db74',
+    num: '#ae81ff', br: '#66d9e8', id: '#f8f8f2',
+    types: { env:'#66d9e8',app:'#a6e22e',db:'#e6db74',server:'#ae81ff',
+             instance:'#f92672',interface:'#66d9e8',config:'#e6db74',
+             batch:'#a6e22e',watcher:'#ae81ff',ftp:'#fd971f',net:'#f92672',domain:'#ae81ff' },
+  },
+  solarized: {
+    name: 'Solarized', dark: false,
+    bg: '#fdf6e3', fg: '#657b83', gutBg: '#eee8d5', gutFg: '#93a1a1',
+    act: 'rgba(0,0,0,.04)', sel: 'rgba(7,54,66,.12)',
+    cmt: '#93a1a1', kw: '#859900', op: '#2aa198', str: '#2aa198',
+    num: '#d33682', br: '#2aa198', id: '#657b83',
+    types: { env:'#268bd2',app:'#859900',db:'#b58900',server:'#6c71c4',
+             instance:'#dc322f',interface:'#2aa198',config:'#b58900',
+             batch:'#2aa198',watcher:'#6c71c4',ftp:'#cb4b16',net:'#268bd2',domain:'#d33682' },
+  },
+};
+
+const FONT_FAMILIES = {
+  system:    "ui-monospace, 'Cascadia Code', 'Fira Code', monospace",
+  fira:      "'Fira Code', 'Fira Mono', monospace",
+  cascadia:  "'Cascadia Code', 'Cascadia Mono', monospace",
+  jetbrains: "'JetBrains Mono', 'JBMono', monospace",
+};
+
+let _editorSettings = {
+  theme: 'meridian',
+  fontSize: 13,
+  fontFamily: 'system',
+  tokenColors: {},
+};
+
+let _diagramSettings = {
+  fontSize: '',
+  primaryColor: '',
+  primaryBorderColor: '',
+  lineColor: '',
+  background: '',
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(LS_SETTINGS_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (s.editor) {
+      _editorSettings = { ..._editorSettings, ...s.editor };
+      _editorSettings.tokenColors = { ...(s.editor.tokenColors || {}) };
+    }
+    if (s.diagram) _diagramSettings = { ..._diagramSettings, ...s.diagram };
+  } catch {}
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(LS_SETTINGS_KEY, JSON.stringify({
+      editor:  _editorSettings,
+      diagram: _diagramSettings,
+    }));
+  } catch {}
+}
+
+// Load settings immediately so CM init uses correct values
+loadSettings();
+
 const RENDER_DEBOUNCE_MS   = 280;
-const HISTORY_DEBOUNCE_MS  = 500;
-const UNDO_MAX_ENTRIES     = 200;
 const HANDLE_HIDE_DELAY_MS = 120;
 const DRAG_CONNECT_THRESH  = 7;
 const NODE_DRAG_THRESH     = 4;
@@ -1098,12 +1369,23 @@ const CM_TYPE_TOKENS = {
   ftp:'ftp', net:'net', domain:'domain',
 };
 
+// Custom lezer Tags for each type prefix — built once at module scope
+const CM_TYPE_TAGS = {};
+
 function buildMeridianLanguage(CM) {
-  const { StreamLanguage, tags } = CM;
+  const { StreamLanguage, tags, Tag } = CM;
   const TYPE_RE = new RegExp(`^(${Object.keys(CM_TYPE_TOKENS).join('|')}):`);
+
+  // Define unique lezer Tags for each type prefix (silences "Unknown highlighting tag" warnings)
+  const tokenTable = {};
+  Object.keys(CM_TYPE_TOKENS).forEach(name => {
+    CM_TYPE_TAGS[name] = CM_TYPE_TAGS[name] || Tag.define();
+    tokenTable[`meridian-${name}`] = CM_TYPE_TAGS[name];
+  });
 
   return StreamLanguage.define({
     name: 'meridian',
+    tokenTable,
     startState: () => ({ inBlock: false }),
     token(stream, state) {
       // Comments
@@ -1159,78 +1441,50 @@ function buildMeridianLanguage(CM) {
 
 function buildMeridianHighlight(CM) {
   const { HighlightStyle, tags } = CM;
-
-  // Colour map: token name → CSS colour string (uses CSS vars via getComputedStyle trick)
-  // We define a thin mapping from StreamLanguage token → visual colour.
-  // These mirror the existing .sy-* CSS classes.
-  const TYPE_COLOURS = {
-    'meridian-env':       '#60a5fa',  // blue
-    'meridian-app':       '#4ade80',  // green
-    'meridian-db':        '#fbbf24',  // amber
-    'meridian-server':    '#c084fc',  // purple
-    'meridian-instance':  '#f87171',  // red
-    'meridian-interface': '#22d3ee',  // cyan
-    'meridian-config':    '#fde68a',  // yellow
-    'meridian-batch':     '#5eead4',  // teal
-    'meridian-watcher':   '#a78bfa',  // violet
-    'meridian-ftp':       '#f9a8d4',  // pink
-    'meridian-net':       '#fb923c',  // orange
-    'meridian-domain':    '#e879f9',  // fuchsia
-  };
-
+  const preset   = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const tOverride = _editorSettings.tokenColors || {};
   return HighlightStyle.define([
-    { tag: tags.lineComment,   color: '#546e7a', fontStyle: 'italic' },
-    { tag: tags.keyword,       color: '#c792ea', fontWeight: '600' },
-    { tag: tags.operator,      color: '#89ddff' },
-    { tag: tags.string,        color: '#c3e88d' },
-    { tag: tags.number,        color: '#f78c6c' },
-    { tag: tags.bracket,       color: '#89ddff' },
-    { tag: tags.variableName,  color: '#d1d5db' },
-    // type-prefix tokens use plain tag with a style spec by token name
-    ...Object.entries(TYPE_COLOURS).map(([name, color]) => ({
-      tag: tags.typeName,  // fallback — per-type colours applied below via overrides
-      color,
-    })),
+    { tag: tags.lineComment,  color: preset.cmt, fontStyle: 'italic' },
+    { tag: tags.keyword,      color: preset.kw,  fontWeight: '600' },
+    { tag: tags.operator,     color: preset.op },
+    { tag: tags.string,       color: preset.str },
+    { tag: tags.number,       color: preset.num },
+    { tag: tags.bracket,      color: preset.br },
+    { tag: tags.variableName, color: preset.id },
+    ...(Object.keys(CM_TYPE_TOKENS).map(name => ({
+      tag:   CM_TYPE_TAGS[name],
+      color: tOverride[name] || preset.types[name],
+    })).filter(e => e.tag && e.color)),
   ]);
 }
 
 function buildMeridianEditorTheme(CM) {
   const { EditorView } = CM;
+  const p  = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const ff = FONT_FAMILIES[_editorSettings.fontFamily] || FONT_FAMILIES.system;
+  const fs = (_editorSettings.fontSize || 13) + 'px';
   return EditorView.theme({
-    '&': {
-      height: '100%',
-      backgroundColor: 'var(--surface-1)',
-      color: 'var(--text)',
-      fontSize: '13px',
-      fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', monospace",
-    },
+    '&': { height: '100%', backgroundColor: p.bg, color: p.fg, fontSize: fs, fontFamily: ff },
     '.cm-scroller': { overflow: 'auto', lineHeight: '1.65' },
     '.cm-content': { padding: '10px 0', caretColor: 'var(--accent)' },
     '.cm-focused': { outline: 'none' },
     '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--accent)' },
-    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground':
-      { background: 'rgba(99,102,241,.28)' },
-    '.cm-activeLine':       { backgroundColor: 'rgba(255,255,255,.03)' },
-    '.cm-activeLineGutter': { backgroundColor: 'rgba(255,255,255,.05)' },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { background: p.sel },
+    '.cm-activeLine':       { backgroundColor: p.act },
+    '.cm-activeLineGutter': { backgroundColor: p.act },
     '.cm-gutters': {
-      backgroundColor: 'var(--surface-1)',
-      color: 'var(--text-faint)',
-      border: 'none',
-      borderRight: '1px solid var(--border)',
+      backgroundColor: p.gutBg, color: p.gutFg,
+      border: 'none', borderRight: '1px solid var(--border)',
     },
     '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 4px', minWidth: '28px' },
     '.cm-completionPopup': {
-      background: 'var(--surface-1)',
-      border: '1px solid var(--border)',
-      borderRadius: '7px',
-      boxShadow: '0 6px 24px rgba(0,0,0,.5)',
+      background: 'var(--surface-1)', border: '1px solid var(--border)',
+      borderRadius: '7px', boxShadow: '0 6px 24px rgba(0,0,0,.5)',
     },
     '.cm-tooltip-autocomplete > ul > li[aria-selected]':
       { background: 'var(--accent-bg)', color: 'var(--text-em)' },
     '.cm-lintRange-error': { textDecoration: 'underline wavy var(--err-title)' },
-    // ── light theme overrides ──
-    '&.light-cm .cm-content': { caretColor: 'var(--accent)' },
-  }, { dark: true });
+  }, { dark: p.dark !== false });
 }
 
 // Autocomplete source — wired after $input adapter is built
@@ -1275,6 +1529,20 @@ function clearCmLintError() {
 
 // Module-level reference to the EditorView (set in initCM)
 let _cmView = null;
+let _hlCompartment    = null;
+let _themeCompartment = null;
+
+function applyEditorTheme() {
+  if (!_cmView || !_hlCompartment || !_themeCompartment) return;
+  const CM = window.__CM;
+  if (!CM) return;
+  _cmView.dispatch({
+    effects: [
+      _hlCompartment.reconfigure(CM.syntaxHighlighting(buildMeridianHighlight(CM))),
+      _themeCompartment.reconfigure(buildMeridianEditorTheme(CM)),
+    ],
+  });
+}
 
 // ════════════════════════════════════════════════════════════════
 //  TEMPLATES
@@ -2035,8 +2303,6 @@ let _lastRenderedIds  = new Set();
 
 // $input is assigned to the adapter object after CM initialises (see initCM)
 let $input = null;
-// $code panel removed; keep stub to avoid null-deref during transition
-const $code = { innerHTML: '' };
 const $preview  = document.getElementById('mermaidOutput');
 const $wrapper  = document.getElementById('zoomWrapper');
 const $indic    = document.getElementById('parseIndicator');
@@ -2046,67 +2312,38 @@ const $pstatus  = document.getElementById('previewStatus');
 const $zoomDisp = document.getElementById('zoomDisplay');
 
 // ════════════════════════════════════════════════════════════════
-//  UNDO / REDO
+//  UNDO / REDO  — delegated to CodeMirror 6 history extension
 // ════════════════════════════════════════════════════════════════
-const undoStack = [''];
-let undoIdx     = 0;
-let historyTimer = null;
-
-function pushHistory(val) {
-  if (undoStack[undoIdx] === val) return;
-  undoStack.splice(undoIdx + 1);        // discard any redo branch
-  undoStack.push(val);
-  if (undoStack.length > UNDO_MAX_ENTRIES) undoStack.shift(); else undoIdx++;
-  syncUndoUI();
-}
+// pushHistory is a no-op: CM's history() extension tracks every transaction.
+// Kept as a named function so the many call-sites need no changes.
+function pushHistory() {}
 
 function undo() {
-  if (undoIdx <= 0) { toast('Nothing to undo'); return; }
-  undoIdx--;
-  _applyHistory();
+  if (!_cmView) return;
+  const { undo: cmUndo, undoDepth } = window.__CM;
+  if (undoDepth(_cmView.state) === 0) { toast('Nothing to undo'); return; }
+  cmUndo(_cmView);
+  syncUndoUI();
 }
 
 function redo() {
-  if (undoIdx >= undoStack.length - 1) { toast('Nothing to redo'); return; }
-  undoIdx++;
-  _applyHistory();
-}
-
-function _applyHistory() {
-  $input.value = undoStack[undoIdx];
-  _savedCursor = $input.value.length;   // move cursor to end after restore
-  clearTimeout(historyTimer);           // don't re-push the restored value
+  if (!_cmView) return;
+  const { redo: cmRedo, redoDepth } = window.__CM;
+  if (redoDepth(_cmView.state) === 0) { toast('Nothing to redo'); return; }
+  cmRedo(_cmView);
   syncUndoUI();
-  const type = document.getElementById('diagramType').value;
-  if (PASSTHROUGH_TYPES.has(type)) {
-    lastCode = $input.value;
-    $code.innerHTML = '';
-    $indic.textContent = type === 'er' ? 'ER diagram' : 'Gantt chart';
-    $count.textContent = '';
-  } else {
-    lastCode = parser.parse($input.value, type);
-    $code.innerHTML = highlight(lastCode);
-    const ec = parser.entities.size, rc = parser.relationships.length;
-    const gc = [...parser.environments.keys()].length;
-    $indic.textContent = ec ? `${ec} entities` : '';
-    $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
-  }
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => renderDiagram(lastCode), RENDER_DEBOUNCE_MS);
-  saveToStorage();
 }
 
 function syncUndoUI() {
-  document.getElementById('undoBtn').disabled = undoIdx <= 0;
-  document.getElementById('redoBtn').disabled = undoIdx >= undoStack.length - 1;
+  if (!_cmView) return;
+  const { undoDepth, redoDepth } = window.__CM;
+  document.getElementById('undoBtn').disabled = undoDepth(_cmView.state) === 0;
+  document.getElementById('redoBtn').disabled = redoDepth(_cmView.state) === 0;
 }
 
-function resetHistory(val) {
-  undoStack.length = 0;
-  undoStack.push(val);
-  undoIdx = 0;
-  syncUndoUI();
-}
+// resetHistory: in CM mode, history is always clean after a fresh load.
+// We call syncUndoUI to reflect that after any content load.
+function resetHistory() { syncUndoUI(); }
 
 document.getElementById('undoBtn').addEventListener('click', undo);
 document.getElementById('redoBtn').addEventListener('click', redo);
@@ -2550,22 +2787,14 @@ function highlightEntityInInput(entityId) {
   const nonRel = matches.filter(mm => !isArrowLine(mm.index));
   const best   = nonRel.length ? nonRel[0] : matches[0];
 
-  // Which line (0-based) does this match sit on?
-  const targetLine = lineStart.findLastIndex(s => s <= best.index);
-
   $input.focus();
   $input.setSelectionRange(best.index, best.index + best.len);
+  if ($input._view) {
+    $input._view.dispatch({
+      effects: window.__CM.EditorView.scrollIntoView(best.index, { y: 'start', yMargin: 40 })
+    });
+  }
 
-  // rAF so our explicit scrollTop wins over the browser's scroll-to-caret
-  requestAnimationFrame(() => {
-    const style = getComputedStyle($input);
-    const lh    = parseFloat(style.lineHeight) || 22;
-    const pt    = parseFloat(style.paddingTop)  || 12;
-    // Show target line ~2 lines from the top of the textarea
-    $input.scrollTop = Math.max(0, pt + targetLine * lh - lh * 2);
-  });
-
-  // Brief border flash so the user notices the jump
   $input.classList.add('input-hl');
   setTimeout(() => $input.classList.remove('input-hl'), 700);
 }
@@ -2584,6 +2813,11 @@ function highlightRelInInput(fromId, toId) {
         new RegExp(tEsc, 'i').test(line)) {
       $input.focus();
       $input.setSelectionRange(charOff, charOff + line.length);
+      if ($input._view) {
+        $input._view.dispatch({
+          effects: window.__CM.EditorView.scrollIntoView(charOff, { y: 'start', yMargin: 40 })
+        });
+      }
       $input.classList.add('input-hl');
       setTimeout(() => $input.classList.remove('input-hl'), 800);
       return;
@@ -2642,18 +2876,6 @@ function attachNodeInteractions() {
   // Click on SVG background → close context panel
   svg.addEventListener('click', () => closeNodeCtx());
 
-  // ── Edge label click → highlight relationship (best-effort by ID match) ──
-  parser.relationships.forEach(rel => {
-    svg.querySelectorAll('g.edgeLabel[id]').forEach(g => {
-      if (g.id.includes(rel.from) && g.id.includes(rel.to)) {
-        g.style.cursor = 'pointer';
-        g.addEventListener('click', (e) => {
-          e.stopPropagation();
-          highlightRelInInput(rel.from, rel.to);
-        });
-      }
-    });
-  });
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2705,12 +2927,22 @@ function attachDragToNodes() {
   });
 
   // ── Edge click → highlight relationship in source ─────────────
-  edges.forEach(({ path, fromId, toId }) => {
+  const edgeLabelGroups = Array.from(svg.querySelectorAll('g.edgeLabel'));
+  edges.forEach(({ path, fromId, toId }, i) => {
     path.style.cursor = 'pointer';
     path.addEventListener('click', (e) => {
       e.stopPropagation();
       highlightRelInInput(fromId, toId);
     });
+    // Edge label groups have no IDs in Mermaid v10 — correlate by index
+    const lg = edgeLabelGroups[i];
+    if (lg) {
+      lg.style.cursor = 'pointer';
+      lg.addEventListener('click', (e) => {
+        e.stopPropagation();
+        highlightRelInInput(fromId, toId);
+      });
+    }
   });
 
   // ── Drag handler ──────────────────────────────────────────────
@@ -3051,24 +3283,6 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
-function highlight(code) {
-  return esc(code)
-    .replace(/\b(flowchart|sequenceDiagram|classDiagram|subgraph|end|classDef|class|participant|direction)\b/g,
-      '<span class="sy-kw">$1</span>')
-    .replace(/\b(LR|TD|RL|BT)\b/g,
-      '<span class="sy-dir">$1</span>')
-    .replace(/(--&gt;\|"[^"]*"\|)/g,
-      '<span class="sy-lbl">$1</span>')
-    .replace(/--&gt;(?!\|)/g,
-      '<span class="sy-edge">--&gt;</span>')
-    .replace(/&lt;--&gt;/g,
-      '<span class="sy-edge">&lt;--&gt;</span>')
-    .replace(/(fill:[^,\n]+|stroke:[^,\n]+|color:[^,\n]+)/g,
-      '<span class="sy-prop">$1</span>')
-    .replace(/(\/\/[^\n]*)/g,
-      '<span class="sy-cmt">$1</span>');
-}
-
 // ════════════════════════════════════════════════════════════════
 //  RENDER
 // ════════════════════════════════════════════════════════════════
@@ -3100,7 +3314,17 @@ async function renderDiagram(code) {
   try {
     const id = 'mg_' + Date.now();
     const currentTheme = document.getElementById('mermaidTheme').value;
-    mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: currentTheme });
+    const _dv = {};
+    if (_diagramSettings.fontSize)           _dv.fontSize           = _diagramSettings.fontSize;
+    if (_diagramSettings.primaryColor)       _dv.primaryColor       = _diagramSettings.primaryColor;
+    if (_diagramSettings.primaryBorderColor) _dv.primaryBorderColor = _diagramSettings.primaryBorderColor;
+    if (_diagramSettings.lineColor)          _dv.lineColor          = _diagramSettings.lineColor;
+    if (_diagramSettings.background)         _dv.background         = _diagramSettings.background;
+    mermaid.initialize({
+      ...BASE_MERMAID_CONFIG,
+      theme: currentTheme,
+      ...(Object.keys(_dv).length ? { themeVariables: _dv } : {}),
+    });
     const { svg } = await mermaid.render(id, code);
     $preview.innerHTML = svg;
     // Ensure SVG fills wrapper nicely
@@ -3138,7 +3362,6 @@ function onInput() {
   const input = $input.value;
 
   if (!input.trim()) {
-    $code.innerHTML = '';
     $indic.textContent = '';
     $count.textContent = '';
     $status.textContent = 'Ready · Start typing or choose a template';
@@ -3152,12 +3375,10 @@ function onInput() {
 
   if (PASSTHROUGH_TYPES.has(type)) {
     lastCode = input;
-    $code.innerHTML = '';
     $indic.textContent = type === 'er' ? 'ER diagram' : 'Gantt chart';
     $count.textContent = '';
   } else {
     lastCode = parser.parse(input, type);
-    $code.innerHTML    = highlight(lastCode);
     const ec = parser.entities.size;
     const rc = parser.relationships.length;
     const gc = [...parser.environments.keys()].length;
@@ -3169,10 +3390,7 @@ function onInput() {
   renderTimer = setTimeout(() => renderDiagram(lastCode), RENDER_DEBOUNCE_MS);
 
   saveToStorage();
-
-  // Push to undo history (debounced — groups rapid keystrokes)
-  clearTimeout(historyTimer);
-  historyTimer = setTimeout(() => pushHistory($input.value), HISTORY_DEBOUNCE_MS);
+  syncUndoUI();
 }
 
 // wireInputListeners() is called from initCM() once $input adapter is ready.
@@ -3457,12 +3675,12 @@ document.getElementById('shareBtn').addEventListener('click', () => {
   }
 });
 
-function loadFromHash() {
+function loadFromHash(skipText) {
   const hash = location.hash;
   if (!hash.startsWith('#d:')) return false;
   const state = decodeState(hash.slice(3));
   if (!state) return false;
-  if (state.i)  $input.value = state.i;
+  if (!skipText && state.i)  $input.value = state.i;
   if (state.t)  document.getElementById('diagramType').value = state.t;
   if (state.th) document.getElementById('mermaidTheme').value = state.th;
   return true;
@@ -3486,12 +3704,12 @@ function saveToStorage() {
   } catch (_) {}
 }
 
-function loadFromStorage() {
+function loadFromStorage(skipText) {
   try {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return false;
     const s = JSON.parse(raw);
-    if (s.input) $input.value = s.input;
+    if (!skipText && s.input) $input.value = s.input;
     if (s.type)  document.getElementById('diagramType').value = s.type;
     if (s.theme) document.getElementById('mermaidTheme').value = s.theme;
     if (s.split) document.getElementById('leftPanel').style.width = s.split;
@@ -3535,7 +3753,11 @@ function insertPrefix(prefix) {
   onInput();
 }
 
-const TEMPLATE_TYPES = { erDiagram: 'er', ganttChart: 'gantt' };
+const TEMPLATE_TYPES = {
+  microservices: 'LR', threeTier: 'LR', cicd: 'LR', cloud: 'LR',
+  etlPipeline: 'LR', fileProcessing: 'LR', networkArch: 'LR', enterpriseDomains: 'LR',
+  erDiagram: 'er', ganttChart: 'gantt',
+};
 
 function loadTemplate(name) {
   $input.value = TEMPLATES[name] || '';
@@ -3555,9 +3777,12 @@ document.addEventListener('keydown', (e) => {
   const ctrl = e.ctrlKey || e.metaKey;
   if (!ctrl) return;
 
-  // Undo / Redo — override browser textarea default
-  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
-  if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); return; }
+  // Undo / Redo — only intercept when focus is outside the CM editor
+  // (CM's historyKeymap handles Ctrl+Z/Y inside the editor natively)
+  if (!isInputFocused()) {
+    if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+    if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); return; }
+  }
 
   if (e.key === 'Enter') {
     e.preventDefault();
@@ -3569,28 +3794,6 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'f' && !e.shiftKey) {
     e.preventDefault();
     openNodeFind();
-    return;
-  }
-  if (e.key === '/' && !e.shiftKey && isInputFocused()) {
-    e.preventDefault();
-    const txt  = $input.value;
-    const pos  = $input.selectionStart;
-    const ls   = txt.lastIndexOf('\n', pos - 1) + 1;
-    const le   = txt.indexOf('\n', pos);
-    const end  = le === -1 ? txt.length : le;
-    const line = txt.slice(ls, end);
-    let newLine, newPos;
-    if (line.trimStart().startsWith('//')) {
-      const commentStart = ls + line.indexOf('//');
-      newLine = txt.slice(0, commentStart) + txt.slice(commentStart + 2);
-      newPos  = Math.max(ls, pos - 2);
-    } else {
-      newLine = txt.slice(0, ls) + '//' + txt.slice(ls);
-      newPos  = pos + 2;
-    }
-    $input.value = newLine;
-    $input.setSelectionRange(newPos, newPos);
-    $input.dispatchEvent(new Event('input'));
     return;
   }
   if (e.shiftKey && e.key === 'C') {
@@ -3699,6 +3902,215 @@ function toast(msg, duration = TOAST_DURATION_MS) {
 }
 
 // ════════════════════════════════════════════════════════════════
+//  SETTINGS PANEL
+// ════════════════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('settingsModal').classList.remove('hidden');
+}
+function closeSettings() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+function applyDiagramSettings() {
+  if (lastCode) renderDiagram(lastCode);
+}
+
+function rebuildTokenColorGrid() {
+  const grid = document.getElementById('tokenColorGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  const preset    = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const tOverride = _editorSettings.tokenColors || {};
+  const TYPES = ['env','app','db','server','instance','interface','config','batch','watcher','ftp','net','domain'];
+  TYPES.forEach(type => {
+    const color = tOverride[type] || preset.types[type] || '#888888';
+    const row   = document.createElement('div');
+    row.className = 'token-row';
+    row.innerHTML = `<span class="token-lbl" style="color:${color}">${type}:</span>
+      <input type="color" class="color-sw" value="${color}" data-type="${type}" title="${type} token color">`;
+    row.querySelector('input').addEventListener('input', (e) => {
+      if (!_editorSettings.tokenColors) _editorSettings.tokenColors = {};
+      _editorSettings.tokenColors[e.target.dataset.type] = e.target.value;
+      row.querySelector('.token-lbl').style.color = e.target.value;
+      saveSettings();
+      applyEditorTheme();
+    });
+    grid.appendChild(row);
+  });
+}
+
+function syncDiagramSettingsUI() {
+  const items = [
+    ['diagPrimaryColor',  'primaryColor',       '#6366f1'],
+    ['diagBorderColor',   'primaryBorderColor',  '#4f46e5'],
+    ['diagLineColor',     'lineColor',           '#4b5563'],
+    ['diagBackground',    'background',          '#1f2937'],
+  ];
+  items.forEach(([inputId, key, def]) => {
+    const cb  = document.getElementById(inputId + 'Enable');
+    const inp = document.getElementById(inputId);
+    if (!cb || !inp) return;
+    const val = _diagramSettings[key];
+    cb.checked  = !!val;
+    inp.value   = val || def;
+    inp.disabled = !val;
+  });
+  const fs     = parseInt(_diagramSettings.fontSize) || 0;
+  const fsEl   = document.getElementById('diagFontSize');
+  const fsLbl  = document.getElementById('diagFontSizeVal');
+  const fsEnbl = document.getElementById('diagFontSizeEnable');
+  if (fsEl && fsLbl && fsEnbl) {
+    fsEnbl.checked  = !!fs;
+    fsEl.value      = fs || 16;
+    fsEl.disabled   = !fs;
+    fsLbl.textContent = (fs || 16) + 'px';
+  }
+}
+
+function initSettingsPanel() {
+  // ── Tab switching ──────────────────────────────────────────────
+  document.querySelectorAll('.stt-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.stt-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.stt-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('stt-' + tab.dataset.stt).classList.add('active');
+    });
+  });
+
+  // ── Editor theme swatches ──────────────────────────────────────
+  const swatchWrap = document.getElementById('editorThemeSwatches');
+  Object.entries(EDITOR_THEMES).forEach(([key, theme]) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'theme-swatch-wrap';
+    wrap.title = theme.name;
+    const btn = document.createElement('button');
+    btn.className = 'theme-swatch' + (key === _editorSettings.theme ? ' active' : '');
+    btn.dataset.themeKey = key;
+    // Swatch shows a 3-color stripe: bg / keyword / string
+    btn.style.background = `linear-gradient(135deg, ${theme.bg} 40%, ${theme.kw} 40%, ${theme.kw} 70%, ${theme.str} 70%)`;
+    const lbl = document.createElement('span');
+    lbl.className = 'swatch-name';
+    lbl.textContent = theme.name;
+    wrap.appendChild(btn);
+    wrap.appendChild(lbl);
+    wrap.addEventListener('click', () => {
+      _editorSettings.theme = key;
+      _editorSettings.tokenColors = {};
+      saveSettings();
+      applyEditorTheme();
+      swatchWrap.querySelectorAll('.theme-swatch').forEach(s => s.classList.remove('active'));
+      btn.classList.add('active');
+      rebuildTokenColorGrid();
+    });
+    swatchWrap.appendChild(wrap);
+  });
+
+  // ── Font size ──────────────────────────────────────────────────
+  const fszWrap = document.getElementById('fontSizeBtns');
+  [11, 13, 15, 17].forEach(sz => {
+    const btn = document.createElement('button');
+    btn.className = 'fsz-btn' + (sz === +_editorSettings.fontSize ? ' active' : '');
+    btn.textContent = sz + 'px';
+    btn.addEventListener('click', () => {
+      _editorSettings.fontSize = sz;
+      saveSettings();
+      applyEditorTheme();
+      fszWrap.querySelectorAll('.fsz-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    fszWrap.appendChild(btn);
+  });
+
+  // ── Font family ────────────────────────────────────────────────
+  const ffPicker = document.getElementById('fontFamilyPicker');
+  if (!FONT_FAMILIES[_editorSettings.fontFamily]) _editorSettings.fontFamily = 'system';
+  ffPicker.value = _editorSettings.fontFamily;
+  ffPicker.addEventListener('change', () => {
+    _editorSettings.fontFamily = ffPicker.value;
+    saveSettings();
+    applyEditorTheme();
+  });
+
+  // ── Token color grid ───────────────────────────────────────────
+  rebuildTokenColorGrid();
+
+  // ── Diagram: font size ─────────────────────────────────────────
+  const diagFS    = document.getElementById('diagFontSize');
+  const diagFSLbl = document.getElementById('diagFontSizeVal');
+  const diagFSEnb = document.getElementById('diagFontSizeEnable');
+  function updateDiagFS() {
+    const enabled = diagFSEnb.checked;
+    diagFS.disabled = !enabled;
+    _diagramSettings.fontSize = enabled ? diagFS.value + 'px' : '';
+    diagFSLbl.textContent = diagFS.value + 'px';
+    saveSettings();
+    applyDiagramSettings();
+  }
+  diagFSEnb.addEventListener('change', updateDiagFS);
+  diagFS.addEventListener('input', () => {
+    diagFSLbl.textContent = diagFS.value + 'px';
+    if (diagFSEnb.checked) {
+      _diagramSettings.fontSize = diagFS.value + 'px';
+      saveSettings();
+      applyDiagramSettings();
+    }
+  });
+
+  // ── Diagram: color pickers ─────────────────────────────────────
+  [
+    ['diagPrimaryColor',  'primaryColor',       '#6366f1'],
+    ['diagBorderColor',   'primaryBorderColor',  '#4f46e5'],
+    ['diagLineColor',     'lineColor',           '#4b5563'],
+    ['diagBackground',    'background',          '#1f2937'],
+  ].forEach(([inputId, settingKey, def]) => {
+    const cb  = document.getElementById(inputId + 'Enable');
+    const inp = document.getElementById(inputId);
+    function syncPicker() {
+      inp.disabled = !cb.checked;
+      _diagramSettings[settingKey] = cb.checked ? inp.value : '';
+      saveSettings();
+      applyDiagramSettings();
+    }
+    cb.addEventListener('change', syncPicker);
+    inp.addEventListener('input', () => {
+      if (cb.checked) {
+        _diagramSettings[settingKey] = inp.value;
+        saveSettings();
+        applyDiagramSettings();
+      }
+    });
+  });
+
+  // ── Reset all ──────────────────────────────────────────────────
+  document.getElementById('settingsResetAll').addEventListener('click', () => {
+    _editorSettings  = { theme: 'meridian', fontSize: 13, fontFamily: 'system', tokenColors: {} };
+    _diagramSettings = { fontSize: '', primaryColor: '', primaryBorderColor: '', lineColor: '', background: '' };
+    saveSettings();
+    applyEditorTheme();
+    applyDiagramSettings();
+    // Refresh UI controls
+    const swatches = document.querySelectorAll('.theme-swatch');
+    swatches.forEach(s => s.classList.toggle('active', s.dataset.themeKey === 'meridian'));
+    document.querySelectorAll('.fsz-btn').forEach(b => b.classList.toggle('active', b.textContent === '13px'));
+    document.getElementById('fontFamilyPicker').value = 'system';
+    rebuildTokenColorGrid();
+    syncDiagramSettingsUI();
+    toast('Settings reset to defaults');
+  });
+
+  // ── Close handlers ─────────────────────────────────────────────
+  document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
+  document.getElementById('settingsCloseX').addEventListener('click', closeSettings);
+  document.getElementById('settingsModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('settingsModal')) closeSettings();
+  });
+
+  // Sync diagram UI from loaded settings
+  syncDiagramSettingsUI();
+}
+
+// ════════════════════════════════════════════════════════════════
 //  HELP MODAL
 // ════════════════════════════════════════════════════════════════
 function openHelp(section) {
@@ -3730,6 +4142,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     closeHelp();
     closeLibrary();
+    closeSettings();
     return;
   }
   if ((e.key === '?' || e.key === 'F1') && !isInputFocused()) {
@@ -3844,6 +4257,9 @@ function libDelete(idx) {
   toast(`Deleted "${title}"`);
 }
 
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+initSettingsPanel();
+
 document.getElementById('libBtn').addEventListener('click', openLibrary);
 document.getElementById('libClose').addEventListener('click', closeLibrary);
 document.getElementById('libraryModal').addEventListener('click', (e) => {
@@ -3904,43 +4320,41 @@ function isInputFocused() {
   return _cmView ? _cmView.hasFocus : false;
 }
 
+// Returns the initial document text without touching any UI state.
+// Used so EditorState.create() receives the real content, avoiding a history entry.
+function peekInitialDoc() {
+  const hash = location.hash;
+  if (hash.startsWith('#d:')) {
+    const state = decodeState(hash.slice(3));
+    if (state?.i) return state.i;
+  }
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const s = JSON.parse(raw); if (s.input) return s.input; }
+  } catch {}
+  return TEMPLATES.microservices || '';
+}
+
 // ════════════════════════════════════════════════════════════════
 //  CODEMIRROR INIT  (Steps 5 & 6 — adapter + EditorView creation)
 // ════════════════════════════════════════════════════════════════
 function initCM(CM) {
   const {
-    EditorView, EditorState, keymap, drawSelection,
+    EditorView, EditorState, Compartment, keymap, drawSelection,
     highlightActiveLine, lineNumbers, highlightActiveLineGutter,
     history, historyKeymap, defaultKeymap, undo: cmUndo, redo: cmRedo,
     syntaxHighlighting, autocompletion, completionKeymap, linter, lintKeymap,
     tags,
   } = CM;
 
+  // ── Compartments for hot-swappable theme + highlight ──────────
+  _hlCompartment    = new Compartment();
+  _themeCompartment = new Compartment();
+
   // ── Build language + theme ────────────────────────────────────
   const meridianLang  = buildMeridianLanguage(CM);
   const meridianHL    = buildMeridianHighlight(CM);
   const meridianTheme = buildMeridianEditorTheme(CM);
-
-  // ── Per-type token colour override via CM decorations ──────────
-  // StreamLanguage returns string token names. CM6's HighlightStyle only maps
-  // lezer tags, not arbitrary string names. We apply per-type colours via a
-  // thin StyleModule injected alongside syntaxHighlighting.
-  const TYPE_CSS = Object.entries({
-    'meridian-env':       '#60a5fa',
-    'meridian-app':       '#4ade80',
-    'meridian-db':        '#fbbf24',
-    'meridian-server':    '#c084fc',
-    'meridian-instance':  '#f87171',
-    'meridian-interface': '#22d3ee',
-    'meridian-config':    '#fde68a',
-    'meridian-batch':     '#5eead4',
-    'meridian-watcher':   '#a78bfa',
-    'meridian-ftp':       '#f9a8d4',
-    'meridian-net':       '#fb923c',
-    'meridian-domain':    '#e879f9',
-  }).map(([tok, col]) => `.tok-${tok} { color: ${col}; }`).join('\n');
-
-  const typeColourExt = EditorView.baseTheme({});  // placeholder; actual injection below
 
   // ── CM keymap entries that replace the textarea keydown handler ─
   const meridianKeymap = [
@@ -4019,11 +4433,11 @@ function initCM(CM) {
   const mountEl = document.getElementById('smartInput');
   _cmView = new EditorView({
     state: EditorState.create({
-      doc: '',
+      doc: peekInitialDoc(),
       extensions: [
         meridianLang,
-        syntaxHighlighting(meridianHL),
-        meridianTheme,
+        _hlCompartment.of(syntaxHighlighting(meridianHL)),
+        _themeCompartment.of(meridianTheme),
         history(),
         drawSelection(),
         highlightActiveLine(),
@@ -4055,11 +4469,6 @@ function initCM(CM) {
     parent: mountEl,
   });
 
-  // ── Inject per-type token colours via a style tag ──────────────
-  const typeStyle = document.createElement('style');
-  typeStyle.textContent = TYPE_CSS;
-  document.head.appendChild(typeStyle);
-
   // ── Build $input adapter (Step 6) ────────────────────────────
   $input = {
     get value()          { return _cmView.state.doc.toString(); },
@@ -4089,13 +4498,13 @@ function initCM(CM) {
 
   // ── Wire remaining DOM listeners and run boot ─────────────────
   wireInputListeners();
-  boot();
+  boot(true);
 }
 
 // ════════════════════════════════════════════════════════════════
 //  BOOT  (called from initCM once the adapter is ready)
 // ════════════════════════════════════════════════════════════════
-function boot() {
+function boot(skipText) {
   // Embed mode: ?embed=1 or hash contains &embed=1 — strip editor, show diagram only
   const isEmbed = location.search.includes('embed=1') ||
                   location.hash.includes('&embed=1');
@@ -4114,14 +4523,13 @@ function boot() {
   }
 
   // Priority: URL hash > localStorage > default template
-  if (!loadFromHash()) {
-    if (!isEmbed && !loadFromStorage()) {
-      loadTemplate('microservices');
+  if (!loadFromHash(skipText)) {
+    if (!isEmbed && !loadFromStorage(skipText)) {
+      if (!skipText) loadTemplate('microservices');
     }
   }
   onInput();
-  clearTimeout(historyTimer);
-  resetHistory($input.value);
+  resetHistory();
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -4137,7 +4545,7 @@ if (window.__CM) {
 <!-- ── Footer ── -->
 <footer class="flex-shrink-0 bg-gray-900 border-t border-gray-800 px-4 py-1.5 flex items-center justify-between text-xs text-gray-500">
   <span>© 2026 <span class="text-gray-400 font-medium">Meridian</span>. Licensed under the <span class="text-gray-400 font-medium">Apache License 2.0</span>.</span>
-  <span>Designed by <span class="text-gray-400 font-medium">AK</span></span>
+  <span>Designed by <a href="https://github.com/aravindksk7" target="_blank" rel="noopener" class="text-gray-400 font-medium hover:text-indigo-400 transition-colors">AK</a></span>
 </footer>
 </body>
 </html>

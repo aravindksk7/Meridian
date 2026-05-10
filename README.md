@@ -2,7 +2,7 @@
 
 A smart, single-file diagram generator that turns plain-text descriptions of systems into Mermaid.js diagrams — no syntax knowledge required.
 
-**Designed by AK (Aravind Kannan)**
+**Designed by [AK (Aravind Kannan)](https://github.com/aravindksk7)**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
@@ -18,7 +18,8 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **12 entity types** — app, db, server, instance, interface, config, batch, watcher, ftp, net, domain, env
 - **Auto-detection** — smart type inference from names (e.g. `api_gateway` → interface, `postgres` → db, `ec2_instance` → server)
 - **Compound name support** — underscore and hyphen separators handled correctly in auto-detection
-- **Syntax highlighting** — token-coloured input panel with entity types, arrows, labels, and comments in distinct colours
+- **CodeMirror 6 editor** — line numbers, in-place syntax highlighting, undo/redo history, `Ctrl+/` comment toggle
+- **Autocomplete** — type prefixes and known entity names suggested as you type
 - **Real-time rendering** — diagram updates as you type
 
 ### Grouping & Topology
@@ -28,10 +29,19 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Hybrid mode** — entities can appear in both `env:` and `domain:` simultaneously; domain ownership shown through fill-colour overrides
 
 ### Diagrams
-- **4 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class
+- **6 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class, ER Diagram, Gantt
 - **5 themes** — Default, Dark, Forest, Neutral, Base
 - **All arrow styles** — normal, labelled, bidirectional, pre-dashed, post-thick, chained (`>>`)
 - **12 natural language connectors** — `calls`, `sends to`, `reads from`, `writes to`, `connects to`, `depends on`, `triggers`, `subscribes to`, `publishes to`, `syncs with`, `authenticates via`, `routes to`
+
+### Appearance Settings (⚙️)
+- **6 editor colour themes** — Meridian (default), One Dark, Dracula, Nord, Monokai, Solarized Light — hot-swapped without page reload
+- **Font size** — 11 / 13 / 15 / 17 px
+- **Font family** — System mono, Fira Code, Cascadia Code, JetBrains Mono
+- **Per-entity token colours** — override individual type colours (env:, app:, db: …) for the active theme
+- **Diagram font size** — override the Mermaid font size via a slider
+- **Diagram node / edge colours** — override primary fill, border, edge colour, and canvas background (works best with the Base diagram theme)
+- **Persistent** — all settings saved to `localStorage` and restored on next open; Reset All restores defaults
 
 ### UI & Theme
 - **Dark / light theme** — full CSS design token system, switchable via toolbar
@@ -41,8 +51,9 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Fullscreen preview** — expand diagram to full viewport
 
 ### Productivity
-- **8 templates** — quick-start presets covering microservices, ETL, network architecture, enterprise domains, authentication flow, file processing, class hierarchy, and more
-- **Snippet library** — save, name, and reload your own diagram snippets
+- **10 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, ER diagram, and Gantt chart
+- **Diagram library** — save, name, and reload your own diagram snippets
+- **Persistent node positions** — drag nodes to rearrange; positions survive re-renders and page reloads
 - **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, download SVG, download PNG (2×)
 - **Shareable URLs** — encode full diagram state (input, type, theme) into a URL hash
 - **Help modal** — built-in reference panel (press `?` or `F1`)
@@ -53,10 +64,13 @@ Meridian lets you describe your architecture, data flows, or system relationship
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Enter` | Render diagram |
+| `Ctrl+Z` / `Ctrl+Y` | Undo / redo |
+| `Ctrl+/` | Toggle comment on current line |
 | `Ctrl+Shift+C` | Copy Mermaid code |
 | `Ctrl+Shift+S` | Copy share URL |
 | `Ctrl+Shift+F` | Toggle fullscreen |
 | `Ctrl++` / `Ctrl+-` | Zoom in / out |
+| `Ctrl+F` | Open node search |
 | `?` or `F1` | Open help |
 | `Escape` | Close modal |
 
@@ -165,6 +179,7 @@ app:Frontend --> app:Backend
 - Nodes are deduplicated — the same entity can appear in multiple blocks
 - Domain subgraphs only render for entities not inside an `env:` block; those entities receive colour overrides instead
 - Auto-detection works on compound names: `ec2_instance` → server, `rest_api` → interface
+- Custom diagram colours (⚙️ → Diagram tab) work best when the diagram theme is set to **Base**
 
 ---
 
@@ -175,13 +190,44 @@ Press **Templates** in the toolbar to load any built-in preset:
 | # | Name | Covers |
 |---|------|--------|
 | 1 | Microservices Architecture | Service mesh, API gateway, databases |
-| 2 | Data Pipeline (ETL) | Batch jobs, data warehouse, orchestration |
-| 3 | Authentication Flow | Sequence diagram, OAuth/JWT |
-| 4 | Class Hierarchy | Class diagram with inheritance |
-| 5 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
-| 6 | ETL Pipeline | File watchers, FTP, batch processing |
-| 7 | File Processing Pipeline | Ingestion, transformation, storage |
-| 8 | Network Architecture | DMZ, internal, external zones |
+| 2 | 3-Tier App | Presentation / logic / data tiers |
+| 3 | CI/CD Pipeline | Build → test → deploy batch chain |
+| 4 | Cloud Infra | VPC with ALB, ECS, RDS, ElastiCache, S3 |
+| 5 | ETL Pipeline | Extract → transform → load with batch entities |
+| 6 | File Processing Pipeline | FTP / watcher / batch processing |
+| 7 | Network Architecture | External, DMZ, and internal net zones |
+| 8 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
+| 9 | ER Diagram | Customer / Order / Line Item / Address schema |
+| 10 | Gantt Chart | Project roadmap across Discovery / Design / Dev / Release |
+
+---
+
+## Appearance Settings
+
+Click the **⚙️** button in the header toolbar to open the Appearance panel.
+
+### Editor tab
+
+| Setting | Options |
+|---------|---------|
+| Theme | Meridian · One Dark · Dracula · Nord · Monokai · Solarized |
+| Font size | 11px · 13px · 15px · 17px |
+| Font family | System mono · Fira Code · Cascadia Code · JetBrains Mono |
+| Token colours | Per-entity-type colour pickers (env:, app:, db:, server:, …) |
+
+Switching themes resets any individual token colour overrides back to the new theme's defaults.
+
+### Diagram tab
+
+| Setting | Description |
+|---------|-------------|
+| Font size | Slider 10–28 px; enable checkbox activates it |
+| Node fill | Primary node background colour |
+| Node border | Primary node border colour |
+| Edge color | Arrow and edge line colour |
+| Background | Canvas background colour |
+
+> Custom diagram colours only take full effect when the **diagram theme** (top toolbar) is set to **🎨 Base**.
 
 ---
 
@@ -191,6 +237,7 @@ Press **Templates** in the toolbar to load any built-in preset:
 |---------|---------|---------|
 | [Mermaid.js](https://mermaid.js.org/) | v10 | Diagram rendering |
 | [Tailwind CSS](https://tailwindcss.com/) | v3 | Utility styling |
+| [CodeMirror](https://codemirror.net/) | v6 | Code editor (syntax, autocomplete, history) |
 
 No npm install. No build step. Open and use.
 
