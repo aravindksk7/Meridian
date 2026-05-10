@@ -1,18 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<!-- ── CodeMirror 6 bootstrap (module) ── -->
+<script type="module">
+import {EditorView, keymap, drawSelection, highlightActiveLine, lineNumbers,
+        highlightActiveLineGutter} from 'https://esm.sh/@codemirror/view@6';
+import {EditorState, Compartment, StateEffect, StateField} from 'https://esm.sh/@codemirror/state@6';
+import {defaultKeymap, historyKeymap, history, undo, redo,
+        indentWithTab} from 'https://esm.sh/@codemirror/commands@6';
+import {StreamLanguage, HighlightStyle, syntaxHighlighting,
+        indentOnInput} from 'https://esm.sh/@codemirror/language@6';
+import {autocompletion, completionKeymap,
+        CompletionContext} from 'https://esm.sh/@codemirror/autocomplete@6';
+import {linter, lintKeymap, setDiagnostics} from 'https://esm.sh/@codemirror/lint@6';
+import {tags} from 'https://esm.sh/@lezer/highlight@1';
+
+window.__CM = {
+  EditorView, keymap, drawSelection, highlightActiveLine, lineNumbers,
+  highlightActiveLineGutter,
+  EditorState, Compartment, StateEffect, StateField,
+  defaultKeymap, historyKeymap, history, undo, redo, indentWithTab,
+  StreamLanguage, HighlightStyle, syntaxHighlighting, indentOnInput,
+  autocompletion, completionKeymap, CompletionContext,
+  linter, lintKeymap, setDiagnostics,
+  tags,
+};
+document.dispatchEvent(new Event('cm-ready'));
+</script>
 <style>
+/* ── Design tokens ── */
+:root {
+  --surface-0:#111827; --surface-1:#1f2937; --surface-2:#374151; --surface-3:#4b5563;
+  --surface-act:#1e1b4b; --border:#374151; --border-sub:#1f2937;
+  --text:#d1d5db; --text-em:#f9fafb; --text-muted:#9ca3af; --text-dim:#6b7280; --text-faint:#4b5563;
+  --accent:#6366f1; --accent-hov:#4f46e5; --accent-bg:#1e1b4b; --accent-text:#a5b4fc;
+  --kbd-bg:#374151; --kbd-text:#9ca3af; --kbd-border:#4b5563; --scrollbar:#4b5563;
+  --code-bg:#1f2937; --code-text:#93c5fd;
+  --ok:#4ade80; --err-bg:#2d1318; --err-border:#7f1d1d; --err-title:#f87171; --err-body:#fca5a5;
+}
+[data-theme="light"] {
+  --surface-0:#f8fafc; --surface-1:#ffffff; --surface-2:#f1f5f9; --surface-3:#e2e8f0;
+  --surface-act:#e0e7ff; --border:#e2e8f0; --border-sub:#f1f5f9;
+  --text:#374151; --text-em:#1e293b; --text-muted:#64748b; --text-dim:#94a3b8; --text-faint:#94a3b8;
+  --accent:#6366f1; --accent-hov:#4f46e5; --accent-bg:#e0e7ff; --accent-text:#4338ca;
+  --kbd-bg:#e2e8f0; --kbd-text:#64748b; --kbd-border:#cbd5e1; --scrollbar:#cbd5e1;
+  --code-bg:#f1f5f9; --code-text:#4f46e5;
+  --ok:#16a34a; --err-bg:#fef2f2; --err-border:#fecaca; --err-title:#dc2626; --err-body:#b91c1c;
+}
 * { box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
 /* Input focus */
 #smartInput { transition: border-color .15s, box-shadow .15s; }
 #smartInput:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.25); }
+
+/* Entity click → code highlight flash */
+#smartInput.input-hl { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,.45) !important; transition: none !important; }
 
 /* Entity badge pills */
 .badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;
@@ -33,35 +81,56 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .badge-net-int   { background:#eff6ff;color:#1e3a8a;border-color:#93c5fd; }
 .badge-domain    { background:#fdf4ff;color:#701a75;border-color:#e879f9; }
 
-/* Template buttons */
-.tpl-btn { transition:background .15s; }
-.tpl-btn:hover { background:#374151 !important; }
 
 /* Zoom controls */
 .zoom-btn { display:inline-flex;align-items:center;justify-content:center;
             width:22px;height:22px;border-radius:4px;font-size:14px;font-weight:700;
             cursor:pointer;user-select:none;transition:background .15s;
-            background:#f3f4f6;color:#374151;border:1px solid #d1d5db; }
-.zoom-btn:hover { background:#e5e7eb; }
+            background:var(--surface-2);color:var(--text);border:1px solid var(--border); }
+.zoom-btn:hover { background:var(--surface-3); }
+
+/* Preview header */
+#previewHeader { background:var(--surface-1);border-bottom:1px solid var(--border); }
+.prev-title { color:var(--text-muted); }
+.btn-sm { font-size:11px;background:var(--surface-2);border:1px solid var(--border);
+          color:var(--text-muted);border-radius:4px;padding:2px 7px;
+          cursor:pointer;transition:background .15s; }
+.btn-sm:hover { background:var(--surface-3);color:var(--text); }
+.prev-divider { width:1px;height:16px;background:var(--border);flex-shrink:0; }
+
+/* Render error box */
+.render-err { background:var(--err-bg);border:1px solid var(--err-border);border-radius:8px;padding:16px;margin:8px;font-size:12px; }
+.render-err h4 { color:var(--err-title);font-weight:600;margin:0 0 6px; }
+.render-err pre { color:var(--err-body);white-space:pre-wrap;margin:0;font-family:monospace;font-size:11px; }
 
 /* Resizer */
-#resizer { width:4px;flex-shrink:0;background:#1f2937;cursor:col-resize;
+#resizer { width:4px;flex-shrink:0;background:var(--border);cursor:col-resize;
            transition:background .15s;position:relative;z-index:10; }
 #resizer:hover, #resizer.dragging { background:#6366f1; }
 
 /* Copy dropdown */
-.copy-menu { position:absolute;right:0;top:calc(100% + 4px);background:#1f2937;border:1px solid #374151;
+.copy-menu { position:absolute;right:0;top:calc(100% + 4px);background:var(--surface-1);border:1px solid var(--border);
              border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.4);z-index:50;min-width:180px;overflow:hidden; }
 .copy-menu button { display:block;width:100%;text-align:left;padding:8px 12px;font-size:12px;
-                    color:#d1d5db;transition:background .1s; }
-.copy-menu button:hover { background:#374151; }
+                    color:var(--text);transition:background .1s; }
+.copy-menu button:hover { background:var(--surface-2); }
 
 /* Keyboard shortcut chip */
-kbd { background:#374151;color:#9ca3af;border:1px solid #4b5563;border-radius:3px;
+kbd { background:var(--kbd-bg);color:var(--kbd-text);border:1px solid var(--kbd-border);border-radius:3px;
       padding:1px 5px;font-size:10px;font-family:monospace; }
 
 /* SVG zoom wrapper */
-#zoomWrapper { transform-origin: top left; transition: transform .15s ease; display:inline-block; }
+#zoomWrapper { transform-origin: top left; transition: transform .15s ease; display:inline-block; cursor: grab; }
+#zoomWrapper.is-panning { cursor: grabbing !important; }
+#zoomWrapper.no-diagram { cursor: default; }
+
+/* ── Preview canvas background (theme-aware) ── */
+#previewScroll {
+  background: repeating-linear-gradient(45deg,#1a1f2e 0,#1a1f2e 10px,#111827 10px,#111827 20px);
+}
+[data-theme="light"] #previewScroll {
+  background: repeating-linear-gradient(45deg,#f9fafb 0,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px);
+}
 
 /* Syntax highlight colors */
 .sy-kw   { color:#c792ea;font-weight:600; }
@@ -75,7 +144,7 @@ kbd { background:#374151;color:#9ca3af;border:1px solid #4b5563;border-radius:3p
 pre#codeOutput { margin:0; }
 ::-webkit-scrollbar { width:5px;height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:#4b5563;border-radius:3px; }
+::-webkit-scrollbar-thumb { background:var(--scrollbar);border-radius:3px; }
 
 /* Fullscreen preview */
 body.fullscreen-preview #leftPanel,
@@ -84,36 +153,268 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 
 /* Help modal */
 .help-nav { display:block;width:100%;text-align:left;padding:6px 10px;border-radius:6px;
-            font-size:12px;color:#9ca3af;transition:background .1s,color .1s;cursor:pointer;border:none;background:none; }
-.help-nav:hover { background:#1f2937;color:#d1d5db; }
-.help-nav.active { background:#1f2937;color:#e5e7eb;font-weight:600; }
+            font-size:12px;color:var(--text-muted);transition:background .1s,color .1s;cursor:pointer;border:none;background:none; }
+.help-nav:hover { background:var(--surface-1);color:var(--text); }
+.help-nav.active { background:var(--surface-1);color:var(--text-em);font-weight:600; }
 .help-section { display:none; }
 .help-section.active { display:block; }
-.help-h2 { font-size:18px;font-weight:700;color:#f9fafb;margin-bottom:4px; }
-.help-sub { font-size:12px;color:#6b7280;margin-bottom:18px;line-height:1.5; }
+.help-h2 { font-size:18px;font-weight:700;color:var(--text-em);margin-bottom:4px; }
+.help-sub { font-size:12px;color:var(--text-dim);margin-bottom:18px;line-height:1.5; }
 .help-h3 { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-           color:#4b5563;margin:20px 0 8px; }
+           color:var(--text-faint);margin:20px 0 8px; }
 .help-tbl { width:100%;border-collapse:collapse;font-size:12px; }
 .help-tbl th { text-align:left;padding:6px 10px;font-size:10px;font-weight:700;
-               text-transform:uppercase;letter-spacing:.05em;color:#6b7280;
-               border-bottom:1px solid #374151; }
-.help-tbl td { padding:8px 10px;border-bottom:1px solid #1f2937;color:#d1d5db;vertical-align:top;line-height:1.5; }
-.help-tbl tr:hover td { background:#111827; }
-.help-tbl code { background:#1f2937;padding:1px 6px;border-radius:4px;color:#93c5fd;font-size:11px;font-family:monospace; }
-.help-ex { background:#111827;border:1px solid #374151;border-radius:8px;padding:12px 16px;
+               text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);
+               border-bottom:1px solid var(--border); }
+.help-tbl td { padding:8px 10px;border-bottom:1px solid var(--border-sub);color:var(--text);vertical-align:top;line-height:1.5; }
+.help-tbl tr:hover td { background:var(--surface-0); }
+.help-tbl code { background:var(--code-bg);padding:1px 6px;border-radius:4px;color:var(--code-text);font-size:11px;font-family:monospace; }
+.help-ex { background:var(--surface-0);border:1px solid var(--border);border-radius:8px;padding:12px 16px;
            font-size:12px;font-family:monospace;color:#c3e88d;white-space:pre;overflow-x:auto;
            margin-bottom:16px;line-height:1.7; }
 .help-pill { display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600;margin:2px; }
-.hkbd { background:#374151;color:#9ca3af;border:1px solid #4b5563;border-radius:3px;
+.hkbd { background:var(--kbd-bg);color:var(--kbd-text);border:1px solid var(--kbd-border);border-radius:3px;
         padding:1px 6px;font-size:11px;font-family:monospace; }
-.hcode { background:#1f2937;padding:1px 6px;border-radius:4px;color:#93c5fd;font-size:11px;font-family:monospace; }
+.hcode { background:var(--code-bg);padding:1px 6px;border-radius:4px;color:var(--code-text);font-size:11px;font-family:monospace; }
+
+/* ── Library modal ── */
+#libraryModal { position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);backdrop-filter:blur(2px); }
+#libraryModal.hidden { display:none; }
+#libraryCard { background:var(--surface-1);border:1px solid var(--border);border-radius:12px;width:520px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.6); }
+.lib-hdr { padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0; }
+.lib-title { font-size:14px;font-weight:700;color:var(--text-em);flex:1; }
+.lib-save-row { padding:10px 16px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-shrink:0; }
+.lib-name-input { flex:1;background:var(--surface-0);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);outline:none; }
+.lib-name-input:focus { border-color:var(--accent);box-shadow:0 0 0 2px rgba(99,102,241,.2); }
+.lib-save-btn { background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap; }
+.lib-save-btn:hover { background:var(--accent-hov); }
+.lib-list { flex:1;overflow-y:auto;padding:8px; }
+.lib-empty { padding:24px;text-align:center;font-size:12px;color:var(--text-dim); }
+.lib-item { display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:7px;transition:background .1s;border:1px solid transparent;margin-bottom:4px; }
+.lib-item:hover { background:var(--surface-2);border-color:var(--border); }
+.lib-item-icon { font-size:16px;flex-shrink:0; }
+.lib-item-body { flex:1;min-width:0; }
+.lib-item-title { font-size:12px;font-weight:600;color:var(--text-em);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.lib-item-meta { font-size:10px;color:var(--text-dim);margin-top:1px; }
+.lib-item-open { background:var(--surface-3);border:1px solid var(--border);border-radius:5px;padding:3px 10px;font-size:11px;color:var(--text);cursor:pointer;white-space:nowrap;flex-shrink:0; }
+.lib-item-open:hover { background:var(--accent);border-color:var(--accent);color:#fff; }
+.lib-item-del { background:transparent;border:none;width:20px;height:20px;border-radius:4px;color:var(--text-dim);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.lib-item-del:hover { background:var(--err-bg);color:var(--err-title); }
 
 /* Toast notification */
 #toast { position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(8px);
-         background:#1f2937;border:1px solid #374151;color:#d1d5db;padding:8px 16px;
+         background:var(--surface-1);border:1px solid var(--border);color:var(--text);padding:8px 16px;
          border-radius:8px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.4);
          opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:100; }
 #toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
+
+/* ── Undo / Redo ── */
+.ur-btn:disabled { opacity:.35;cursor:default;pointer-events:none; }
+
+/* ── Node hover highlight (injected class via JS) ── */
+#mermaidOutput svg g.node { cursor:pointer; }
+#mermaidOutput svg g.node-hl > rect,
+#mermaidOutput svg g.node-hl > polygon,
+#mermaidOutput svg g.node-hl > circle,
+#mermaidOutput svg g.node-hl > ellipse,
+#mermaidOutput svg g.node-hl > path { stroke:#6366f1!important;stroke-width:2.5px!important; }
+
+/* ── Find-match highlight ── */
+#mermaidOutput svg g.node-find-hl > rect,
+#mermaidOutput svg g.node-find-hl > polygon,
+#mermaidOutput svg g.node-find-hl > circle,
+#mermaidOutput svg g.node-find-hl > ellipse,
+#mermaidOutput svg g.node-find-hl > path { stroke:#f59e0b!important;stroke-width:2px!important;stroke-dasharray:5,3!important; }
+
+/* ── Source-cursor highlight (cursor in textarea → node glow) ── */
+#mermaidOutput svg g.node-src-hl > rect,
+#mermaidOutput svg g.node-src-hl > polygon,
+#mermaidOutput svg g.node-src-hl > circle,
+#mermaidOutput svg g.node-src-hl > ellipse,
+#mermaidOutput svg g.node-src-hl > path { stroke:#818cf8!important;stroke-width:2px!important;stroke-dasharray:3,2!important; }
+
+/* ── Floating node "+" handle ── */
+#nodeHandle {
+  position:fixed;display:none;z-index:150;flex-direction:column;align-items:center;gap:4px;
+}
+#nodeHandle .nh-btn {
+  width:22px;height:22px;background:#6366f1;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+  box-shadow:0 2px 8px rgba(99,102,241,.55);
+  transition:background .15s,transform .15s;user-select:none;
+}
+#nodeHandle .nh-btn:hover { background:#4f46e5;transform:scale(1.15); }
+#nodeHandle .nh-tip {
+  background:var(--surface-1);color:var(--text-em);font-size:10px;padding:3px 8px;
+  border-radius:5px;white-space:nowrap;pointer-events:none;
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
+}
+
+/* ── Find node bar ── */
+#nodeFindBar { flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface-1); }
+#nodeFindInput:focus { border-color:var(--accent) !important; }
+
+/* ── Node context panel ── */
+#nodeCtxPanel {
+  position:fixed;display:none;z-index:200;min-width:210px;max-height:80vh;overflow-y:auto;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#nodeCtxPanel.vis { display:block; }
+.ncp-hdr { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:5px; }
+.ncp-name { font-size:13px;font-weight:600;color:var(--text-em);padding:4px 8px;background:var(--surface-0);border-radius:6px;margin-bottom:8px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis; }
+.ncp-btn { display:flex;align-items:center;gap:6px;width:100%;padding:6px 8px;background:var(--surface-0);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);cursor:pointer;transition:background .1s;margin-bottom:4px; }
+.ncp-btn:hover { background:var(--surface-2);color:var(--text-em); }
+.ncp-x { position:absolute;top:7px;right:7px;width:17px;height:17px;background:var(--surface-2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);cursor:pointer; }
+.ncp-x:hover { background:var(--surface-3);color:var(--text-em); }
+.ncp-sep  { height:1px;background:var(--border);margin:6px 0;flex-shrink:0; }
+.ncp-sec  { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin-bottom:4px; }
+.ncp-conn { display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:5px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:background .1s;line-height:1.4; }
+.ncp-conn:hover { background:var(--surface-2);color:var(--text); }
+.ncp-dir  { color:var(--text-faint);flex-shrink:0;font-size:10px;width:12px;text-align:center; }
+.ncp-elbl { font-size:9px;color:var(--text-dim);font-style:italic;margin-left:2px; }
+
+/* ── Add node form ── */
+#nodeAddForm {
+  position:fixed;display:none;z-index:201;width:278px;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:13px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#nodeAddForm.vis { display:block; }
+.naf-hdr { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:10px; }
+.naf-lbl { display:block;font-size:11px;color:var(--text-dim);margin-bottom:3px;margin-top:7px; }
+.naf-input { width:100%;background:var(--surface-0);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px;color:var(--text);outline:none; }
+.naf-input:focus { border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.2); }
+.naf-types { display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:4px; }
+.naf-type { padding:5px 2px;border-radius:5px;border:1px solid var(--border);background:var(--surface-0);color:var(--text);font-size:9px;text-align:center;cursor:pointer;transition:all .1s;line-height:1.3; }
+.naf-type:hover,.naf-type.sel { border-color:#6366f1;background:var(--accent-bg);color:var(--accent-text); }
+.naf-actions { display:flex;gap:6px;margin-top:10px; }
+.naf-ok { flex:1;padding:6px;background:#6366f1;color:#fff;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:background .1s; }
+.naf-ok:hover { background:#4f46e5; }
+.naf-cancel { padding:6px 10px;background:var(--surface-2);color:var(--text-muted);border-radius:6px;font-size:12px;cursor:pointer;border:none;transition:background .1s; }
+.naf-cancel:hover { background:var(--surface-3); }
+
+/* ── Connect-to panel ── */
+#nodeConnectPanel {
+  position:fixed;display:none;z-index:201;min-width:185px;max-height:250px;overflow-y:auto;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:8px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#nodeConnectPanel.vis { display:block; }
+.nc2-hdr { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:7px; }
+.nc2-item { display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;cursor:pointer;font-size:12px;color:var(--text);transition:background .1s; }
+.nc2-item:hover { background:var(--surface-2); }
+
+/* ── Shape / icon picker ── */
+#shapePicker {
+  position:fixed;display:none;z-index:200;width:360px;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#shapePicker.vis { display:block; }
+.sp-hdr { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);margin-bottom:8px; }
+.sp-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:5px; }
+.sp-card { background:var(--surface-0);border:1px solid var(--border);border-left-width:3px;border-radius:7px;
+  padding:7px 9px;cursor:pointer;transition:all .15s;display:flex;flex-direction:column;gap:4px;text-align:left; }
+.sp-card:hover { background:var(--accent-bg);border-color:#6366f1 !important; }
+.sp-pill { display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;
+  font-size:11px;font-weight:600;white-space:nowrap;max-width:100%; }
+.sp-desc { font-size:9px;color:var(--text-dim);padding-left:1px; }
+
+/* ── Cloud icon picker ── */
+#iconPicker {
+  position:fixed;display:none;z-index:100;width:400px;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#iconPicker.vis { display:block; }
+.ip-search {
+  width:100%;background:var(--surface-0);border:1px solid var(--border);border-radius:6px;
+  padding:5px 10px;font-size:12px;color:var(--text);outline:none;margin-bottom:8px;
+}
+.ip-search:focus { border-color:#6366f1;box-shadow:0 0 0 2px rgba(99,102,241,.2); }
+.ip-search::placeholder { color:var(--text-faint); }
+.ip-tabs { display:flex;gap:4px;margin-bottom:8px; }
+.ip-tab {
+  flex:1;padding:5px 2px;border-radius:5px;border:1px solid var(--border);
+  background:var(--surface-0);color:var(--text-muted);font-size:11px;font-weight:700;
+  cursor:pointer;transition:all .1s;text-align:center;
+}
+.ip-tab:hover { background:var(--surface-1);color:var(--text); }
+.ip-tab.active { background:var(--accent-bg);border-color:#6366f1;color:var(--accent-text); }
+.ip-grid {
+  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+  max-height:260px;overflow-y:auto;
+}
+.ip-item {
+  background:var(--surface-0);border:1px solid var(--border);border-radius:7px;
+  padding:7px 3px;text-align:center;cursor:pointer;transition:all .15s;
+}
+.ip-item:hover { border-color:#6366f1;background:var(--accent-bg); }
+.ip-icon  { font-size:16px;line-height:1.25; }
+.ip-label { font-size:9px;color:var(--text);line-height:1.3;margin-top:2px;
+            white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px; }
+.ip-type  { font-size:8px;color:var(--text-faint);font-family:monospace;margin-top:1px; }
+.ip-empty { grid-column:1/-1;text-align:center;padding:24px;font-size:12px;color:var(--text-faint); }
+
+/* ── Template picker dropdown ── */
+#tplPicker {
+  position:fixed;display:none;z-index:100;width:220px;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:6px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#tplPicker.vis { display:block; }
+.tpl-item {
+  display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;
+  background:none;border:none;border-radius:6px;text-align:left;cursor:pointer;
+  font-size:12px;color:var(--text);transition:background .1s;
+}
+.tpl-item:hover { background:var(--surface-2);color:var(--text-em); }
+.tpl-item-icon { font-size:14px;flex-shrink:0;width:18px;text-align:center; }
+.tpl-divider { height:1px;background:var(--surface-2);margin:4px 0; }
+
+/* ── Drag-to-connect SVG overlay ── */
+#dragSvg { position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:300;display:none; }
+
+/* ── App Light Theme: Tailwind utility overrides ── */
+[data-theme="light"] body                  { background:#f8fafc !important; color:#1e293b !important; }
+[data-theme="light"] .bg-gray-950          { background-color:#f1f5f9 !important; }
+[data-theme="light"] .bg-gray-900          { background-color:#ffffff !important; }
+[data-theme="light"] .bg-gray-800          { background-color:#f1f5f9 !important; }
+[data-theme="light"] .bg-gray-700          { background-color:#e2e8f0 !important; }
+[data-theme="light"] .border-gray-800      { border-color:#e2e8f0 !important; }
+[data-theme="light"] .border-gray-700      { border-color:#cbd5e1 !important; }
+[data-theme="light"] .border-gray-200      { border-color:#cbd5e1 !important; }
+[data-theme="light"] .text-gray-100        { color:#1e293b !important; }
+[data-theme="light"] .text-gray-200        { color:#334155 !important; }
+[data-theme="light"] .text-gray-300        { color:#475569 !important; }
+[data-theme="light"] .text-gray-400        { color:#64748b !important; }
+[data-theme="light"] .text-gray-500        { color:#94a3b8 !important; }
+[data-theme="light"] .text-gray-600        { color:#64748b !important; }
+[data-theme="light"] header span.text-white { color:#1e293b !important; }
+[data-theme="light"] select                { color:#374151 !important; }
+[data-theme="light"] pre#codeOutput        { color:#374151 !important; }
+[data-theme="light"] .flex-1.overflow-auto[style*="rgba(17,24,39"] { background:rgba(241,245,249,.7) !important; }
+/* smartInput: needs stronger value than .bg-gray-800 override */
+[data-theme="light"] #smartInput           { background:#ffffff !important; border-color:#cbd5e1 !important; color:#1e293b !important; }
+[data-theme="light"] #smartInput::placeholder { color:#94a3b8 !important; }
+/* Picker trigger buttons use inline styles — must override with !important */
+[data-theme="light"] #iconPickerBtn  { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
+[data-theme="light"] #shapePickerBtn { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
+[data-theme="light"] #tplPickerBtn   { background:#f1f5f9 !important; border-color:#cbd5e1 !important; color:#64748b !important; }
+/* helpClose hover: Tailwind hover: variant can't be overridden by plain class selectors */
+[data-theme="light"] #helpClose       { background:#e2e8f0 !important; color:#64748b !important; }
+[data-theme="light"] #helpClose:hover { background:#cbd5e1 !important; color:#1e293b !important; }
+/* Syntax highlight – light mode */
+[data-theme="light"] .sy-kw   { color:#7c3aed; }
+[data-theme="light"] .sy-dir  { color:#0369a1; }
+[data-theme="light"] .sy-edge { color:#0369a1; }
+[data-theme="light"] .sy-lbl  { color:#15803d; }
+[data-theme="light"] .sy-prop { color:#c2410c; }
+[data-theme="light"] .sy-cmt  { color:#94a3b8; }
+/* help-ex keeps its green syntax color in light mode */
+[data-theme="light"] .help-ex { color:#15803d !important; }
 </style>
 </head>
 <body class="bg-gray-950 text-gray-100 h-screen flex flex-col overflow-hidden">
@@ -134,6 +435,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
       <button class="help-nav" data-section="arrows">→ Arrows</button>
       <button class="help-nav" data-section="grouping">⬡ Grouping</button>
       <button class="help-nav" data-section="natural">💬 Natural Language</button>
+      <button class="help-nav" data-section="toolbar">🛠️ Toolbar</button>
       <button class="help-nav" data-section="shortcuts">⌨️ Shortcuts</button>
     </div>
 
@@ -172,7 +474,9 @@ domain:Platform {
           <li>Comments: lines starting with <span class="hcode">//</span> or <span class="hcode">#</span> are ignored</li>
           <li>Multi-line blocks: open with <span class="hcode">env:Name {</span> and close with <span class="hcode">}</span> on its own line</li>
           <li>Switch views with the Diagram type dropdown — Flowchart, Sequence, Class</li>
-          <li>Click any template button to load a working example instantly</li>
+          <li>Use <span class="hcode">🏷️ Entities ▾</span> to pick an entity type — it inserts the prefix and you just type the name</li>
+          <li>Use <span class="hcode">📋 Templates ▾</span> to load a working example instantly</li>
+          <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 140+ AWS / GCP / Azure / General service icons and insert them with their cloud icon embedded in the label</li>
         </ul>
       </div>
 
@@ -338,6 +642,49 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-500 mt-2">Entity names are auto-typed by keywords — "PostgreSQL" becomes a db, "BatchJob" becomes a batch node. You can still use explicit prefixes to override.</p>
       </div>
 
+      <!-- ── Toolbar ── -->
+      <div id="hs-toolbar" class="help-section">
+        <div class="help-h2">Toolbar &amp; Pickers</div>
+        <div class="help-sub">The toolbar above the Smart Input gives quick access to entity insertion, templates, cloud service icons, and app settings.</div>
+
+        <div class="help-h3">🏷️ Entities ▾</div>
+        <p class="text-xs text-gray-400 mb-3">Opens a grid of all 13 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
+
+        <div class="help-h3">📋 Templates ▾</div>
+        <p class="text-xs text-gray-400 mb-3">Ten pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
+        <table class="help-tbl" style="margin-bottom:12px">
+          <thead><tr><th>Template</th><th>What it shows</th></tr></thead>
+          <tbody>
+            <tr><td>📐 Microservices</td><td>Multi-service app with API gateway, databases, and cache</td></tr>
+            <tr><td>🏗️ 3-Tier App</td><td>Classic presentation / logic / data tier layout</td></tr>
+            <tr><td>🔄 CI/CD Pipeline</td><td>Build → test → deploy chain using batch entities</td></tr>
+            <tr><td>☁️ Cloud Infra</td><td>VPC with ALB, ECS, RDS, ElastiCache, and S3</td></tr>
+            <tr><td>🔃 ETL Pipeline</td><td>Extract → transform → load with batch entities</td></tr>
+            <tr><td>📁 File Processing</td><td>FTP / watcher / batch processing pipeline</td></tr>
+            <tr><td>🌐 Network Arch</td><td>External, DMZ, and internal net zones</td></tr>
+            <tr><td>🏢 Enterprise Domains</td><td>Multi-domain ownership with env grouping</td></tr>
+            <tr><td>🔗 ER Diagram</td><td>Entity-relationship schema with CUSTOMER, ORDER, LINE_ITEM, ADDRESS — switches diagram type automatically</td></tr>
+            <tr><td>📅 Gantt Chart</td><td>Project roadmap across Discovery / Design / Development / Release phases — switches diagram type automatically</td></tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">☁️ Icons ▾ — cloud service icon picker</div>
+        <p class="text-xs text-gray-400 mb-2">Browse 140+ named cloud services across four provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
+        <table class="help-tbl" style="margin-bottom:12px">
+          <thead><tr><th>Tab</th><th>Services included</th></tr></thead>
+          <tbody>
+            <tr><td>AWS</td><td>Lambda, EC2, ECS, EKS, S3, RDS, DynamoDB, SQS, SNS, CloudFront, IAM, CloudWatch, CodePipeline…</td></tr>
+            <tr><td>GCP</td><td>Cloud Functions, GKE, Cloud Run, BigQuery, Firestore, Pub/Sub, Cloud Armor, Vertex AI…</td></tr>
+            <tr><td>Azure</td><td>Azure Functions, AKS, Cosmos DB, Service Bus, Event Hubs, Key Vault, Azure Monitor…</td></tr>
+            <tr><td>General</td><td>Docker, Kubernetes, PostgreSQL, Kafka, RabbitMQ, Nginx, Grafana, Prometheus, Terraform, ArgoCD…</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-gray-500 mb-4">Use the search box at the top of the picker to filter by service name across all items in the active tab. The inserted entity uses the correct type prefix automatically (e.g. <span class="hcode">instance:⚡ Lambda</span>, <span class="hcode">db:🗄️ RDS</span>).</p>
+
+        <div class="help-h3">🌙 / ☀️ Theme toggle</div>
+        <p class="text-xs text-gray-400">Switches the app between dark and light themes. The preference is saved to <code>localStorage</code> and restored on next open.</p>
+      </div>
+
       <!-- ── Shortcuts ── -->
       <div id="hs-shortcuts" class="help-section">
         <div class="help-h2">Keyboard Shortcuts</div>
@@ -345,13 +692,19 @@ BatchJob writes to db:Warehouse</div>
         <table class="help-tbl">
           <thead><tr><th>Shortcut</th><th>Action</th></tr></thead>
           <tbody>
+            <tr><td><kbd class="hkbd">Ctrl+Z</kbd></td><td>Undo last change</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Y</kbd> / <kbd class="hkbd">Ctrl+Shift+Z</kbd></td><td>Redo</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Enter</kbd></td><td>Force re-render the diagram immediately</td></tr>
             <tr><td><kbd class="hkbd">Ctrl++</kbd> / <kbd class="hkbd">Ctrl+-</kbd></td><td>Zoom preview in / out</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+0</kbd></td><td>Reset zoom to 100%</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Scroll</kbd></td><td>Zoom (while hovering the preview panel)</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+F</kbd></td><td>Open node search bar (highlight matching nodes)</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Shift+C</kbd></td><td>Copy generated Mermaid code</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Shift+F</kbd></td><td>Toggle fullscreen preview</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Shift+S</kbd></td><td>Copy share URL to clipboard</td></tr>
+            <tr><td><kbd class="hkbd">Tab</kbd> / <kbd class="hkbd">Shift+Tab</kbd></td><td>Indent / un-indent line in Smart Input</td></tr>
+            <tr><td><kbd class="hkbd">Enter</kbd> after <kbd class="hkbd">{</kbd></td><td>Auto-indent + insert closing <code>}</code></td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+/</kbd></td><td>Toggle <code>//</code> comment on the current line (Smart Input must be focused)</td></tr>
             <tr><td><kbd class="hkbd">?</kbd> or <kbd class="hkbd">F1</kbd></td><td>Open this help panel (when not typing)</td></tr>
             <tr><td><kbd class="hkbd">Escape</kbd></td><td>Close help panel</td></tr>
           </tbody>
@@ -363,10 +716,30 @@ BatchJob writes to db:Warehouse</div>
           <tbody>
             <tr><td>↓ SVG</td><td>Download the diagram as a scalable SVG file</td></tr>
             <tr><td>↓ PNG</td><td>Download at 2× (retina) resolution</td></tr>
-            <tr><td>Copy ▾</td><td>Copy code · copy with ```mermaid fences · copy as markdown block</td></tr>
+            <tr><td>Copy ▾</td><td>Copy code · copy with ```mermaid fences · copy as markdown block · copy embed &lt;iframe&gt;</td></tr>
             <tr><td>🔗 Share</td><td>Encode full diagram state into a shareable URL</td></tr>
+            <tr><td>Copy embed &lt;iframe&gt;</td><td>Generates an <code>&lt;iframe&gt;</code> snippet pointing to the current diagram in read-only embed mode — paste into any HTML page or Notion/Confluence block</td></tr>
             <tr><td>⊞ Fit</td><td>Auto-fit zoom to the preview window</td></tr>
             <tr><td>⛶ Fullscreen</td><td>Expand preview panel to full width</td></tr>
+            <tr><td>🌙 / ☀️ Theme</td><td>Toggle dark / light app theme (saved automatically)</td></tr>
+          </tbody>
+        </table>
+
+        <div class="help-h3">Live preview interactions</div>
+        <table class="help-tbl">
+          <thead><tr><th>Action</th><th>Result</th></tr></thead>
+          <tbody>
+            <tr><td>Click a node</td><td>Scrolls Smart Input to that entity's definition line and briefly highlights the textarea border. Also opens the node context panel.</td></tr>
+            <tr><td>Double-click a node</td><td>Opens the node context panel and immediately activates the rename input — type the new label and press Enter to confirm.</td></tr>
+            <tr><td>Drag a node</td><td>Repositions the node and redraws connected edges in real time. Position is visual only — re-rendering resets layout.</td></tr>
+            <tr><td>Hover a node → drag the <strong>↗</strong> handle</td><td>Draws a dashed line to a target node; releasing over another node creates an arrow relationship and inserts it into the Smart Input.</td></tr>
+            <tr><td>Node context panel → <em>Add node</em></td><td>Opens a form to create a new entity and immediately connect it to the selected node.</td></tr>
+            <tr><td>Node context panel → <em>Connect to…</em></td><td>Lists all existing entities; click one to draw an arrow from the selected node.</td></tr>
+            <tr><td>Node context panel → <em>Delete</em></td><td>Removes the entity and all its relationships from the Smart Input.</td></tr>
+            <tr><td>Node context panel → connection item</td><td>Jumps to and selects that arrow line in Smart Input.</td></tr>
+            <tr><td>Click / type in Smart Input</td><td>Highlights the node(s) on the current line in the preview (faint indigo dashes).</td></tr>
+            <tr><td>Click an arrow / edge label</td><td>Selects and highlights the corresponding arrow line in Smart Input.</td></tr>
+            <tr><td>Drag on empty preview space</td><td>Pans (scrolls) the preview canvas. Works alongside scroll and Ctrl+scroll zoom.</td></tr>
           </tbody>
         </table>
 
@@ -383,6 +756,21 @@ BatchJob writes to db:Warehouse</div>
   </div><!-- /modal card -->
 </div><!-- /helpModal -->
 
+<!-- ── Library modal ── -->
+<div id="libraryModal" class="hidden">
+  <div id="libraryCard">
+    <div class="lib-hdr">
+      <span class="lib-title">📁 Diagram Library</span>
+      <button id="libClose" style="width:22px;height:22px;border-radius:5px;background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;" title="Close">✕</button>
+    </div>
+    <div class="lib-save-row">
+      <input id="libNameInput" class="lib-name-input" placeholder="Diagram name…" autocomplete="off" spellcheck="false">
+      <button id="libSaveBtn" class="lib-save-btn" title="Save current diagram (Ctrl+Shift+L)">Save current</button>
+    </div>
+    <div class="lib-list" id="libList"></div>
+  </div>
+</div>
+
 <!-- ── Header ── -->
 <header class="bg-gray-900 border-b border-gray-800 px-3 py-2 flex items-center gap-2 flex-shrink-0">
   <div class="flex items-center gap-2 mr-2">
@@ -398,6 +786,8 @@ BatchJob writes to db:Warehouse</div>
       <option value="TD">Flowchart ↓</option>
       <option value="sequence">Sequence</option>
       <option value="class">Class</option>
+      <option value="er">ER Diagram</option>
+      <option value="gantt">Gantt</option>
     </select>
 
     <!-- Theme -->
@@ -411,11 +801,21 @@ BatchJob writes to db:Warehouse</div>
     </select>
   </div>
 
+  <!-- App theme toggle -->
+  <button id="themeToggle" title="Toggle app theme (light / dark)"
+    class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2 py-1 text-xs text-gray-400 transition flex items-center gap-1 select-none">
+    <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
+  </button>
+
   <!-- Spacer -->
   <div class="flex-1"></div>
 
   <!-- Action buttons -->
   <div class="flex items-center gap-1.5">
+    <button id="libBtn" title="Diagram Library (Ctrl+Shift+L)"
+      class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
+      <span>📁</span> Library
+    </button>
     <button id="helpBtn" title="Help (? or F1)"
       class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
       <span>?</span> Help
@@ -423,6 +823,14 @@ BatchJob writes to db:Warehouse</div>
     <button id="shareBtn" title="Share via URL (Ctrl+Shift+S)"
       class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-300 transition flex items-center gap-1">
       <span>🔗</span> Share
+    </button>
+    <button id="undoBtn" title="Undo (Ctrl+Z)" disabled
+      class="ur-btn bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
+      ↩ Undo
+    </button>
+    <button id="redoBtn" title="Redo (Ctrl+Y)" disabled
+      class="ur-btn bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition flex items-center gap-1">
+      ↪ Redo
     </button>
     <button id="clearBtn" title="Clear input"
       class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded px-2.5 py-1 text-xs text-gray-400 transition">
@@ -446,6 +854,7 @@ BatchJob writes to db:Warehouse</div>
         <button onclick="doCopy('plain')">Copy code</button>
         <button onclick="doCopy('fences')">Copy with ```mermaid fences</button>
         <button onclick="doCopy('markdown')">Copy as markdown block</button>
+        <button onclick="doCopy('embed')">Copy embed &lt;iframe&gt;</button>
       </div>
     </div>
   </div>
@@ -453,30 +862,51 @@ BatchJob writes to db:Warehouse</div>
 
 <!-- ── Toolbar ── -->
 <div class="bg-gray-900 border-b border-gray-800 px-3 py-1.5 flex items-center gap-1.5 flex-shrink-0 overflow-x-auto">
-  <span class="text-xs text-gray-600 mr-1 whitespace-nowrap flex-shrink-0">Insert:</span>
-  <button class="badge badge-env       flex-shrink-0" onclick="insertPrefix('env:')"       title="Environment">🌐 env:</button>
-  <button class="badge badge-app       flex-shrink-0" onclick="insertPrefix('app:')"       title="Application">📦 app:</button>
-  <button class="badge badge-db        flex-shrink-0" onclick="insertPrefix('db:')"        title="Database">🗄️ db:</button>
-  <button class="badge badge-server    flex-shrink-0" onclick="insertPrefix('server:')"    title="Server">🖥️ server:</button>
-  <button class="badge badge-instance  flex-shrink-0" onclick="insertPrefix('instance:')"  title="Instance/Container">⚙️ instance:</button>
-  <button class="badge badge-interface flex-shrink-0" onclick="insertPrefix('interface:')" title="Interface/API">🔌 interface:</button>
-  <button class="badge badge-config    flex-shrink-0" onclick="insertPrefix('config:')"    title="Config/Setting">📋 config:</button>
-  <button class="badge badge-batch     flex-shrink-0" onclick="insertPrefix('batch:')"     title="Batch Job / ETL">🔄 batch:</button>
-  <button class="badge badge-watcher   flex-shrink-0" onclick="insertPrefix('watcher:')"   title="File Watcher / Monitor">👁️ watcher:</button>
-  <button class="badge badge-ftp       flex-shrink-0" onclick="insertPrefix('ftp:')"       title="FTP / SFTP Server">📁 ftp:</button>
-  <button class="badge badge-net-ext   flex-shrink-0" onclick="insertPrefix('net:External\n  ')" title="External network zone">🌍 net:Ext</button>
-  <button class="badge badge-net-int   flex-shrink-0" onclick="insertPrefix('net:Internal\n  ')" title="Internal network zone">🔒 net:Int</button>
-  <button class="badge badge-domain    flex-shrink-0" onclick="insertPrefix('domain:')"           title="Business domain / team ownership">🏢 domain:</button>
+  <!-- Entity / Shape / Icon / Template pickers -->
+  <div id="shapePickerWrap" class="flex-shrink-0">
+    <button id="shapePickerBtn" onclick="toggleShapePicker()"
+      class="badge flex-shrink-0" style="background:#1f2937;border-color:#4b5563;color:#9ca3af;" title="Insert entity type">🏷️ Entities ▾</button>
+    <div id="shapePicker">
+      <div class="sp-hdr">Entity Types</div>
+      <div class="sp-grid" id="spGrid"></div>
+    </div>
+  </div>
+  <!-- Cloud icon picker -->
+  <div id="iconPickerWrap" class="flex-shrink-0">
+    <button id="iconPickerBtn" onclick="toggleIconPicker()"
+      class="badge flex-shrink-0" style="background:#1f2937;border-color:#4b5563;color:#9ca3af;" title="Insert cloud / infra service">☁️ Icons ▾</button>
+    <div id="iconPicker">
+      <input id="ipSearch" class="ip-search" placeholder="Search services…" autocomplete="off" spellcheck="false"
+        oninput="renderIconGrid(_ipProvider, this.value)">
+      <div class="ip-tabs">
+        <button class="ip-tab active" data-provider="aws"     onclick="document.getElementById('ipSearch').value='';renderIconGrid('aws','')">AWS</button>
+        <button class="ip-tab"        data-provider="gcp"     onclick="document.getElementById('ipSearch').value='';renderIconGrid('gcp','')">GCP</button>
+        <button class="ip-tab"        data-provider="azure"   onclick="document.getElementById('ipSearch').value='';renderIconGrid('azure','')">Azure</button>
+        <button class="ip-tab"        data-provider="general" onclick="document.getElementById('ipSearch').value='';renderIconGrid('general','')">General</button>
+      </div>
+      <div id="ipGrid" class="ip-grid"></div>
+    </div>
+  </div>
   <div class="w-px h-4 bg-gray-700 mx-1.5 flex-shrink-0"></div>
-  <span class="text-xs text-gray-600 whitespace-nowrap flex-shrink-0">Templates:</span>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('microservices')">Microservices</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('threeTier')">3-Tier App</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cicd')">CI/CD Pipeline</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('cloud')">Cloud Infra</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('etlPipeline')">ETL Pipeline</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('fileProcessing')">File Processing</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('networkArch')">Network Arch</button>
-  <button class="tpl-btn text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300 whitespace-nowrap flex-shrink-0" onclick="loadTemplate('enterpriseDomains')">Enterprise Domains</button>
+  <!-- Template picker dropdown -->
+  <div id="tplPickerWrap" class="flex-shrink-0">
+    <button id="tplPickerBtn" onclick="toggleTplPicker()"
+      class="badge flex-shrink-0" style="background:#1f2937;border-color:#4b5563;color:#9ca3af;" title="Load a template">📋 Templates ▾</button>
+    <div id="tplPicker">
+      <button class="tpl-item" onclick="loadTemplate('microservices');toggleTplPicker(true)"><span class="tpl-item-icon">📐</span>Microservices</button>
+      <button class="tpl-item" onclick="loadTemplate('threeTier');toggleTplPicker(true)"><span class="tpl-item-icon">🏗️</span>3-Tier App</button>
+      <button class="tpl-item" onclick="loadTemplate('cicd');toggleTplPicker(true)"><span class="tpl-item-icon">🔄</span>CI/CD Pipeline</button>
+      <button class="tpl-item" onclick="loadTemplate('cloud');toggleTplPicker(true)"><span class="tpl-item-icon">☁️</span>Cloud Infra</button>
+      <div class="tpl-divider"></div>
+      <button class="tpl-item" onclick="loadTemplate('etlPipeline');toggleTplPicker(true)"><span class="tpl-item-icon">🔃</span>ETL Pipeline</button>
+      <button class="tpl-item" onclick="loadTemplate('fileProcessing');toggleTplPicker(true)"><span class="tpl-item-icon">📁</span>File Processing</button>
+      <button class="tpl-item" onclick="loadTemplate('networkArch');toggleTplPicker(true)"><span class="tpl-item-icon">🌐</span>Network Arch</button>
+      <button class="tpl-item" onclick="loadTemplate('enterpriseDomains');toggleTplPicker(true)"><span class="tpl-item-icon">🏢</span>Enterprise Domains</button>
+      <div class="tpl-divider"></div>
+      <button class="tpl-item" onclick="loadTemplate('erDiagram');toggleTplPicker(true)"><span class="tpl-item-icon">🔗</span>ER Diagram</button>
+      <button class="tpl-item" onclick="loadTemplate('ganttChart');toggleTplPicker(true)"><span class="tpl-item-icon">📅</span>Gantt Chart</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── Main split layout ── -->
@@ -485,40 +915,26 @@ BatchJob writes to db:Warehouse</div>
   <!-- Left panel -->
   <div id="leftPanel" class="flex flex-col overflow-hidden" style="width:45%;min-width:220px">
 
-    <!-- Smart input -->
-    <div class="flex-shrink-0 p-3 border-b border-gray-800">
-      <div class="flex items-center justify-between mb-1.5">
-        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Smart Input</span>
-        <span id="parseIndicator" class="text-xs text-gray-600"></span>
-      </div>
-      <textarea id="smartInput"
-        class="w-full bg-gray-800 border border-gray-700 rounded-lg p-3 text-sm font-mono text-gray-200 placeholder-gray-600 resize-none leading-relaxed"
-        rows="9" spellcheck="false" autocomplete="off"
-        placeholder="// Single-line env block&#10;env:Prod { app:UserAPI db:PostgreSQL }&#10;&#10;// Multi-line env block&#10;env:Staging {&#10;  app:WebServer&#10;  db:MySQL&#10;}&#10;&#10;// Arrows&#10;server:Nginx --HTTPS--> app:UserAPI&#10;app:UserAPI -> db:PostgreSQL&#10;app:A <--> app:B&#10;&#10;// Natural language&#10;UserAPI connects to PostgreSQL"
-      ></textarea>
-      <p class="mt-1.5 text-xs text-gray-600">
-        <span class="text-gray-500">Syntax:</span>
-        <code class="text-indigo-400 mx-1">prefix:Name</code>·
-        <code class="text-indigo-400 mx-1">A --label--> B</code>·
-        <code class="text-indigo-400 mx-1">A &lt;--&gt; B</code>·
-        <code class="text-indigo-400 mx-1">env:X&nbsp;{&nbsp;…&nbsp;}</code>·
-        <code class="text-teal-400 mx-1">batch:A >> batch:B</code>·
-        <code class="text-teal-400 mx-1">--pre--></code>·
-        <code class="text-teal-400 mx-1">net:External&nbsp;{&nbsp;…&nbsp;}</code>·
-        <code class="text-fuchsia-400 mx-1" style="color:#c026d3">domain:BU&nbsp;{&nbsp;…&nbsp;}</code>·
-        <kbd>Ctrl+Enter</kbd> re-render
-      </p>
-    </div>
-
-    <!-- Generated code -->
+    <!-- Smart input (CodeMirror 6 mounts into #smartInput) -->
     <div class="flex-1 flex flex-col overflow-hidden">
       <div class="flex items-center justify-between px-3 py-2 border-b border-gray-800 flex-shrink-0">
-        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Generated Mermaid</span>
-        <span id="entityCount" class="text-xs text-gray-600"></span>
+        <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Smart Input</span>
+        <div class="flex items-center gap-2">
+          <span id="parseIndicator" class="text-xs text-gray-600"></span>
+          <span id="entityCount" class="text-xs text-gray-600"></span>
+        </div>
       </div>
-      <div class="flex-1 overflow-auto select-text" style="background:rgba(17,24,39,.5)">
-        <pre id="codeOutput" class="p-3 text-xs font-mono text-gray-300 leading-relaxed whitespace-pre"></pre>
-      </div>
+      <!-- CM editor host — EditorView mounts here -->
+      <div id="smartInput" class="flex-1 overflow-hidden"></div>
+      <p class="flex-shrink-0 px-3 py-1.5 text-xs text-gray-600 border-t border-gray-800 leading-relaxed">
+        <code class="text-indigo-400 mx-0.5">prefix:Name</code>·
+        <code class="text-indigo-400 mx-0.5">A --label--> B</code>·
+        <code class="text-indigo-400 mx-0.5">A&lt;--&gt;B</code>·
+        <code class="text-indigo-400 mx-0.5">env:X{…}</code>·
+        <code class="text-teal-400 mx-0.5">batch:A>>batch:B</code>·
+        <code style="color:#c026d3" class="mx-0.5">domain:BU{…}</code>·
+        <kbd>Ctrl+Enter</kbd> re-render
+      </p>
     </div>
 
   </div>
@@ -527,35 +943,46 @@ BatchJob writes to db:Warehouse</div>
   <div id="resizer" title="Drag to resize"></div>
 
   <!-- Right panel – preview -->
-  <div id="rightPanel" class="flex flex-col bg-white overflow-hidden" style="width:55%;min-width:200px">
+  <div id="rightPanel" class="flex flex-col overflow-hidden" style="width:55%;min-width:200px;background:var(--surface-0)">
 
     <!-- Preview header -->
-    <div class="flex items-center gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-      <span class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Live Preview</span>
+    <div id="previewHeader" class="flex items-center gap-2 px-3 py-2 flex-shrink-0">
+      <span class="text-xs font-semibold prev-title uppercase tracking-wider">Live Preview</span>
       <span id="previewStatus" class="text-xs ml-1"></span>
       <div class="flex-1"></div>
 
       <!-- Zoom controls -->
       <div class="flex items-center gap-1" title="Zoom (Ctrl+scroll or Ctrl+± )">
         <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+-)">−</button>
-        <span id="zoomDisplay" class="text-xs text-gray-500 w-10 text-center font-mono select-none">100%</span>
+        <span id="zoomDisplay" class="text-xs w-10 text-center font-mono select-none" style="color:var(--text-muted)">100%</span>
         <button class="zoom-btn" id="zoomIn"  title="Zoom in (Ctrl++)">+</button>
         <button class="zoom-btn text-xs" id="zoomFit" title="Fit to window">⊞</button>
       </div>
 
-      <div class="w-px h-4 bg-gray-300 mx-0.5"></div>
+      <div class="prev-divider mx-0.5"></div>
 
       <!-- Export -->
-      <button id="downloadSvg" class="text-xs bg-white hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-gray-600 transition" title="Download SVG">↓ SVG</button>
-      <button id="downloadPng" class="text-xs bg-white hover:bg-gray-100 border border-gray-200 rounded px-2 py-1 text-gray-600 transition" title="Download PNG (2×)">↓ PNG</button>
+      <button id="downloadSvg" class="btn-sm" title="Download SVG">↓ SVG</button>
+      <button id="downloadPng" class="btn-sm" title="Download PNG (2×)">↓ PNG</button>
+      <button id="resetPosBtn" class="btn-sm" title="Reset all manually-dragged node positions">↺ Reset layout</button>
 
       <!-- Fullscreen -->
       <button id="fullscreenBtn" class="zoom-btn" title="Toggle fullscreen preview (Ctrl+Shift+F)">⛶</button>
     </div>
 
+    <!-- Find node bar (Ctrl+F) -->
+    <div id="nodeFindBar" class="hidden flex items-center gap-2 px-3 py-1.5">
+      <span style="font-size:10px;color:var(--text-dim);white-space:nowrap;flex-shrink:0">🔍</span>
+      <input id="nodeFindInput"
+        style="flex:1;min-width:0;background:var(--surface-0);border:1px solid var(--border);border-radius:4px;padding:2px 8px;font-size:12px;color:var(--text);outline:none;"
+        placeholder="Search nodes…" autocomplete="off" spellcheck="false">
+      <span id="nodeFindCount" style="font-size:10px;color:var(--text-dim);white-space:nowrap"></span>
+      <span style="font-size:10px;color:var(--text-faint);white-space:nowrap">↵ next · ⇧↵ prev · Esc close</span>
+      <button onclick="closeNodeFind()" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:0 2px;flex-shrink:0;line-height:1">✕</button>
+    </div>
+
     <!-- Preview scroll area -->
-    <div id="previewScroll" class="flex-1 overflow-auto p-4"
-         style="background: repeating-linear-gradient(45deg,#f9fafb 0,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px)">
+    <div id="previewScroll" class="flex-1 overflow-auto p-4">
       <div id="zoomWrapper">
         <div id="mermaidOutput" class="inline-block min-w-full">
           <div style="text-align:center;padding:48px 24px">
@@ -575,12 +1002,67 @@ BatchJob writes to db:Warehouse</div>
   <span id="statusLeft">Ready · Start typing or choose a template</span>
   <span class="flex items-center gap-2">
     <span id="storageDot" title="Autosaved to localStorage" class="hidden">💾</span>
+    <kbd>Ctrl+Z</kbd> undo ·
+    <kbd>Ctrl+Y</kbd> redo ·
     <kbd>Ctrl+Enter</kbd> render ·
     <kbd>Ctrl+±</kbd> zoom ·
     <kbd>Ctrl+Shift+C</kbd> copy ·
-    <kbd>Ctrl+Shift+F</kbd> fullscreen
-    <span class="ml-2">v4.0</span>
+    <kbd>Ctrl+F</kbd> find node ·
+    <kbd>Tab</kbd> indent ·
+    <kbd>Ctrl+/</kbd> comment
+    <span class="ml-2">v5.7</span>
   </span>
+</div>
+
+<!-- ── Drag-to-connect SVG overlay ── -->
+<svg id="dragSvg">
+  <defs>
+    <marker id="drag-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6366f1"/>
+    </marker>
+  </defs>
+  <line id="dragLine" stroke="#6366f1" stroke-width="2" stroke-dasharray="7,4" marker-end="url(#drag-arrow)" x1="0" y1="0" x2="0" y2="0"/>
+</svg>
+
+<!-- ── Floating node "+" hover handle ── -->
+<div id="nodeHandle">
+  <div class="nh-btn" id="nhBtn">+</div>
+  <div class="nh-tip">Click to add · Drag to connect</div>
+</div>
+
+<!-- ── Node context panel ── -->
+<div id="nodeCtxPanel">
+  <div class="ncp-x" onclick="closeNodeCtx()">✕</div>
+  <div class="ncp-hdr">Node</div>
+  <div id="ncpName" class="ncp-name"></div>
+  <button class="ncp-btn" onclick="startRename()">✏️ Rename</button>
+  <button class="ncp-btn" onclick="highlightEntityInInput(activeNodeId);closeNodeCtx()">📍 Find in source</button>
+  <button class="ncp-btn" onclick="openAddNodeForm()">＋ Add connected node</button>
+  <button class="ncp-btn" onclick="openConnectToPanel()">⟶ Connect to existing…</button>
+  <button class="ncp-btn" style="color:#f87171;margin-top:2px" onclick="deleteNode(activeNodeId)">🗑 Delete node</button>
+  <div class="ncp-sep"></div>
+  <div id="ncpConns"></div>
+</div>
+
+<!-- ── Add node mini-form ── -->
+<div id="nodeAddForm">
+  <div class="naf-hdr" id="nafTitle">Add Connected Node</div>
+  <label class="naf-lbl">Type</label>
+  <div class="naf-types" id="nafTypes"></div>
+  <label class="naf-lbl">Name</label>
+  <input id="nafName" class="naf-input" placeholder="e.g. OrderDB" autocomplete="off" spellcheck="false"/>
+  <label class="naf-lbl">Arrow label <span style="color:#4b5563;font-size:10px">(optional)</span></label>
+  <input id="nafLabel" class="naf-input" placeholder="e.g. HTTPS, queries" autocomplete="off" spellcheck="false"/>
+  <div class="naf-actions">
+    <button class="naf-cancel" onclick="closeAddNodeForm()">Cancel</button>
+    <button class="naf-ok" onclick="submitAddNode()">Add Node</button>
+  </div>
+</div>
+
+<!-- ── Connect-to panel ── -->
+<div id="nodeConnectPanel">
+  <div class="nc2-hdr">Connect to…</div>
+  <div id="nc2List"></div>
 </div>
 
 <script>
@@ -591,11 +1073,208 @@ const BASE_MERMAID_CONFIG = {
   startOnLoad: false,
   flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
   sequence:   { useMaxWidth: true },
-  securityLevel: 'loose',
+  securityLevel: 'strict',
   fontSize: 14,
 };
 
 mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: 'default' });
+
+const RENDER_DEBOUNCE_MS   = 280;
+const HISTORY_DEBOUNCE_MS  = 500;
+const UNDO_MAX_ENTRIES     = 200;
+const HANDLE_HIDE_DELAY_MS = 120;
+const DRAG_CONNECT_THRESH  = 7;
+const NODE_DRAG_THRESH     = 4;
+const TOAST_DURATION_MS    = 2200;
+
+// ════════════════════════════════════════════════════════════════
+//  CODEMIRROR 6 — MERIDIAN LANGUAGE + THEME  (Steps 2 & 3)
+// ════════════════════════════════════════════════════════════════
+
+// Type prefixes that get coloured individually
+const CM_TYPE_TOKENS = {
+  env:'env', app:'app', db:'db', server:'server', instance:'instance',
+  interface:'interface', config:'config', batch:'batch', watcher:'watcher',
+  ftp:'ftp', net:'net', domain:'domain',
+};
+
+function buildMeridianLanguage(CM) {
+  const { StreamLanguage, tags } = CM;
+  const TYPE_RE = new RegExp(`^(${Object.keys(CM_TYPE_TOKENS).join('|')}):`);
+
+  return StreamLanguage.define({
+    name: 'meridian',
+    startState: () => ({ inBlock: false }),
+    token(stream, state) {
+      // Comments
+      if (stream.match(/^\/\/.*/)) return 'lineComment';
+
+      // Block delimiters
+      if (stream.eat('{')) { state.inBlock = true;  return 'bracket'; }
+      if (stream.eat('}')) { state.inBlock = false; return 'bracket'; }
+
+      // ER / Gantt pass-through keywords
+      if (stream.match(/^(erDiagram|gantt|section|dateFormat|excludes)\b/)) return 'keyword';
+      if (stream.match(/^:(done|active|crit|milestone)\b/)) return 'keyword';
+
+      // Arrow operators (order matters — longest first)
+      if (stream.match(/^(->>|>>|-\->|<-->|-->|->|--)/)) return 'operator';
+
+      // Edge label between pipes: |"text"| or |text|
+      if (stream.eat('|')) {
+        stream.match(/^[^|]*/);
+        stream.eat('|');
+        return 'string';
+      }
+
+      // Type prefix:  app:Name  or  env:Prod
+      const tm = stream.match(TYPE_RE, false);
+      if (tm) {
+        stream.match(TYPE_RE);        // consume prefix + colon
+        return `meridian-${tm[1]}`;  // e.g. "meridian-app"
+      }
+
+      // Quoted label  "..."
+      if (stream.eat('"')) {
+        stream.match(/^[^"]*/);
+        stream.eat('"');
+        return 'string';
+      }
+
+      // Numbers
+      if (stream.match(/^\d+(\.\d+)?/)) return 'number';
+
+      // Identifiers (entity names, keywords)
+      if (stream.match(/^[A-Za-z_][\w-]*/)) return 'variableName';
+
+      // Skip whitespace and unknown single chars
+      stream.next();
+      return null;
+    },
+    languageData: {
+      commentTokens: { line: '//' },
+    },
+  });
+}
+
+function buildMeridianHighlight(CM) {
+  const { HighlightStyle, tags } = CM;
+
+  // Colour map: token name → CSS colour string (uses CSS vars via getComputedStyle trick)
+  // We define a thin mapping from StreamLanguage token → visual colour.
+  // These mirror the existing .sy-* CSS classes.
+  const TYPE_COLOURS = {
+    'meridian-env':       '#60a5fa',  // blue
+    'meridian-app':       '#4ade80',  // green
+    'meridian-db':        '#fbbf24',  // amber
+    'meridian-server':    '#c084fc',  // purple
+    'meridian-instance':  '#f87171',  // red
+    'meridian-interface': '#22d3ee',  // cyan
+    'meridian-config':    '#fde68a',  // yellow
+    'meridian-batch':     '#5eead4',  // teal
+    'meridian-watcher':   '#a78bfa',  // violet
+    'meridian-ftp':       '#f9a8d4',  // pink
+    'meridian-net':       '#fb923c',  // orange
+    'meridian-domain':    '#e879f9',  // fuchsia
+  };
+
+  return HighlightStyle.define([
+    { tag: tags.lineComment,   color: '#546e7a', fontStyle: 'italic' },
+    { tag: tags.keyword,       color: '#c792ea', fontWeight: '600' },
+    { tag: tags.operator,      color: '#89ddff' },
+    { tag: tags.string,        color: '#c3e88d' },
+    { tag: tags.number,        color: '#f78c6c' },
+    { tag: tags.bracket,       color: '#89ddff' },
+    { tag: tags.variableName,  color: '#d1d5db' },
+    // type-prefix tokens use plain tag with a style spec by token name
+    ...Object.entries(TYPE_COLOURS).map(([name, color]) => ({
+      tag: tags.typeName,  // fallback — per-type colours applied below via overrides
+      color,
+    })),
+  ]);
+}
+
+function buildMeridianEditorTheme(CM) {
+  const { EditorView } = CM;
+  return EditorView.theme({
+    '&': {
+      height: '100%',
+      backgroundColor: 'var(--surface-1)',
+      color: 'var(--text)',
+      fontSize: '13px',
+      fontFamily: "ui-monospace, 'Cascadia Code', 'Fira Code', monospace",
+    },
+    '.cm-scroller': { overflow: 'auto', lineHeight: '1.65' },
+    '.cm-content': { padding: '10px 0', caretColor: 'var(--accent)' },
+    '.cm-focused': { outline: 'none' },
+    '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--accent)' },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground':
+      { background: 'rgba(99,102,241,.28)' },
+    '.cm-activeLine':       { backgroundColor: 'rgba(255,255,255,.03)' },
+    '.cm-activeLineGutter': { backgroundColor: 'rgba(255,255,255,.05)' },
+    '.cm-gutters': {
+      backgroundColor: 'var(--surface-1)',
+      color: 'var(--text-faint)',
+      border: 'none',
+      borderRight: '1px solid var(--border)',
+    },
+    '.cm-lineNumbers .cm-gutterElement': { padding: '0 8px 0 4px', minWidth: '28px' },
+    '.cm-completionPopup': {
+      background: 'var(--surface-1)',
+      border: '1px solid var(--border)',
+      borderRadius: '7px',
+      boxShadow: '0 6px 24px rgba(0,0,0,.5)',
+    },
+    '.cm-tooltip-autocomplete > ul > li[aria-selected]':
+      { background: 'var(--accent-bg)', color: 'var(--text-em)' },
+    '.cm-lintRange-error': { textDecoration: 'underline wavy var(--err-title)' },
+    // ── light theme overrides ──
+    '&.light-cm .cm-content': { caretColor: 'var(--accent)' },
+  }, { dark: true });
+}
+
+// Autocomplete source — wired after $input adapter is built
+function meridianCompletion(context) {
+  const word = context.matchBefore(/[\w:-]*/);
+  if (!word || (word.from === word.to && !context.explicit)) return null;
+  const TYPE_PREFIXES = Object.keys(CM_TYPE_TOKENS).map(k => ({
+    label: k + ':', type: 'keyword', boost: 5,
+  }));
+  const entities = (typeof parser !== 'undefined')
+    ? [...parser.entities.keys()].map(k => ({ label: k, type: 'variable' }))
+    : [];
+  return {
+    from: word.from,
+    options: [...TYPE_PREFIXES, ...entities],
+    validFor: /^[\w:-]*$/,
+  };
+}
+
+// Lint source — marks render errors in the editor
+let _cmLintDiag = [];
+function meridianLintSource() { return _cmLintDiag; }
+
+// Called from renderDiagram error path to highlight the offending line
+function setCmLintError(msg, lineNum) {
+  if (!_cmView) return;
+  const { setDiagnostics } = window.__CM || {};
+  if (!setDiagnostics) return;
+  try {
+    const line = _cmView.state.doc.line(Math.max(1, lineNum || 1));
+    _cmView.dispatch(setDiagnostics(_cmView.state, [{
+      from: line.from, to: line.to,
+      severity: 'error', message: msg,
+    }]));
+  } catch {}
+}
+function clearCmLintError() {
+  if (!_cmView) return;
+  const { setDiagnostics } = window.__CM || {};
+  if (setDiagnostics) _cmView.dispatch(setDiagnostics(_cmView.state, []));
+}
+
+// Module-level reference to the EditorView (set in initCM)
+let _cmView = null;
 
 // ════════════════════════════════════════════════════════════════
 //  TEMPLATES
@@ -817,11 +1496,71 @@ app:ECS_Cluster --> db:RDS_Primary
 app:ECS_Cluster --session--> db:ElastiCache
 config:Env_Vars --> instance:Lambda_fn
 instance:Lambda_fn --> db:RDS_Primary`,
+
+  erDiagram: `erDiagram
+  CUSTOMER {
+    int    id      PK
+    string name
+    string email
+    string phone
+  }
+  ORDER {
+    int    id      PK
+    date   placed
+    string status
+    float  total
+  }
+  LINE_ITEM {
+    int    id       PK
+    int    quantity
+    float  price
+    string product
+  }
+  ADDRESS {
+    int    id     PK
+    string street
+    string city
+    string country
+  }
+  CUSTOMER ||--o{ ORDER      : "places"
+  ORDER    ||--|{ LINE_ITEM  : "contains"
+  CUSTOMER ||--o{ ADDRESS    : "has"`,
+
+  ganttChart: `gantt
+  title Project Roadmap
+  dateFormat YYYY-MM-DD
+  excludes weekends
+
+  section Discovery
+    Stakeholder interviews   :done,    d1, 2024-01-08, 5d
+    Requirements doc         :done,    d2, after d1,   4d
+    Tech spike               :done,    d3, after d2,   3d
+
+  section Design
+    Wireframes               :done,    s1, 2024-01-22, 6d
+    UI mockups               :active,  s2, after s1,   8d
+    Design review            :         s3, after s2,   2d
+
+  section Development
+    API layer                :         p1, after s3,  14d
+    Frontend                 :         p2, after s3,  18d
+    Integration tests        :         p3, after p1,   5d
+
+  section Release
+    Staging deploy           :         r1, after p3,   2d
+    UAT sign-off             :         r2, after r1,   3d
+    Production release       :crit,    r3, after r2,   1d`,
 };
+
+const PASSTHROUGH_TYPES = new Set(['er', 'gantt']);
 
 // ════════════════════════════════════════════════════════════════
 //  PARSER
 // ════════════════════════════════════════════════════════════════
+const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu';
+const _pfxTest  = new RegExp(`^(?:${_PFX_STR}):`, 'i');
+const _splitRe  = new RegExp(`\\s*,\\s*|\\s+(?=(?:${_PFX_STR}):)`, 'i');
+
 class SmartParser {
   constructor() { this.reset(); }
 
@@ -849,7 +1588,7 @@ class SmartParser {
           out.push(`${bPrefix}:${bName} { ${bKids.join(' ')} }`);
           inBlock = false; bPrefix = 'env'; bName = ''; bKids = [];
         } else if (line && !line.startsWith('//') && !line.startsWith('#')) {
-          bKids.push(...line.split(/[\s,]+/).filter(Boolean));
+          bKids.push(...line.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
         }
       } else {
         // Multi-line opener: env:X {  or  net:X {  or  domain:X {
@@ -946,8 +1685,8 @@ class SmartParser {
     if (envBlock) {
       const blockType = envBlock[1].toLowerCase();
       const blockName = envBlock[2];
-      const childIds  = envBlock[3].trim().split(/[\s,]+/).filter(Boolean)
-        .map(k => this.parseToken(k)?.id).filter(Boolean);
+      const childIds  = envBlock[3].trim().split(_splitRe).filter(Boolean)
+        .map(k => this.parseToken(k.trim())?.id).filter(Boolean);
 
       if (blockType === 'net') {
         const netId = this.addEntity('net', blockName);
@@ -1038,8 +1777,16 @@ class SmartParser {
       }
     }
 
-    // Bare declarations
-    line.split(/[\s,]+/).filter(Boolean).forEach(t => this.parseToken(t));
+    // Bare declarations — split on commas or on whitespace immediately before a type prefix.
+    // Keeps multi-word prefixed labels (e.g. "instance:⚡ Lambda") as a single token.
+    line.split(_splitRe).filter(Boolean).forEach(chunk => {
+      const t = chunk.trim();
+      if (_pfxTest.test(t)) {
+        this.parseToken(t);                                // multi-word prefixed label
+      } else {
+        t.split(/\s+/).filter(Boolean).forEach(w => this.parseToken(w)); // bare auto-type words
+      }
+    });
   }
 
   // ── Output helpers ───────────────────────────────────────────
@@ -1049,21 +1796,19 @@ class SmartParser {
 
   nodeShape(type, label) {
     const l = this.safeLabel(label);
+    // If label already starts with a non-ASCII char (e.g. emoji from icon picker), skip the type icon
+    const _icons = {env:'🌐',app:'📦',db:'🗄️',server:'🖥️',instance:'⚙️',
+      interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢'};
+    const lbl = l.codePointAt(0) > 127 ? l : (_icons[type] ? `${_icons[type]} ${l}` : l);
     switch (type) {
-      case 'env':       return `["🌐 ${l}"]`;
-      case 'app':       return `["📦 ${l}"]`;
-      case 'db':        return `[("🗄️ ${l}")]`;
-      case 'server':    return `[["🖥️ ${l}"]]`;
-      case 'instance':  return `("⚙️ ${l}")`;
-      case 'interface': return `{{"🔌 ${l}"}}`;
-      case 'config':    return `["📋 ${l}"]`;
-      // New types
-      case 'batch':     return `[/"🔄 ${l}"/]`;     // parallelogram — process shape
-      case 'watcher':   return `{"👁️ ${l}"}`;        // rhombus — decision/monitor
-      case 'ftp':       return `(["📁 ${l}"])`;       // stadium — file transfer
-      case 'net':       return `["🌐 ${l}"]`;         // rectangle (fallback for standalone net nodes)
-      case 'domain':    return `["🏢 ${l}"]`;         // rectangle (fallback for standalone domain nodes)
-      default:          return `["${l}"]`;
+      case 'db':        return `[("${lbl}")]`;
+      case 'server':    return `[["${lbl}"]]`;
+      case 'instance':  return `("${lbl}")`;
+      case 'interface': return `{{"${lbl}"}}`;
+      case 'batch':     return `[/"${lbl}"/]`;
+      case 'watcher':   return `{"${lbl}"}`;
+      case 'ftp':       return `(["${lbl}"])`;
+      default:          return `["${lbl}"]`;
     }
   }
 
@@ -1282,12 +2027,16 @@ class SmartParser {
 // ════════════════════════════════════════════════════════════════
 const parser     = new SmartParser();
 let lastCode     = '';
-let renderTimer  = null;
-let zoom         = 1;
-let isFullscreen = false;
+let renderTimer      = null;
+let zoom             = 1;
+let isFullscreen     = false;
+let _prevRenderEmpty  = true;
+let _lastRenderedIds  = new Set();
 
-const $input    = document.getElementById('smartInput');
-const $code     = document.getElementById('codeOutput');
+// $input is assigned to the adapter object after CM initialises (see initCM)
+let $input = null;
+// $code panel removed; keep stub to avoid null-deref during transition
+const $code = { innerHTML: '' };
 const $preview  = document.getElementById('mermaidOutput');
 const $wrapper  = document.getElementById('zoomWrapper');
 const $indic    = document.getElementById('parseIndicator');
@@ -1297,6 +2046,971 @@ const $pstatus  = document.getElementById('previewStatus');
 const $zoomDisp = document.getElementById('zoomDisplay');
 
 // ════════════════════════════════════════════════════════════════
+//  UNDO / REDO
+// ════════════════════════════════════════════════════════════════
+const undoStack = [''];
+let undoIdx     = 0;
+let historyTimer = null;
+
+function pushHistory(val) {
+  if (undoStack[undoIdx] === val) return;
+  undoStack.splice(undoIdx + 1);        // discard any redo branch
+  undoStack.push(val);
+  if (undoStack.length > UNDO_MAX_ENTRIES) undoStack.shift(); else undoIdx++;
+  syncUndoUI();
+}
+
+function undo() {
+  if (undoIdx <= 0) { toast('Nothing to undo'); return; }
+  undoIdx--;
+  _applyHistory();
+}
+
+function redo() {
+  if (undoIdx >= undoStack.length - 1) { toast('Nothing to redo'); return; }
+  undoIdx++;
+  _applyHistory();
+}
+
+function _applyHistory() {
+  $input.value = undoStack[undoIdx];
+  _savedCursor = $input.value.length;   // move cursor to end after restore
+  clearTimeout(historyTimer);           // don't re-push the restored value
+  syncUndoUI();
+  const type = document.getElementById('diagramType').value;
+  if (PASSTHROUGH_TYPES.has(type)) {
+    lastCode = $input.value;
+    $code.innerHTML = '';
+    $indic.textContent = type === 'er' ? 'ER diagram' : 'Gantt chart';
+    $count.textContent = '';
+  } else {
+    lastCode = parser.parse($input.value, type);
+    $code.innerHTML = highlight(lastCode);
+    const ec = parser.entities.size, rc = parser.relationships.length;
+    const gc = [...parser.environments.keys()].length;
+    $indic.textContent = ec ? `${ec} entities` : '';
+    $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
+  }
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => renderDiagram(lastCode), RENDER_DEBOUNCE_MS);
+  saveToStorage();
+}
+
+function syncUndoUI() {
+  document.getElementById('undoBtn').disabled = undoIdx <= 0;
+  document.getElementById('redoBtn').disabled = undoIdx >= undoStack.length - 1;
+}
+
+function resetHistory(val) {
+  undoStack.length = 0;
+  undoStack.push(val);
+  undoIdx = 0;
+  syncUndoUI();
+}
+
+document.getElementById('undoBtn').addEventListener('click', undo);
+document.getElementById('redoBtn').addEventListener('click', redo);
+
+// ════════════════════════════════════════════════════════════════
+//  ENTITY TYPE CATALOGUE  (used by shape picker + add-node form)
+// ════════════════════════════════════════════════════════════════
+const ETYPES = [
+  { type:'env',       icon:'🌐', label:'Env',        prefix:'env:',               color:'#2563eb', bg:'#dbeafe', fg:'#1e40af', desc:'Deployment environment' },
+  { type:'app',       icon:'📦', label:'App',        prefix:'app:',               color:'#16a34a', bg:'#dcfce7', fg:'#166534', desc:'Application / service' },
+  { type:'db',        icon:'🗄️',  label:'DB',         prefix:'db:',                color:'#d97706', bg:'#fef3c7', fg:'#92400e', desc:'Database / data store' },
+  { type:'server',    icon:'🖥️',  label:'Server',     prefix:'server:',            color:'#9333ea', bg:'#f3e8ff', fg:'#6b21a8', desc:'Server / proxy / LB' },
+  { type:'instance',  icon:'⚙️',  label:'Instance',   prefix:'instance:',          color:'#e11d48', bg:'#ffe4e6', fg:'#9f1239', desc:'Container / VM / function' },
+  { type:'interface', icon:'🔌', label:'Interface',   prefix:'interface:',         color:'#0891b2', bg:'#cffafe', fg:'#155e75', desc:'API / queue / event bus' },
+  { type:'config',    icon:'📋', label:'Config',      prefix:'config:',            color:'#ca8a04', bg:'#fef9c3', fg:'#713f12', desc:'Config / secret / cert' },
+  { type:'batch',     icon:'🔄', label:'Batch',       prefix:'batch:',             color:'#0d9488', bg:'#ccfbf1', fg:'#134e4a', desc:'Batch job / ETL / pipeline' },
+  { type:'watcher',   icon:'👁️',  label:'Watcher',    prefix:'watcher:',           color:'#7c3aed', bg:'#ede9fe', fg:'#4c1d95', desc:'Monitor / observer' },
+  { type:'ftp',       icon:'📁', label:'FTP',         prefix:'ftp:',               color:'#be185d', bg:'#fce7f3', fg:'#831843', desc:'FTP / SFTP transfer' },
+  { type:'net',       icon:'🌍', label:'Net Ext',     prefix:'net:External\n  ',   color:'#dc2626', bg:'#fee2e2', fg:'#7f1d1d', desc:'External / internet zone' },
+  { type:'net',       icon:'🔒', label:'Net Int',     prefix:'net:Internal\n  ',   color:'#2563eb', bg:'#eff6ff', fg:'#1e3a8a', desc:'Internal / private zone' },
+  { type:'domain',    icon:'🏢', label:'Domain',      prefix:'domain:',            color:'#c026d3', bg:'#fdf4ff', fg:'#701a75', desc:'Business domain / team' },
+];
+
+// ════════════════════════════════════════════════════════════════
+//  SHAPE PICKER
+// ════════════════════════════════════════════════════════════════
+(function initShapePicker() {
+  const grid = document.getElementById('spGrid');
+  ETYPES.forEach(s => {
+    const card = document.createElement('button');
+    card.className = 'sp-card';
+    card.style.borderLeftColor = s.color;
+    card.innerHTML = `
+      <div class="sp-pill" style="background:${s.bg};color:${s.fg};border:1px solid ${s.color}">${s.icon} ${s.label}</div>
+      <div class="sp-desc">${s.desc}</div>`;
+    card.addEventListener('click', () => {
+      insertPrefix(s.prefix);
+      toggleShapePicker(true);
+    });
+    grid.appendChild(card);
+  });
+})();
+
+function toggleShapePicker(forceClose) {
+  const p = document.getElementById('shapePicker');
+  const open = p.classList.contains('vis');
+  if (forceClose || open) { p.classList.remove('vis'); return; }
+  const r = document.getElementById('shapePickerBtn').getBoundingClientRect();
+  const w = 360;
+  p.style.top  = (r.bottom + 6) + 'px';
+  p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - w - 12)) + 'px';
+  p.classList.add('vis');
+}
+
+function toggleTplPicker(forceClose) {
+  const p = document.getElementById('tplPicker');
+  const open = p.classList.contains('vis');
+  if (forceClose || open) { p.classList.remove('vis'); return; }
+  const r = document.getElementById('tplPickerBtn').getBoundingClientRect();
+  p.style.top  = (r.bottom + 6) + 'px';
+  p.style.left = r.left + 'px';
+  p.classList.add('vis');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CLOUD / INFRA ICON PICKER
+// ════════════════════════════════════════════════════════════════
+// [icon, display label, entity prefix to insert]
+const CLOUD_ICONS = {
+  aws: [
+    // Compute
+    ['⚡','Lambda',          'instance:Lambda'],
+    ['🖥️','EC2',             'instance:EC2'],
+    ['🐳','ECS',             'instance:ECS'],
+    ['☸️','EKS',             'instance:EKS'],
+    ['🏃','Fargate',         'instance:Fargate'],
+    ['🌱','Elastic BStalk',  'app:ElasticBeanstalk'],
+    ['🔧','Batch',           'batch:AWS_Batch'],
+    // Storage
+    ['🪣','S3',              'config:S3'],
+    ['📁','EFS',             'config:EFS'],
+    ['💾','EBS',             'config:EBS'],
+    ['❄️','Glacier',         'config:Glacier'],
+    // Database
+    ['🗄️','RDS',             'db:RDS'],
+    ['🌌','Aurora',          'db:Aurora'],
+    ['🔷','DynamoDB',        'db:DynamoDB'],
+    ['🔴','ElastiCache',     'instance:ElastiCache'],
+    ['📊','Redshift',        'db:Redshift'],
+    ['🔍','OpenSearch',      'db:OpenSearch'],
+    // Networking
+    ['🌐','CloudFront',      'server:CloudFront'],
+    ['⚖️','ALB',             'server:ALB'],
+    ['🔌','API Gateway',     'interface:API_Gateway'],
+    ['🗺️','Route 53',        'server:Route53'],
+    ['🏠','VPC',             'env:VPC'],
+    // Messaging
+    ['📨','SQS',             'interface:SQS'],
+    ['📢','SNS',             'interface:SNS'],
+    ['🚌','EventBridge',     'interface:EventBridge'],
+    ['📺','Kinesis',         'interface:Kinesis'],
+    ['🔗','MSK / Kafka',     'interface:MSK'],
+    // Security
+    ['🔑','IAM',             'config:IAM'],
+    ['🛡️','WAF',             'config:WAF'],
+    ['🔐','Secrets Mgr',     'config:SecretsManager'],
+    ['🗝️','KMS',             'config:KMS'],
+    ['🕵️','GuardDuty',       'watcher:GuardDuty'],
+    // Monitoring / DevOps
+    ['👁️','CloudWatch',      'watcher:CloudWatch'],
+    ['📜','CloudTrail',      'watcher:CloudTrail'],
+    ['🔄','CodePipeline',    'batch:CodePipeline'],
+    ['🏗️','CodeBuild',       'batch:CodeBuild'],
+    ['🚀','CodeDeploy',      'batch:CodeDeploy'],
+    ['🏗️','CloudFormation',  'config:CloudFormation'],
+    ['🌍','Amplify',         'app:Amplify'],
+  ],
+  gcp: [
+    // Compute
+    ['⚡','Cloud Functions', 'instance:CloudFunctions'],
+    ['🖥️','Compute Engine',  'instance:ComputeEngine'],
+    ['☸️','GKE',             'instance:GKE'],
+    ['🏃','Cloud Run',       'instance:CloudRun'],
+    ['📦','App Engine',      'app:AppEngine'],
+    ['🔧','Cloud Batch',     'batch:CloudBatch'],
+    // Storage
+    ['🪣','Cloud Storage',   'config:CloudStorage'],
+    ['📁','Filestore',       'config:Filestore'],
+    ['💾','Persistent Disk', 'config:PersistentDisk'],
+    // Database
+    ['🗄️','Cloud SQL',       'db:CloudSQL'],
+    ['🌌','AlloyDB',         'db:AlloyDB'],
+    ['🍃','Firestore',       'db:Firestore'],
+    ['🔴','Memorystore',     'instance:Memorystore'],
+    ['📊','BigQuery',        'db:BigQuery'],
+    ['🔷','Bigtable',        'db:Bigtable'],
+    ['🔍','Spanner',         'db:Spanner'],
+    // Networking
+    ['🌐','Cloud CDN',       'server:CloudCDN'],
+    ['⚖️','Cloud LB',        'server:CloudLB'],
+    ['🔌','Cloud Endpoints', 'interface:CloudEndpoints'],
+    ['🗺️','Cloud DNS',       'server:CloudDNS'],
+    ['🏠','VPC',             'env:GCP_VPC'],
+    // Messaging
+    ['📨','Pub/Sub',         'interface:PubSub'],
+    ['📺','Dataflow',        'batch:Dataflow'],
+    ['🚌','Eventarc',        'interface:Eventarc'],
+    // Security
+    ['🔑','Cloud IAM',       'config:GCP_IAM'],
+    ['🔐','Secret Manager',  'config:SecretManager'],
+    ['🛡️','Cloud Armor',     'config:CloudArmor'],
+    // Monitoring / DevOps
+    ['👁️','Cloud Monitor',   'watcher:CloudMonitoring'],
+    ['📜','Cloud Logging',   'watcher:CloudLogging'],
+    ['🔄','Cloud Build',     'batch:CloudBuild'],
+    ['🚀','Cloud Deploy',    'batch:CloudDeploy'],
+    ['🏗️','Deployment Mgr',  'config:DeploymentManager'],
+    ['🤖','Vertex AI',       'instance:VertexAI'],
+  ],
+  azure: [
+    // Compute
+    ['⚡','Azure Functions', 'instance:AzureFunctions'],
+    ['🖥️','Virtual Machine', 'instance:VirtualMachine'],
+    ['☸️','AKS',             'instance:AKS'],
+    ['🏃','Container Apps',  'instance:ContainerApps'],
+    ['📦','App Service',     'app:AppService'],
+    ['🔧','Batch',           'batch:AzureBatch'],
+    // Storage
+    ['🪣','Blob Storage',    'config:BlobStorage'],
+    ['📁','Azure Files',     'config:AzureFiles'],
+    ['💾','Managed Disk',    'config:ManagedDisk'],
+    // Database
+    ['🗄️','Azure SQL',       'db:AzureSQL'],
+    ['🌌','Cosmos DB',       'db:CosmosDB'],
+    ['🔴','Azure Cache',     'instance:AzureCache'],
+    ['📊','Synapse',         'db:Synapse'],
+    ['🔷','Azure DB PG',     'db:AzurePostgres'],
+    ['🍃','Azure DB Mongo',  'db:AzureMongo'],
+    // Networking
+    ['🌐','Azure CDN',       'server:AzureCDN'],
+    ['⚖️','Load Balancer',   'server:AzureLB'],
+    ['🔌','API Management',  'interface:APIMgmt'],
+    ['🗺️','Azure DNS',       'server:AzureDNS'],
+    ['🏠','Virtual Network', 'env:VNet'],
+    ['🚪','App Gateway',     'server:AppGateway'],
+    // Messaging
+    ['📨','Service Bus',     'interface:ServiceBus'],
+    ['📺','Event Hubs',      'interface:EventHubs'],
+    ['🚌','Event Grid',      'interface:EventGrid'],
+    // Security
+    ['🔑','Azure AD / Entra','config:AzureAD'],
+    ['🗝️','Key Vault',       'config:KeyVault'],
+    ['🛡️','Azure Firewall',  'config:AzureFirewall'],
+    ['🕵️','Defender',        'watcher:Defender'],
+    // Monitoring / DevOps
+    ['👁️','Azure Monitor',   'watcher:AzureMonitor'],
+    ['📜','Log Analytics',   'watcher:LogAnalytics'],
+    ['🔄','Azure Pipelines', 'batch:AzurePipelines'],
+    ['🚀','Azure DevOps',    'batch:AzureDevOps'],
+    ['🏗️','ARM / Bicep',     'config:ARMTemplate'],
+    ['🤖','Azure OpenAI',    'instance:AzureOpenAI'],
+  ],
+  general: [
+    // Containers & Orchestration
+    ['🐳','Docker',          'instance:Docker'],
+    ['☸️','Kubernetes',      'instance:Kubernetes'],
+    ['⛵','Helm',            'config:Helm'],
+    ['🔨','Podman',          'instance:Podman'],
+    // Databases
+    ['🐘','PostgreSQL',      'db:PostgreSQL'],
+    ['🐬','MySQL',           'db:MySQL'],
+    ['🍃','MongoDB',         'db:MongoDB'],
+    ['🔴','Redis',           'instance:Redis'],
+    ['🔷','Elasticsearch',   'db:Elasticsearch'],
+    ['🗃️','SQLite',          'db:SQLite'],
+    ['🏛️','Oracle DB',       'db:OracleDB'],
+    ['🔵','MSSQL',           'db:MSSQL'],
+    // Messaging & Streaming
+    ['📊','Kafka',           'interface:Kafka'],
+    ['🐰','RabbitMQ',        'interface:RabbitMQ'],
+    ['📡','MQTT Broker',     'interface:MQTT'],
+    ['⚡','NATS',            'interface:NATS'],
+    // Web Servers & Proxies
+    ['🕸️','Nginx',           'server:Nginx'],
+    ['🪶','Apache',          'server:Apache'],
+    ['🏄','HAProxy',         'server:HAProxy'],
+    ['🚦','Traefik',         'server:Traefik'],
+    ['⚓','Caddy',           'server:Caddy'],
+    // Monitoring
+    ['🌿','Grafana',         'watcher:Grafana'],
+    ['🔭','Prometheus',      'watcher:Prometheus'],
+    ['🐶','Datadog',         'watcher:Datadog'],
+    ['🔎','Jaeger',          'watcher:Jaeger'],
+    ['🦔','Sentry',          'watcher:Sentry'],
+    // CI/CD & IaC
+    ['🔄','Jenkins',         'batch:Jenkins'],
+    ['🦊','GitLab CI',       'batch:GitLabCI'],
+    ['🐙','GitHub Actions',  'batch:GitHubActions'],
+    ['🏗️','Terraform',       'config:Terraform'],
+    ['📜','Ansible',         'config:Ansible'],
+    ['🌾','ArgoCD',          'batch:ArgoCD'],
+    ['🔁','Flux CD',         'batch:FluxCD'],
+    // Auth & API
+    ['🔑','OAuth / OIDC',    'interface:OAuth'],
+    ['🛡️','Vault',           'config:Vault'],
+    ['🔌','GraphQL',         'interface:GraphQL'],
+    ['⚡','gRPC',            'interface:gRPC'],
+  ],
+};
+
+let _ipProvider = 'aws';
+
+function toggleIconPicker(forceClose) {
+  const p = document.getElementById('iconPicker');
+  const open = p.classList.contains('vis');
+  if (forceClose || open) { p.classList.remove('vis'); return; }
+  const r   = document.getElementById('iconPickerBtn').getBoundingClientRect();
+  const w   = 400;
+  const top = r.bottom + 6;
+  const left = Math.max(8, Math.min(r.left, window.innerWidth - w - 12));
+  p.style.top  = top  + 'px';
+  p.style.left = left + 'px';
+  document.getElementById('ipSearch').value = '';
+  renderIconGrid(_ipProvider, '');
+  p.classList.add('vis');
+}
+
+function renderIconGrid(provider, filter) {
+  _ipProvider = provider;
+  document.querySelectorAll('.ip-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.provider === provider));
+  const q       = (filter || '').toLowerCase().trim();
+  const raw     = CLOUD_ICONS[provider] || [];
+  const items   = q ? raw.filter(([,lbl]) => lbl.toLowerCase().includes(q)) : raw;
+  const grid    = document.getElementById('ipGrid');
+  if (!items.length) {
+    grid.innerHTML = '<div class="ip-empty">No services match "' + q + '"</div>';
+    return;
+  }
+  grid.innerHTML = items.map(([icon, lbl, pfx]) => {
+    const type = pfx.split(':')[0];
+    const insertVal = `${type}:${icon} ${lbl}`;
+    return `<button class="ip-item" title="${pfx}" onclick='insertPrefix(${JSON.stringify(insertVal)});toggleIconPicker(true)'>
+      <div class="ip-icon">${icon}</div>
+      <div class="ip-label">${lbl}</div>
+      <div class="ip-type">${type}:</div>
+    </button>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  NODE CANVAS INTERACTIONS
+// ════════════════════════════════════════════════════════════════
+let activeNodeId   = null;   // entity ID shown in context panel
+let addFromNodeId  = null;   // entity ID being "from" in add/connect
+let hideHandleTimer = null;
+let dragFrom = null;         // {entityId, sx, sy}
+let isDragging = false;
+let dragTargetId = null;
+
+const $nodeHandle  = document.getElementById('nodeHandle');
+const $nhBtn       = document.getElementById('nhBtn');
+const $nodeCtx     = document.getElementById('nodeCtxPanel');
+const $nodeAddForm = document.getElementById('nodeAddForm');
+const $nodeConnect = document.getElementById('nodeConnectPanel');
+const $dragSvg     = document.getElementById('dragSvg');
+const $dragLine    = document.getElementById('dragLine');
+
+// ── Handle show / hide ──────────────────────────────────────────
+function showHandle(entityId, rect) {
+  clearTimeout(hideHandleTimer);
+  $nodeHandle.dataset.eid = entityId;
+  const x = rect.left + rect.width  / 2 - 11;
+  const y = rect.bottom + 5;
+  $nodeHandle.style.left    = x + 'px';
+  $nodeHandle.style.top     = y + 'px';
+  $nodeHandle.style.display = 'flex';
+}
+
+function scheduleHideHandle() {
+  hideHandleTimer = setTimeout(() => { $nodeHandle.style.display = 'none'; }, HANDLE_HIDE_DELAY_MS);
+}
+
+$nodeHandle.addEventListener('mouseenter', () => clearTimeout(hideHandleTimer));
+$nodeHandle.addEventListener('mouseleave', scheduleHideHandle);
+
+// ── Drag-to-connect ─────────────────────────────────────────────
+$nhBtn.addEventListener('mousedown', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  const eid = $nodeHandle.dataset.eid;
+  if (!eid) return;
+  isDragging = false;
+  dragFrom   = { entityId: eid, sx: e.clientX, sy: e.clientY };
+  dragTargetId = null;
+
+  const onMove = (me) => {
+    const dx = me.clientX - dragFrom.sx, dy = me.clientY - dragFrom.sy;
+    if (!isDragging && Math.sqrt(dx*dx + dy*dy) > DRAG_CONNECT_THRESH) {
+      isDragging = true;
+      $dragSvg.style.display = 'block';
+    }
+    if (!isDragging) return;
+    $dragLine.setAttribute('x1', dragFrom.sx);
+    $dragLine.setAttribute('y1', dragFrom.sy);
+    $dragLine.setAttribute('x2', me.clientX);
+    $dragLine.setAttribute('y2', me.clientY);
+
+    // Highlight target node
+    const el = document.elementFromPoint(me.clientX, me.clientY);
+    const ng = el && el.closest('g[id^="flowchart-"]');
+    const svg = $preview.querySelector('svg');
+    if (svg) svg.querySelectorAll('g.node-hl').forEach(n => n.classList.remove('node-hl'));
+    dragTargetId = null;
+    if (ng) {
+      const m = ng.id.match(/^flowchart-(.+)-\d+$/);
+      if (m && parser.entities.has(m[1]) && m[1] !== dragFrom.entityId) {
+        dragTargetId = m[1];
+        ng.classList.add('node-hl');
+      }
+    }
+  };
+
+  const onUp = (me) => {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    $dragSvg.style.display = 'none';
+    const svg = $preview.querySelector('svg');
+    if (svg) svg.querySelectorAll('g.node-hl').forEach(n => n.classList.remove('node-hl'));
+
+    if (isDragging) {
+      isDragging = false;
+      if (dragTargetId) {
+        connectEntities(dragFrom.entityId, dragTargetId);
+      } else {
+        addFromNodeId = dragFrom.entityId;
+        showAddNodeForm(me.clientX, me.clientY);
+      }
+    } else {
+      // Plain click on handle — show add form
+      addFromNodeId = eid;
+      showAddNodeForm(e.clientX, e.clientY);
+    }
+    dragFrom = null; dragTargetId = null;
+  };
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+});
+
+// ── Attach interactions after each render ───────────────────────
+// ── Type-prefix map for input search ─────────────────────────────
+const _TYPE_PFXS = {
+  env:       ['env'],
+  app:       ['app'],
+  db:        ['db','database'],
+  server:    ['server','srv'],
+  instance:  ['instance','inst'],
+  interface: ['interface','iface'],
+  config:    ['config','cfg','conf'],
+  batch:     ['batch','btch'],
+  watcher:   ['watcher','watch'],
+  ftp:       ['ftp','sftp','ftps'],
+  net:       ['net','network','zone'],
+  domain:    ['domain','dom','team','biz','bu'],
+};
+
+function highlightEntityInInput(entityId) {
+  const ent = parser.entities.get(entityId);
+  if (!ent) return;
+
+  const text    = $input.value;
+  const escaped = ent.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pfxs    = (_TYPE_PFXS[ent.type] || [ent.type]).join('|');
+  const pfxRe   = new RegExp(`(?:${pfxs}):${escaped}`, 'ig');
+
+  // Collect all matches of the prefixed form
+  const matches = [];
+  let m;
+  while ((m = pfxRe.exec(text)) !== null) {
+    matches.push({ index: m.index, len: m[0].length });
+  }
+  // Fallback: bare label
+  if (!matches.length) {
+    const bm = new RegExp(escaped, 'i').exec(text);
+    if (bm) matches.push({ index: bm.index, len: bm[0].length });
+  }
+  if (!matches.length) return;
+
+  // Prefer a definition line (no arrow syntax) over a relationship line
+  const lines = text.split('\n');
+  const lineStart = [];
+  let p = 0;
+  for (const l of lines) { lineStart.push(p); p += l.length + 1; }
+
+  const isArrowLine = idx => {
+    const li = lineStart.findLastIndex(s => s <= idx);
+    return li >= 0 && /-->|->|<->|>>/.test(lines[li]);
+  };
+
+  const nonRel = matches.filter(mm => !isArrowLine(mm.index));
+  const best   = nonRel.length ? nonRel[0] : matches[0];
+
+  // Which line (0-based) does this match sit on?
+  const targetLine = lineStart.findLastIndex(s => s <= best.index);
+
+  $input.focus();
+  $input.setSelectionRange(best.index, best.index + best.len);
+
+  // rAF so our explicit scrollTop wins over the browser's scroll-to-caret
+  requestAnimationFrame(() => {
+    const style = getComputedStyle($input);
+    const lh    = parseFloat(style.lineHeight) || 22;
+    const pt    = parseFloat(style.paddingTop)  || 12;
+    // Show target line ~2 lines from the top of the textarea
+    $input.scrollTop = Math.max(0, pt + targetLine * lh - lh * 2);
+  });
+
+  // Brief border flash so the user notices the jump
+  $input.classList.add('input-hl');
+  setTimeout(() => $input.classList.remove('input-hl'), 700);
+}
+
+function highlightRelInInput(fromId, toId) {
+  const from = parser.entities.get(fromId);
+  const to   = parser.entities.get(toId);
+  if (!from || !to) return;
+  const fEsc = from.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const tEsc = to.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lines = $input.value.split('\n');
+  let charOff = 0;
+  for (const line of lines) {
+    if (/-->|->|<->|>>/.test(line) &&
+        new RegExp(fEsc, 'i').test(line) &&
+        new RegExp(tEsc, 'i').test(line)) {
+      $input.focus();
+      $input.setSelectionRange(charOff, charOff + line.length);
+      $input.classList.add('input-hl');
+      setTimeout(() => $input.classList.remove('input-hl'), 800);
+      return;
+    }
+    charOff += line.length + 1;
+  }
+  highlightEntityInInput(toId); // fallback
+}
+
+function highlightSourceLine() {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+  svg.querySelectorAll('.node-src-hl').forEach(g => g.classList.remove('node-src-hl'));
+  const pos  = $input.selectionStart;
+  const text = $input.value;
+  const ls   = text.lastIndexOf('\n', pos - 1) + 1;
+  const le   = text.indexOf('\n', pos);
+  const line = text.slice(ls, le === -1 ? text.length : le);
+  if (!line.trim() || /^[/#]/.test(line.trim())) return;
+  parser.entities.forEach((ent, id) => {
+    const esc = ent.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(esc, 'i').test(line)) {
+      svg.querySelectorAll(`g[id^="flowchart-${id}-"]`).forEach(g => g.classList.add('node-src-hl'));
+    }
+  });
+}
+
+function attachNodeInteractions() {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+
+  svg.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
+    const m = g.id.match(/^flowchart-(.+)-\d+$/);
+    if (!m || !parser.entities.has(m[1])) return;
+    const eid = m[1];
+    g.style.cursor = 'pointer';
+
+    g.addEventListener('mouseenter', () => showHandle(eid, g.getBoundingClientRect()));
+    g.addEventListener('mouseleave', scheduleHideHandle);
+
+    g.addEventListener('click', (e) => {
+      e.stopPropagation();
+      $nodeHandle.style.display = 'none';
+      highlightEntityInInput(eid);
+      showNodeCtx(eid, e.clientX, e.clientY);
+    });
+
+    g.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      $nodeHandle.style.display = 'none';
+      showNodeCtx(eid, e.clientX, e.clientY);
+      setTimeout(startRename, 0);
+    });
+  });
+
+  // Click on SVG background → close context panel
+  svg.addEventListener('click', () => closeNodeCtx());
+
+  // ── Edge label click → highlight relationship (best-effort by ID match) ──
+  parser.relationships.forEach(rel => {
+    svg.querySelectorAll('g.edgeLabel[id]').forEach(g => {
+      if (g.id.includes(rel.from) && g.id.includes(rel.to)) {
+        g.style.cursor = 'pointer';
+        g.addEventListener('click', (e) => {
+          e.stopPropagation();
+          highlightRelInInput(rel.from, rel.to);
+        });
+      }
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SVG NODE DRAG
+// ════════════════════════════════════════════════════════════════
+function attachDragToNodes() {
+  const svg = $preview.querySelector('svg');
+  if (!svg || !svg.createSVGPoint) return;
+
+  // Screen px → SVG root coords (viewBox space, same as node translate values)
+  function toSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  // ── Node map ─────────────────────────────────────────────────
+  // Nodes are direct children of the un-transformed <g class="nodes"> group,
+  // so their translate values ARE SVG-root coordinates. Use them directly.
+  const nodes = new Map(); // entityId → {el, cx, cy}
+  svg.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
+    const m = g.id.match(/^flowchart-(.+)-\d+$/);
+    if (!m || !parser.entities.has(m[1])) return;
+    const t  = g.getAttribute('transform') || 'translate(0,0)';
+    const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+    const cx = tm ? parseFloat(tm[1]) : 0;
+    const cy = tm ? parseFloat(tm[2]) : 0;
+    nodes.set(m[1], { el: g, cx, cy });
+  });
+
+  // ── Edge map ──────────────────────────────────────────────────
+  // Edge paths live directly in <g class="edgePaths"> with no parent
+  // transform, so getPointAtLength() coordinates = SVG-root coordinates.
+  const edges = [];
+  svg.querySelectorAll('.edgePaths path').forEach(path => {
+    if (!path.getTotalLength || !path.getPointAtLength) return;
+    const len = path.getTotalLength();
+    if (len < 2) return;
+    const p0 = path.getPointAtLength(0);
+    const p1 = path.getPointAtLength(len);
+    let fromId = null, toId = null, dF = Infinity, dT = Infinity;
+    nodes.forEach((n, id) => {
+      const d0 = Math.hypot(p0.x - n.cx, p0.y - n.cy);
+      const d1 = Math.hypot(p1.x - n.cx, p1.y - n.cy);
+      if (d0 < dF) { dF = d0; fromId = id; }
+      if (d1 < dT) { dT = d1; toId   = id; }
+    });
+    if (fromId && toId && fromId !== toId) edges.push({ path, fromId, toId });
+  });
+
+  // ── Edge click → highlight relationship in source ─────────────
+  edges.forEach(({ path, fromId, toId }) => {
+    path.style.cursor = 'pointer';
+    path.addEventListener('click', (e) => {
+      e.stopPropagation();
+      highlightRelInInput(fromId, toId);
+    });
+  });
+
+  // ── Drag handler ──────────────────────────────────────────────
+  nodes.forEach((node, eid) => {
+    node.el.style.cursor = 'grab';
+    node.el.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+
+      // Track screen position separately for the 4px drag threshold
+      const mx0 = e.clientX, my0 = e.clientY;
+      const s0  = toSVG(e.clientX, e.clientY);
+      const cx0 = node.cx, cy0 = node.cy;
+      let dragging = false;
+
+      function onMove(ev) {
+        // Use screen distance for threshold (scale-independent)
+        if (!dragging && Math.hypot(ev.clientX - mx0, ev.clientY - my0) < NODE_DRAG_THRESH) return;
+        if (!dragging) {
+          dragging = true;
+          node.el.style.cursor = 'grabbing';
+          $nodeHandle.style.display = 'none';
+          closeNodeCtx();
+        }
+        const s  = toSVG(ev.clientX, ev.clientY);
+        const dx = s.x - s0.x, dy = s.y - s0.y;
+        node.cx = cx0 + dx;
+        node.cy = cy0 + dy;
+        node.el.setAttribute('transform', `translate(${node.cx},${node.cy})`);
+        edges.forEach(edge => {
+          if (edge.fromId === eid || edge.toId === eid) _redrawEdge(edge, nodes);
+        });
+      }
+
+      function onUp() {
+        if (dragging) {
+          node.el.addEventListener('click', ev => ev.stopPropagation(), { once: true, capture: true });
+          // Persist the new delta (accumulates across renders)
+          posLoad();
+          const prev = _nodePositions[eid] || { dx: 0, dy: 0 };
+          _nodePositions[eid] = { dx: prev.dx + (node.cx - cx0), dy: prev.dy + (node.cy - cy0) };
+          posSave();
+        }
+        node.el.style.cursor = 'grab';
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+
+function _redrawEdge({ path, fromId, toId }, nodes) {
+  const f = nodes.get(fromId), t = nodes.get(toId);
+  if (!f || !t) return;
+  // f.cx/cy and t.cx/cy are in SVG-root coords = path's coordinate space
+  const mx = (f.cx + t.cx) / 2;
+  path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t.cy} ${t.cx},${t.cy}`);
+}
+
+// ── Node context panel ──────────────────────────────────────────
+function showNodeCtx(entityId, x, y) {
+  activeNodeId = entityId;
+  const ent = parser.entities.get(entityId);
+  if (!ent) return;
+  const ico = ETYPES.find(t => t.type === ent.type)?.icon || '▪';
+  document.getElementById('ncpName').textContent = `${ico} ${ent.label}`;
+
+  // Populate connections list
+  const conns = document.getElementById('ncpConns');
+  conns.innerHTML = '';
+  const rels = parser.relationships.filter(r => r.from === entityId || r.to === entityId);
+  if (rels.length) {
+    const hdr = document.createElement('div');
+    hdr.className = 'ncp-sec';
+    hdr.textContent = `Connections (${rels.length})`;
+    conns.appendChild(hdr);
+    rels.forEach(r => {
+      const out  = r.from === entityId;
+      const peer = parser.entities.get(out ? r.to : r.from);
+      if (!peer) return;
+      const pIco = ETYPES.find(t => t.type === peer.type)?.icon || '▪';
+      const item = document.createElement('div');
+      item.className = 'ncp-conn';
+      item.innerHTML =
+        `<span class="ncp-dir">${out ? '→' : '←'}</span>` +
+        `<span>${pIco} ${peer.label}</span>` +
+        (r.label ? `<span class="ncp-elbl">${r.label}</span>` : '');
+      item.addEventListener('click', () => { closeNodeCtx(); highlightRelInInput(r.from, r.to); });
+      conns.appendChild(item);
+    });
+  }
+
+  const pw = 220, ph = 215 + Math.min(rels.length * 26, 130);
+  let px = x + 10, py = y - 10;
+  if (px + pw > window.innerWidth  - 12) px = x - pw - 10;
+  if (py + ph > window.innerHeight - 12) py = y - ph + 10;
+  $nodeCtx.style.left = px + 'px';
+  $nodeCtx.style.top  = py + 'px';
+  $nodeCtx.classList.add('vis');
+}
+
+function closeNodeCtx() { $nodeCtx.classList.remove('vis'); }
+
+function openAddNodeForm() {
+  const rect = $nodeCtx.getBoundingClientRect();
+  addFromNodeId = activeNodeId;
+  closeNodeCtx();
+  showAddNodeForm(rect.right + 8, rect.top);
+}
+
+function openConnectToPanel() {
+  const rect = $nodeCtx.getBoundingClientRect();
+  addFromNodeId = activeNodeId;
+  closeNodeCtx();
+
+  const list = document.getElementById('nc2List');
+  list.innerHTML = '';
+  parser.entities.forEach((e, id) => {
+    if (id === addFromNodeId) return;
+    const ico = ETYPES.find(t => t.type === e.type)?.icon || '▪';
+    const item = document.createElement('div');
+    item.className = 'nc2-item';
+    item.innerHTML = `<span>${ico}</span><span>${e.label}</span>`;
+    item.addEventListener('click', () => {
+      connectEntities(addFromNodeId, id);
+      $nodeConnect.classList.remove('vis');
+    });
+    list.appendChild(item);
+  });
+  if (!list.children.length)
+    list.innerHTML = '<div style="font-size:11px;color:#6b7280;padding:4px 8px">No other nodes yet</div>';
+
+  let px = rect.right + 8, py = rect.top;
+  if (px + 190 > window.innerWidth - 12) px = rect.left - 196;
+  $nodeConnect.style.left = px + 'px';
+  $nodeConnect.style.top  = py + 'px';
+  $nodeConnect.classList.add('vis');
+}
+
+// ── Rename node ─────────────────────────────────────────────────
+function startRename() {
+  const ent = parser.entities.get(activeNodeId);
+  if (!ent) return;
+  const nameEl = document.getElementById('ncpName');
+  const oldLabel = ent.label;
+  nameEl.innerHTML = '';
+  const inp = document.createElement('input');
+  inp.value = oldLabel;
+  inp.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--accent);border-radius:4px;padding:3px 6px;font-size:13px;color:var(--text-em);outline:none;font-weight:600;';
+  nameEl.appendChild(inp);
+  inp.focus();
+  inp.select();
+  let committed = false;
+  const commit = () => {
+    if (committed) return;
+    committed = true;
+    const newLabel = inp.value.trim();
+    if (newLabel && newLabel !== oldLabel) renameNode(activeNodeId, oldLabel, newLabel);
+    else closeNodeCtx();
+  };
+  inp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { committed = true; closeNodeCtx(); }
+  });
+  inp.addEventListener('blur', commit);
+}
+
+function renameNode(entityId, oldLabel, newLabel) {
+  const ent = parser.entities.get(entityId);
+  if (!ent) return;
+  const escaped = oldLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const prefixes = (_TYPE_PFXS[ent.type] || [ent.type]).join('|');
+  const re = new RegExp(`((?:${prefixes}):)(${escaped})(?=[\\s,{}\\n]|$)`, 'gi');
+  $input.value = $input.value.replace(re, (_, pfx) => `${pfx}${newLabel}`);
+  closeNodeCtx();
+  pushHistory($input.value);
+  onInput();
+  toast(`Renamed to "${newLabel}"`);
+}
+
+// ── Delete node ──────────────────────────────────────────────────
+function deleteNode(entityId) {
+  const ent = parser.entities.get(entityId);
+  if (!ent) return;
+  const escaped = ent.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const prefixes = (_TYPE_PFXS[ent.type] || [ent.type]).join('|');
+  const tokenPat = `(?:${prefixes}):${escaped}`;
+  const tokenRe  = new RegExp(tokenPat, 'gi');
+  const arrowRe  = /-->|->|<->|>>/;
+  const lines = $input.value.split('\n');
+  const kept = lines.flatMap(line => {
+    if (!tokenRe.test(line)) { tokenRe.lastIndex = 0; return [line]; }
+    tokenRe.lastIndex = 0;
+    if (arrowRe.test(line)) return [];           // relationship → remove entire line
+    if (/\{[^}]*\}/.test(line)) {               // inline group member → strip just the token
+      const cleaned = line
+        .replace(new RegExp(`\\s*${tokenPat}`, 'gi'), '')
+        .replace(/\{\s+\}/g, '{}')
+        .trimEnd();
+      return [cleaned];
+    }
+    return [];                                   // standalone declaration → remove
+  });
+  $input.value = kept.join('\n').replace(/\n{3,}/g, '\n\n').trimEnd();
+  closeNodeCtx();
+  pushHistory($input.value);
+  onInput();
+  toast(`Deleted "${ent.label}"`);
+}
+
+// ── Add node form ───────────────────────────────────────────────
+let selectedAddType = 'app';
+
+function showAddNodeForm(x, y) {
+  selectedAddType = 'app';
+  const fromEnt = parser.entities.get(addFromNodeId);
+  document.getElementById('nafTitle').textContent =
+    fromEnt ? `Add node connected from ${fromEnt.label}` : 'Add Node';
+  document.getElementById('nafName').value  = '';
+  document.getElementById('nafLabel').value = '';
+
+  // Render type buttons
+  const grid = document.getElementById('nafTypes');
+  grid.innerHTML = '';
+  ETYPES.forEach(t => {
+    const btn = document.createElement('div');
+    btn.className = 'naf-type' + (t.type === 'app' ? ' sel' : '');
+    btn.innerHTML = `<div>${t.icon}</div><div>${t.label}</div>`;
+    btn.addEventListener('click', () => {
+      grid.querySelectorAll('.naf-type').forEach(b => b.classList.remove('sel'));
+      btn.classList.add('sel');
+      selectedAddType = t.type;
+    });
+    grid.appendChild(btn);
+  });
+
+  const fw = 278, fh = 230;
+  let px = x + 8, py = y - 10;
+  if (px + fw > window.innerWidth  - 12) px = x - fw - 8;
+  if (py + fh > window.innerHeight - 12) py = y - fh + 10;
+  $nodeAddForm.style.left = px + 'px';
+  $nodeAddForm.style.top  = py + 'px';
+  $nodeAddForm.classList.add('vis');
+  setTimeout(() => document.getElementById('nafName').focus(), 40);
+}
+
+function closeAddNodeForm() { $nodeAddForm.classList.remove('vis'); }
+
+function submitAddNode() {
+  const name = document.getElementById('nafName').value.trim();
+  if (!name) { document.getElementById('nafName').focus(); return; }
+  const lbl     = document.getElementById('nafLabel').value.trim();
+  const newRef  = `${selectedAddType}:${name.replace(/\s+/g, '_')}`;
+  const fromEnt = parser.entities.get(addFromNodeId);
+  const arrow   = lbl ? `--${lbl}-->` : '-->';
+  const line    = fromEnt
+    ? `\n${fromEnt.type}:${fromEnt.label} ${arrow} ${newRef}`
+    : `\n${newRef}`;
+  $input.value += line;
+  closeAddNodeForm();
+  pushHistory($input.value);
+  onInput();
+  toast(`Added ${name}`);
+}
+
+// Enter key submits add form
+document.getElementById('nafName').addEventListener('keydown',  (e) => { if (e.key === 'Enter') submitAddNode(); });
+document.getElementById('nafLabel').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitAddNode(); });
+
+// ── Connect two existing entities ───────────────────────────────
+function connectEntities(fromId, toId) {
+  const f = parser.entities.get(fromId), t = parser.entities.get(toId);
+  if (!f || !t) return;
+  $input.value += `\n${f.type}:${f.label} --> ${t.type}:${t.label}`;
+  pushHistory($input.value);
+  onInput();
+  toast(`Connected ${f.label} → ${t.label}`);
+}
+
+// ── Click outside → close all floating panels ───────────────────
+document.addEventListener('click', (e) => {
+  const inCtx     = !!e.target.closest('#nodeCtxPanel');
+  const inAdd     = !!e.target.closest('#nodeAddForm');
+  const inConnect = !!e.target.closest('#nodeConnectPanel');
+  const inShape   = !!e.target.closest('#shapePickerWrap');
+  const inTpl     = !!e.target.closest('#tplPickerWrap');
+  const inIcon    = !!e.target.closest('#iconPickerWrap');
+
+  if (!inCtx)                closeNodeCtx();
+  if (!inAdd && !inCtx)      closeAddNodeForm();
+  if (!inConnect && !inCtx)  $nodeConnect.classList.remove('vis');
+  if (!inShape)              toggleShapePicker(true);
+  if (!inTpl)                toggleTplPicker(true);
+  if (!inIcon)               toggleIconPicker(true);
+});
+
+// ════════════════════════════════════════════════════════════════
 //  ZOOM
 // ════════════════════════════════════════════════════════════════
 function setZoom(val) {
@@ -1304,6 +3018,7 @@ function setZoom(val) {
   $wrapper.style.transform = `scale(${zoom})`;
   $wrapper.style.transformOrigin = 'top left';
   $zoomDisp.textContent = Math.round(zoom * 100) + '%';
+  saveToStorage();
 }
 
 function fitZoom() {
@@ -1358,12 +3073,26 @@ function highlight(code) {
 //  RENDER
 // ════════════════════════════════════════════════════════════════
 function showPlaceholder() {
+  _prevRenderEmpty = true;
+  _lastRenderedIds  = new Set();
+  $wrapper.classList.add('no-diagram');
   $preview.innerHTML = `
     <div style="text-align:center;padding:48px 24px">
       <div style="font-size:40px;margin-bottom:12px;opacity:.15">&#9651;</div>
       <p style="color:#6b7280;font-size:14px">Start typing to generate a diagram</p>
       <p style="color:#9ca3af;font-size:12px;margin-top:4px">or pick a template above</p>
     </div>`;
+}
+
+function scrollToNewNodes() {
+  const currentIds = new Set(parser.entities.keys());
+  if (_lastRenderedIds.size === 0) { _lastRenderedIds = currentIds; return; }
+  const newId = [...currentIds].find(id => !_lastRenderedIds.has(id));
+  _lastRenderedIds = currentIds;
+  if (!newId) return;
+  const svgEl = $preview.querySelector('svg');
+  const node  = svgEl?.querySelector(`g[id^="flowchart-${newId}-"]`);
+  if (node) node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
 
 async function renderDiagram(code) {
@@ -1376,18 +3105,28 @@ async function renderDiagram(code) {
     $preview.innerHTML = svg;
     // Ensure SVG fills wrapper nicely
     const svgEl = $preview.querySelector('svg');
-    if (svgEl) { svgEl.style.display = 'block'; svgEl.style.maxWidth = '100%'; }
+    if (svgEl) {
+      svgEl.style.display = 'block';
+      svgEl.style.maxWidth = '100%';
+      svgEl.setAttribute('overflow', 'visible');
+      svgEl.style.overflow = 'visible';
+    }
+    $wrapper.classList.remove('no-diagram');
+    posLoad();
+    applyNodePositions();
+    attachNodeInteractions();
+    attachDragToNodes();
+    if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
+    _prevRenderEmpty = false;
     $pstatus.textContent = '✓ OK';
-    $pstatus.style.color = '#16a34a';
+    $pstatus.style.color = 'var(--ok)';
     $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${[...parser.environments.keys()].length} groups`;
+    scrollToNewNodes();
   } catch (err) {
-    $preview.innerHTML = `
-      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;margin:8px;font-size:12px">
-        <div style="color:#dc2626;font-weight:600;margin-bottom:6px">⚠️ Render Error</div>
-        <pre style="color:#b91c1c;white-space:pre-wrap;margin:0;font-family:monospace;font-size:11px">${esc(err.message || String(err))}</pre>
-      </div>`;
+    _prevRenderEmpty = true;
+    $preview.innerHTML = `<div class="render-err"><h4>⚠️ Render Error</h4><pre>${esc(err.message || String(err))}</pre></div>`;
     $pstatus.textContent = '⚠️ Error';
-    $pstatus.style.color = '#dc2626';
+    $pstatus.style.color = 'var(--err-title)';
     $status.textContent  = 'Render error — check generated Mermaid code';
   }
 }
@@ -1410,22 +3149,85 @@ function onInput() {
   }
 
   const type = document.getElementById('diagramType').value;
-  lastCode = parser.parse(input, type);
 
-  $code.innerHTML    = highlight(lastCode);
-  const ec = parser.entities.size;
-  const rc = parser.relationships.length;
-  const gc = [...parser.environments.keys()].length;
-  $indic.textContent = ec ? `${ec} entities` : '';
-  $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
+  if (PASSTHROUGH_TYPES.has(type)) {
+    lastCode = input;
+    $code.innerHTML = '';
+    $indic.textContent = type === 'er' ? 'ER diagram' : 'Gantt chart';
+    $count.textContent = '';
+  } else {
+    lastCode = parser.parse(input, type);
+    $code.innerHTML    = highlight(lastCode);
+    const ec = parser.entities.size;
+    const rc = parser.relationships.length;
+    const gc = [...parser.environments.keys()].length;
+    $indic.textContent = ec ? `${ec} entities` : '';
+    $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
+  }
 
   clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => renderDiagram(lastCode), 280);
+  renderTimer = setTimeout(() => renderDiagram(lastCode), RENDER_DEBOUNCE_MS);
 
   saveToStorage();
+
+  // Push to undo history (debounced — groups rapid keystrokes)
+  clearTimeout(historyTimer);
+  historyTimer = setTimeout(() => pushHistory($input.value), HISTORY_DEBOUNCE_MS);
 }
 
-$input.addEventListener('input', onInput);
+// wireInputListeners() is called from initCM() once $input adapter is ready.
+// All handlers that were previously wired at parse-time now live here.
+function wireInputListeners() {
+  // 'input' → CM updateListener handles this; adapter's addEventListener is a no-op,
+  // so this is kept for clarity but does nothing.
+  $input.addEventListener('input', onInput);
+
+  // Cursor movement → SVG highlight (handled via CM updateListener in initCM)
+  $input.addEventListener('click',  highlightSourceLine);
+  $input.addEventListener('keyup',  highlightSourceLine);
+
+  // Tab / Enter auto-indent (handled via CM keymap in initCM; these are no-ops on the adapter)
+  $input.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const s = $input.selectionStart, end = $input.selectionEnd;
+      if (!e.shiftKey) {
+        $input.value = $input.value.slice(0, s) + '  ' + $input.value.slice(end);
+        $input.setSelectionRange(s + 2, s + 2);
+      } else {
+        const ls = $input.value.lastIndexOf('\n', s - 1) + 1;
+        const sp = $input.value.slice(ls).match(/^( {1,2})/);
+        if (sp) {
+          const n = sp[1].length;
+          $input.value = $input.value.slice(0, ls) + $input.value.slice(ls + n);
+          $input.setSelectionRange(Math.max(ls, s - n), Math.max(ls, s - n));
+        }
+      }
+      _savedCursor = $input.selectionStart;
+      onInput();
+      return;
+    }
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      const s = $input.selectionStart;
+      const ls = $input.value.lastIndexOf('\n', s - 1) + 1;
+      const curLine = $input.value.slice(ls, s);
+      if (curLine.trimEnd().endsWith('{')) {
+        e.preventDefault();
+        const indent = curLine.match(/^(\s*)/)[1];
+        const after  = $input.value.slice($input.selectionEnd);
+        const hasClose = after.trimStart().startsWith('}');
+        const ins = '\n' + indent + '  ' + (hasClose ? '' : '\n' + indent + '}');
+        $input.value = $input.value.slice(0, s) + ins + after;
+        const newPos = s + indent.length + 3;
+        $input.setSelectionRange(newPos, newPos);
+        _savedCursor = newPos;
+        pushHistory($input.value);
+        onInput();
+      }
+    }
+  });
+}
+
 document.getElementById('diagramType').addEventListener('change', onInput);
 document.getElementById('mermaidTheme').addEventListener('change', () => {
   if (lastCode) renderDiagram(lastCode);
@@ -1434,7 +3236,26 @@ document.getElementById('mermaidTheme').addEventListener('change', () => {
 // ════════════════════════════════════════════════════════════════
 //  COPY
 // ════════════════════════════════════════════════════════════════
+function buildShareUrl() {
+  const state = encodeState(
+    $input.value,
+    document.getElementById('diagramType').value,
+    document.getElementById('mermaidTheme').value
+  );
+  return location.origin + location.pathname + '#d:' + state;
+}
+
 function doCopy(mode = 'plain') {
+  if (mode === 'embed') {
+    const url = buildShareUrl() + '&embed=1';
+    const code = `<iframe src="${url}" width="900" height="600" style="border:none;border-radius:8px;overflow:hidden" title="Meridian diagram"></iframe>`;
+    navigator.clipboard.writeText(code)
+      .then(() => toast('Embed code copied!'))
+      .catch(() => { prompt('Copy embed code:', code); });
+    document.getElementById('copyMenu').classList.add('hidden');
+    return;
+  }
+
   if (!lastCode) return;
   let text = lastCode;
   if (mode === 'fences')   text = '```mermaid\n' + lastCode + '\n```';
@@ -1514,6 +3335,9 @@ document.getElementById('downloadPng').addEventListener('click', () => {
 //  FULLSCREEN
 // ════════════════════════════════════════════════════════════════
 document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
+document.getElementById('resetPosBtn').addEventListener('click', posReset);
+
+let _preFsLeft = '';
 
 function toggleFullscreen() {
   isFullscreen = !isFullscreen;
@@ -1521,10 +3345,12 @@ function toggleFullscreen() {
   document.getElementById('fullscreenBtn').textContent = isFullscreen ? '⊠' : '⛶';
   document.getElementById('fullscreenBtn').title = isFullscreen
     ? 'Exit fullscreen (Ctrl+Shift+F)' : 'Fullscreen preview (Ctrl+Shift+F)';
-  if (!isFullscreen) {
-    // Restore panel widths
-    document.getElementById('leftPanel').style.width  = '45%';
-    document.getElementById('rightPanel').style.width = '55%';
+  if (isFullscreen) {
+    _preFsLeft = document.getElementById('leftPanel').style.width;
+  } else {
+    const w = _preFsLeft || '45%';
+    document.getElementById('leftPanel').style.width  = w;
+    document.getElementById('rightPanel').style.width = (100 - parseFloat(w) - 0.5) + '%';
   }
 }
 
@@ -1564,6 +3390,38 @@ function toggleFullscreen() {
     resizer.classList.remove('dragging');
     document.body.style.cursor    = '';
     document.body.style.userSelect = '';
+    saveToStorage();
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+//  PREVIEW DRAG-TO-PAN
+// ════════════════════════════════════════════════════════════════
+(function initPreviewPan() {
+  const scroll = document.getElementById('previewScroll');
+  let panAnchor = null;
+
+  scroll.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('g[id^="flowchart-"], #nhBtn, button, input')) return;
+    if (!$preview.querySelector('svg')) return;
+    panAnchor = { x: e.clientX, y: e.clientY, sl: scroll.scrollLeft, st: scroll.scrollTop };
+    $wrapper.classList.add('is-panning');
+    e.preventDefault();
+
+    const onMove = (me) => {
+      if (!panAnchor) return;
+      scroll.scrollLeft = panAnchor.sl - (me.clientX - panAnchor.x);
+      scroll.scrollTop  = panAnchor.st - (me.clientY - panAnchor.y);
+    };
+    const onUp = () => {
+      panAnchor = null;
+      $wrapper.classList.remove('is-panning');
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   });
 })();
 
@@ -1586,12 +3444,8 @@ function decodeState(b64) {
 }
 
 document.getElementById('shareBtn').addEventListener('click', () => {
-  const state = encodeState(
-    $input.value,
-    document.getElementById('diagramType').value,
-    document.getElementById('mermaidTheme').value
-  );
-  const url = location.origin + location.pathname + '#d:' + state;
+  const url = buildShareUrl();
+  const state = url.split('#d:')[1];
   // Always update URL hash first, then attempt clipboard
   history.replaceState(null, '', '#d:' + state);
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1625,6 +3479,8 @@ function saveToStorage() {
       input: $input.value,
       type:  document.getElementById('diagramType').value,
       theme: document.getElementById('mermaidTheme').value,
+      split: document.getElementById('leftPanel').style.width,
+      zoom,
     }));
     document.getElementById('storageDot').classList.remove('hidden');
   } catch (_) {}
@@ -1638,6 +3494,8 @@ function loadFromStorage() {
     if (s.input) $input.value = s.input;
     if (s.type)  document.getElementById('diagramType').value = s.type;
     if (s.theme) document.getElementById('mermaidTheme').value = s.theme;
+    if (s.split) document.getElementById('leftPanel').style.width = s.split;
+    if (s.zoom)  setZoom(s.zoom);
     return true;
   } catch { return false; }
 }
@@ -1647,6 +3505,8 @@ function loadFromStorage() {
 // ════════════════════════════════════════════════════════════════
 document.getElementById('clearBtn').addEventListener('click', () => {
   $input.value = '';
+  _savedCursor = 0;
+  pushHistory('');
   onInput();
   toast('Input cleared');
 });
@@ -1654,21 +3514,37 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 // ════════════════════════════════════════════════════════════════
 //  QUICK INSERT
 // ════════════════════════════════════════════════════════════════
+
+// Track last cursor position so badge/shape-picker inserts land in the
+// right place even after undo/redo/loadTemplate (which reset cursor to 0).
+let _savedCursor = 0;
+// blur/click/keyup for cursor save — added in wireInputListeners()
+
 function insertPrefix(prefix) {
-  const start = $input.selectionStart;
-  const pre   = $input.value.slice(0, start);
-  const post  = $input.value.slice($input.selectionEnd);
-  const nl    = start > 0 && !pre.endsWith('\n') ? '\n' : '';
-  const ins   = nl + prefix;
+  const pos  = isInputFocused() ? $input.selectionStart : _savedCursor;
+  const pre  = $input.value.slice(0, pos);
+  const post = $input.value.slice(pos);
+  const nl   = pos > 0 && !pre.endsWith('\n') ? '\n' : '';
+  const ins  = nl + prefix;
   $input.value = pre + ins + post;
-  $input.selectionStart = $input.selectionEnd = start + ins.length;
+  const newPos = pos + ins.length;
   $input.focus();
+  $input.setSelectionRange(newPos, newPos);
+  _savedCursor = newPos;
+  pushHistory($input.value);
   onInput();
 }
 
+const TEMPLATE_TYPES = { erDiagram: 'er', ganttChart: 'gantt' };
+
 function loadTemplate(name) {
   $input.value = TEMPLATES[name] || '';
+  _savedCursor = $input.value.length;
+  if (TEMPLATE_TYPES[name]) {
+    document.getElementById('diagramType').value = TEMPLATE_TYPES[name];
+  }
   $input.focus();
+  pushHistory($input.value);
   onInput();
 }
 
@@ -1679,11 +3555,42 @@ document.addEventListener('keydown', (e) => {
   const ctrl = e.ctrlKey || e.metaKey;
   if (!ctrl) return;
 
+  // Undo / Redo — override browser textarea default
+  if (e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); return; }
+  if (e.key === 'y' || (e.key === 'z' && e.shiftKey)) { e.preventDefault(); redo(); return; }
+
   if (e.key === 'Enter') {
     e.preventDefault();
     clearTimeout(renderTimer);
     renderDiagram(lastCode);
     toast('Re-rendered');
+    return;
+  }
+  if (e.key === 'f' && !e.shiftKey) {
+    e.preventDefault();
+    openNodeFind();
+    return;
+  }
+  if (e.key === '/' && !e.shiftKey && isInputFocused()) {
+    e.preventDefault();
+    const txt  = $input.value;
+    const pos  = $input.selectionStart;
+    const ls   = txt.lastIndexOf('\n', pos - 1) + 1;
+    const le   = txt.indexOf('\n', pos);
+    const end  = le === -1 ? txt.length : le;
+    const line = txt.slice(ls, end);
+    let newLine, newPos;
+    if (line.trimStart().startsWith('//')) {
+      const commentStart = ls + line.indexOf('//');
+      newLine = txt.slice(0, commentStart) + txt.slice(commentStart + 2);
+      newPos  = Math.max(ls, pos - 2);
+    } else {
+      newLine = txt.slice(0, ls) + '//' + txt.slice(ls);
+      newPos  = pos + 2;
+    }
+    $input.value = newLine;
+    $input.setSelectionRange(newPos, newPos);
+    $input.dispatchEvent(new Event('input'));
     return;
   }
   if (e.shiftKey && e.key === 'C') {
@@ -1699,6 +3606,12 @@ document.addEventListener('keydown', (e) => {
   if (e.shiftKey && e.key === 'S') {
     e.preventDefault();
     document.getElementById('shareBtn').click();
+    return;
+  }
+  if (e.shiftKey && e.key === 'L') {
+    e.preventDefault();
+    if (document.getElementById('libraryModal').classList.contains('hidden')) openLibrary();
+    else closeLibrary();
     return;
   }
   if (e.key === '=' || e.key === '+') {
@@ -1719,10 +3632,65 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ════════════════════════════════════════════════════════════════
+//  NODE FIND  (Ctrl+F)
+// ════════════════════════════════════════════════════════════════
+let _findMatches = [], _findIdx = 0;
+
+function openNodeFind() {
+  document.getElementById('nodeFindBar').classList.remove('hidden');
+  const inp = document.getElementById('nodeFindInput');
+  inp.focus();
+  inp.select();
+}
+
+function closeNodeFind() {
+  document.getElementById('nodeFindBar').classList.add('hidden');
+  document.getElementById('nodeFindInput').value = '';
+  document.getElementById('nodeFindCount').textContent = '';
+  _findMatches = []; _findIdx = 0;
+  const svg = $preview.querySelector('svg');
+  if (svg) svg.querySelectorAll('.node-find-hl').forEach(g => g.classList.remove('node-find-hl'));
+}
+
+document.getElementById('nodeFindInput').addEventListener('input', (e) => {
+  const q = e.target.value.trim().toLowerCase();
+  const svg = $preview.querySelector('svg');
+  if (svg) svg.querySelectorAll('.node-find-hl').forEach(g => g.classList.remove('node-find-hl'));
+  _findMatches = []; _findIdx = 0;
+  if (!q) { document.getElementById('nodeFindCount').textContent = ''; return; }
+  parser.entities.forEach((ent, id) => {
+    if (ent.label.toLowerCase().includes(q) || ent.type.toLowerCase().includes(q))
+      _findMatches.push(id);
+  });
+  const count = _findMatches.length;
+  document.getElementById('nodeFindCount').textContent =
+    count ? `${count} match${count !== 1 ? 'es' : ''}` : 'no matches';
+  if (svg) _findMatches.forEach(id => {
+    svg.querySelectorAll(`g[id^="flowchart-${id}-"]`).forEach(g => g.classList.add('node-find-hl'));
+  });
+});
+
+document.getElementById('nodeFindInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') { closeNodeFind(); return; }
+  if (e.key === 'Enter' && _findMatches.length) {
+    e.preventDefault();
+    _findIdx = (_findIdx + (e.shiftKey ? -1 : 1) + _findMatches.length) % _findMatches.length;
+    const id  = _findMatches[_findIdx];
+    const svg = $preview.querySelector('svg');
+    const g   = svg?.querySelector(`g[id^="flowchart-${id}-"]`);
+    if (g) {
+      g.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      g.classList.add('node-hl');
+      setTimeout(() => g.classList.remove('node-hl'), 600);
+    }
+  }
+});
+
+// ════════════════════════════════════════════════════════════════
 //  TOAST
 // ════════════════════════════════════════════════════════════════
 let toastTimer;
-function toast(msg, duration = 2200) {
+function toast(msg, duration = TOAST_DURATION_MS) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('show');
@@ -1759,26 +3727,411 @@ document.querySelectorAll('.help-nav').forEach(btn =>
 
 // ? and F1 open help; Escape closes it
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { closeHelp(); return; }
-  if ((e.key === '?' || e.key === 'F1') && document.activeElement !== $input) {
+  if (e.key === 'Escape') {
+    closeHelp();
+    closeLibrary();
+    return;
+  }
+  if ((e.key === '?' || e.key === 'F1') && !isInputFocused()) {
     e.preventDefault();
     if (document.getElementById('helpModal').classList.contains('hidden')) openHelp('quickstart');
   }
 });
 
 // ════════════════════════════════════════════════════════════════
-//  BOOT
+//  APP THEME
 // ════════════════════════════════════════════════════════════════
-(function boot() {
+(function initAppTheme() {
+  const KEY = 'meridian-app-theme';
+  const html = document.documentElement;
+  const icon  = document.getElementById('themeIcon');
+  const label = document.getElementById('themeLabel');
+
+  function apply(theme, save) {
+    html.setAttribute('data-theme', theme);
+    if (icon)  icon.textContent  = theme === 'light' ? '☀️' : '🌙';
+    if (label) label.textContent = theme === 'light' ? 'Light' : 'Dark';
+    if (save) localStorage.setItem(KEY, theme);
+  }
+
+  const saved = localStorage.getItem(KEY) || 'dark';
+  apply(saved, false);
+
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    apply(next, true);
+  });
+})();
+
+// ════════════════════════════════════════════════════════════════
+//  DIAGRAM LIBRARY
+// ════════════════════════════════════════════════════════════════
+const LIBRARY_KEY = 'meridian_library_v1';
+
+function libLoad() {
+  try { return JSON.parse(localStorage.getItem(LIBRARY_KEY) || '[]'); } catch { return []; }
+}
+function libSave(items) {
+  localStorage.setItem(LIBRARY_KEY, JSON.stringify(items));
+}
+
+function openLibrary() {
+  renderLibList();
+  document.getElementById('libraryModal').classList.remove('hidden');
+  document.getElementById('libNameInput').focus();
+}
+function closeLibrary() {
+  document.getElementById('libraryModal').classList.add('hidden');
+}
+
+function renderLibList() {
+  const items = libLoad();
+  const el = document.getElementById('libList');
+  if (!items.length) {
+    el.innerHTML = '<div class="lib-empty">No saved diagrams yet.<br>Type a name above and click <strong>Save current</strong>.</div>';
+    return;
+  }
+  const TYPE_ICONS = { er:'🔗', gantt:'📅', sequence:'🔁', class:'📐', LR:'⟶', TD:'↓' };
+  el.innerHTML = items.map((d, i) => {
+    const icon = TYPE_ICONS[d.type] || '📄';
+    const date = new Date(d.savedAt).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+    return `<div class="lib-item">
+      <span class="lib-item-icon">${icon}</span>
+      <div class="lib-item-body">
+        <div class="lib-item-title">${esc(d.title)}</div>
+        <div class="lib-item-meta">${d.type} · saved ${date}</div>
+      </div>
+      <button class="lib-item-open" onclick="libOpen(${i})">Open</button>
+      <button class="lib-item-del" title="Delete" onclick="libDelete(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function libSaveCurrent() {
+  const title = document.getElementById('libNameInput').value.trim();
+  if (!title) { toast('Enter a diagram name first'); document.getElementById('libNameInput').focus(); return; }
+  const items = libLoad();
+  const type  = document.getElementById('diagramType').value;
+  const theme = document.getElementById('mermaidTheme').value;
+  const existing = items.findIndex(d => d.title.toLowerCase() === title.toLowerCase());
+  const entry = { id: Date.now().toString(36), title, input: $input.value, type, theme, savedAt: Date.now() };
+  if (existing >= 0) { items[existing] = entry; } else { items.unshift(entry); }
+  libSave(items);
+  document.getElementById('libNameInput').value = '';
+  renderLibList();
+  toast(`Saved "${title}"`);
+}
+
+function libOpen(idx) {
+  const items = libLoad();
+  const d = items[idx];
+  if (!d) return;
+  $input.value = d.input;
+  document.getElementById('diagramType').value = d.type;
+  document.getElementById('mermaidTheme').value = d.theme;
+  pushHistory($input.value);
+  onInput();
+  closeLibrary();
+  toast(`Opened "${d.title}"`);
+}
+
+function libDelete(idx) {
+  const items = libLoad();
+  const title = items[idx]?.title || 'diagram';
+  items.splice(idx, 1);
+  libSave(items);
+  renderLibList();
+  toast(`Deleted "${title}"`);
+}
+
+document.getElementById('libBtn').addEventListener('click', openLibrary);
+document.getElementById('libClose').addEventListener('click', closeLibrary);
+document.getElementById('libraryModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('libraryModal')) closeLibrary();
+});
+document.getElementById('libSaveBtn').addEventListener('click', libSaveCurrent);
+document.getElementById('libNameInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); libSaveCurrent(); }
+});
+
+// ════════════════════════════════════════════════════════════════
+//  PERSISTENT NODE POSITIONS
+// ════════════════════════════════════════════════════════════════
+const POS_KEY = 'meridian_nodepos_v1';
+let _nodePositions = {};   // { [entityId]: {dx, dy} }
+let _posLoaded     = false;
+
+function posLoad() {
+  if (_posLoaded) return;
+  try { _nodePositions = JSON.parse(localStorage.getItem(POS_KEY) || '{}'); } catch { _nodePositions = {}; }
+  _posLoaded = true;
+}
+
+function posSave() {
+  localStorage.setItem(POS_KEY, JSON.stringify(_nodePositions));
+}
+
+function posReset() {
+  _nodePositions = {};
+  localStorage.removeItem(POS_KEY);
+  // Re-render to snap nodes back to auto-layout
+  if (lastCode) renderDiagram(lastCode);
+  toast('Node positions reset');
+}
+
+function applyNodePositions() {
+  if (!Object.keys(_nodePositions).length) return;
+  const svgEl = $preview.querySelector('svg');
+  if (!svgEl) return;
+  svgEl.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
+    const raw  = g.id.replace('flowchart-', '');
+    const eid  = raw.replace(/-\d+$/, '');
+    const pos  = _nodePositions[eid];
+    if (!pos) return;
+    const cur = (g.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
+    if (cur) {
+      const bx = parseFloat(cur[1]), by = parseFloat(cur[2]);
+      g.setAttribute('transform', `translate(${bx + pos.dx},${by + pos.dy})`);
+    }
+  });
+}
+
+
+// ════════════════════════════════════════════════════════════════
+//  isInputFocused helper  (used before adapter is built)
+// ════════════════════════════════════════════════════════════════
+function isInputFocused() {
+  return _cmView ? _cmView.hasFocus : false;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CODEMIRROR INIT  (Steps 5 & 6 — adapter + EditorView creation)
+// ════════════════════════════════════════════════════════════════
+function initCM(CM) {
+  const {
+    EditorView, EditorState, keymap, drawSelection,
+    highlightActiveLine, lineNumbers, highlightActiveLineGutter,
+    history, historyKeymap, defaultKeymap, undo: cmUndo, redo: cmRedo,
+    syntaxHighlighting, autocompletion, completionKeymap, linter, lintKeymap,
+    tags,
+  } = CM;
+
+  // ── Build language + theme ────────────────────────────────────
+  const meridianLang  = buildMeridianLanguage(CM);
+  const meridianHL    = buildMeridianHighlight(CM);
+  const meridianTheme = buildMeridianEditorTheme(CM);
+
+  // ── Per-type token colour override via CM decorations ──────────
+  // StreamLanguage returns string token names. CM6's HighlightStyle only maps
+  // lezer tags, not arbitrary string names. We apply per-type colours via a
+  // thin StyleModule injected alongside syntaxHighlighting.
+  const TYPE_CSS = Object.entries({
+    'meridian-env':       '#60a5fa',
+    'meridian-app':       '#4ade80',
+    'meridian-db':        '#fbbf24',
+    'meridian-server':    '#c084fc',
+    'meridian-instance':  '#f87171',
+    'meridian-interface': '#22d3ee',
+    'meridian-config':    '#fde68a',
+    'meridian-batch':     '#5eead4',
+    'meridian-watcher':   '#a78bfa',
+    'meridian-ftp':       '#f9a8d4',
+    'meridian-net':       '#fb923c',
+    'meridian-domain':    '#e879f9',
+  }).map(([tok, col]) => `.tok-${tok} { color: ${col}; }`).join('\n');
+
+  const typeColourExt = EditorView.baseTheme({});  // placeholder; actual injection below
+
+  // ── CM keymap entries that replace the textarea keydown handler ─
+  const meridianKeymap = [
+    // Tab: insert 2 spaces
+    { key: 'Tab', run: (view) => {
+        const { state, dispatch } = view;
+        const { from } = state.selection.main;
+        dispatch(state.update({ changes: { from, to: state.selection.main.to, insert: '  ' },
+                               selection: { anchor: from + 2 } }));
+        _savedCursor = from + 2;
+        onInput();
+        return true;
+    }},
+    // Shift+Tab: remove up to 2 leading spaces
+    { key: 'Shift-Tab', run: (view) => {
+        const { state, dispatch } = view;
+        const { from } = state.selection.main;
+        const line = state.doc.lineAt(from);
+        const sp   = line.text.match(/^( {1,2})/);
+        if (sp) {
+          const n = sp[1].length;
+          dispatch(state.update({ changes: { from: line.from, to: line.from + n, insert: '' },
+                                 selection: { anchor: Math.max(line.from, from - n) } }));
+          onInput();
+        }
+        return true;
+    }},
+    // Enter: auto-indent after '{', add closing '}'
+    { key: 'Enter', run: (view) => {
+        const { state, dispatch } = view;
+        const { from } = state.selection.main;
+        const line = state.doc.lineAt(from);
+        const curLine = line.text.slice(0, from - line.from);
+        if (!curLine.trimEnd().endsWith('{')) return false; // let CM default handle it
+        const indent = curLine.match(/^(\s*)/)[1];
+        const after  = state.doc.sliceString(from);
+        const hasClose = after.trimStart().startsWith('}');
+        const ins = '\n' + indent + '  ' + (hasClose ? '' : '\n' + indent + '}');
+        const newPos = from + indent.length + 3;
+        dispatch(state.update({ changes: { from, to: from, insert: ins },
+                               selection: { anchor: newPos } }));
+        _savedCursor = newPos;
+        pushHistory(view.state.doc.toString());
+        onInput();
+        return true;
+    }},
+    // Ctrl+/: toggle comment on current line (mirrors existing handler)
+    { key: 'Ctrl-/', run: (view) => {
+        const { state, dispatch } = view;
+        const { from } = state.selection.main;
+        const line = state.doc.lineAt(from);
+        const txt  = line.text;
+        let changes, newAnchor;
+        if (txt.trimStart().startsWith('//')) {
+          const ci = line.from + txt.indexOf('//');
+          changes  = { from: ci, to: ci + 2, insert: '' };
+          newAnchor = Math.max(line.from, from - 2);
+        } else {
+          changes  = { from: line.from, to: line.from, insert: '//' };
+          newAnchor = from + 2;
+        }
+        dispatch(state.update({ changes, selection: { anchor: newAnchor } }));
+        onInput();
+        return true;
+    }},
+    // Ctrl+Enter: force re-render (same as existing shortcut)
+    { key: 'Ctrl-Enter', run: () => {
+        clearTimeout(renderTimer);
+        renderDiagram(lastCode);
+        toast('Re-rendered');
+        return true;
+    }},
+  ];
+
+  // ── Create EditorView ─────────────────────────────────────────
+  const mountEl = document.getElementById('smartInput');
+  _cmView = new EditorView({
+    state: EditorState.create({
+      doc: '',
+      extensions: [
+        meridianLang,
+        syntaxHighlighting(meridianHL),
+        meridianTheme,
+        history(),
+        drawSelection(),
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        lineNumbers(),
+        autocompletion({ override: [meridianCompletion] }),
+        linter(meridianLintSource, { delay: 0 }),
+        keymap.of([
+          ...meridianKeymap,
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...completionKeymap,
+          ...lintKeymap,
+        ]),
+        EditorView.updateListener.of(update => {
+          if (update.docChanged) {
+            _savedCursor = _cmView.state.selection.main.head;
+            onInput();
+          } else if (update.selectionSet) {
+            _savedCursor = _cmView.state.selection.main.head;
+            highlightSourceLine();
+          }
+        }),
+        EditorView.domEventHandlers({
+          blur: () => { _savedCursor = _cmView.state.selection.main.head; },
+        }),
+      ],
+    }),
+    parent: mountEl,
+  });
+
+  // ── Inject per-type token colours via a style tag ──────────────
+  const typeStyle = document.createElement('style');
+  typeStyle.textContent = TYPE_CSS;
+  document.head.appendChild(typeStyle);
+
+  // ── Build $input adapter (Step 6) ────────────────────────────
+  $input = {
+    get value()          { return _cmView.state.doc.toString(); },
+    set value(text)      {
+      _cmView.dispatch({
+        changes: { from: 0, to: _cmView.state.doc.length, insert: text },
+      });
+    },
+    get selectionStart() { return _cmView.state.selection.main.head; },
+    get selectionEnd()   { return _cmView.state.selection.main.anchor; },
+    setSelectionRange(a, b) {
+      _cmView.dispatch({ selection: { anchor: a, head: b } });
+      _cmView.focus();
+    },
+    focus()              { _cmView.focus(); },
+    get scrollTop()      { return _cmView.scrollDOM.scrollTop; },
+    set scrollTop(v)     { _cmView.scrollDOM.scrollTop = v; },
+    classList: {
+      add(c)    { _cmView.dom.classList.add(c); },
+      remove(c) { _cmView.dom.classList.remove(c); },
+    },
+    // CM handles all events internally; no-op to avoid breaking callers
+    addEventListener()  {},
+    dispatchEvent(evt)  { if (evt.type === 'input') onInput(); },
+    _view: _cmView,
+  };
+
+  // ── Wire remaining DOM listeners and run boot ─────────────────
+  wireInputListeners();
+  boot();
+}
+
+// ════════════════════════════════════════════════════════════════
+//  BOOT  (called from initCM once the adapter is ready)
+// ════════════════════════════════════════════════════════════════
+function boot() {
+  // Embed mode: ?embed=1 or hash contains &embed=1 — strip editor, show diagram only
+  const isEmbed = location.search.includes('embed=1') ||
+                  location.hash.includes('&embed=1');
+  if (isEmbed) {
+    ['leftPanel','resizer'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
+    document.querySelector('header').style.display          = 'none';
+    document.querySelector('.bg-gray-900.border-t').style.display = 'none';
+    document.querySelector('footer').style.display          = 'none';
+    document.getElementById('rightPanel').style.width       = '100%';
+    document.getElementById('previewHeader').style.display  = 'none';
+    document.getElementById('previewScroll').style.height   = '100vh';
+    _prevRenderEmpty = true;
+  }
+
   // Priority: URL hash > localStorage > default template
   if (!loadFromHash()) {
-    if (!loadFromStorage()) {
+    if (!isEmbed && !loadFromStorage()) {
       loadTemplate('microservices');
-      return; // loadTemplate calls onInput
     }
   }
   onInput();
-})();
+  clearTimeout(historyTimer);
+  resetHistory($input.value);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CM READY GATE  — waits for module bootstrap then calls initCM
+// ════════════════════════════════════════════════════════════════
+if (window.__CM) {
+  initCM(window.__CM);
+} else {
+  document.addEventListener('cm-ready', () => initCM(window.__CM), { once: true });
+}
 </script>
 
 <!-- ── Footer ── -->

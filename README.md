@@ -4,40 +4,73 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 **Designed by AK (Aravind Kannan)**
 
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 ---
 
 ## Overview
 
-Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types.
+Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types — all in a zero-dependency single HTML file.
 
 ## Features
 
+### Editing
 - **12 entity types** — app, db, server, instance, interface, config, batch, watcher, ftp, net, domain, env
-- **Auto-detection** — smart type inference from names (e.g. `api_gateway` → interface, `postgres` → db)
+- **Auto-detection** — smart type inference from names (e.g. `api_gateway` → interface, `postgres` → db, `ec2_instance` → server)
+- **Compound name support** — underscore and hyphen separators handled correctly in auto-detection
+- **Syntax highlighting** — token-coloured input panel with entity types, arrows, labels, and comments in distinct colours
+- **Real-time rendering** — diagram updates as you type
+
+### Grouping & Topology
 - **Business domain groupings** — colour-coded dashed subgraphs for team/org ownership (`domain:`)
 - **Network zones** — security boundary subgraphs with distinct colours (`net:`)
 - **Environment blocks** — deployment topology groupings (`env:`)
-- **Hybrid mode** — entities can appear in both env and domain simultaneously, with fill overrides showing ownership
-- **All arrow styles** — normal, labelled, bidirectional, pre-dashed, post-thick, chained (`>>`)
+- **Hybrid mode** — entities can appear in both `env:` and `domain:` simultaneously; domain ownership shown through fill-colour overrides
+
+### Diagrams
 - **4 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class
 - **5 themes** — Default, Dark, Forest, Neutral, Base
-- **8 templates** — quick-start presets covering microservices, ETL, network architecture, enterprise domains, and more
-- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, download SVG, download PNG
-- **Shareable URLs** — encode current diagram state into a URL hash for sharing
+- **All arrow styles** — normal, labelled, bidirectional, pre-dashed, post-thick, chained (`>>`)
+- **12 natural language connectors** — `calls`, `sends to`, `reads from`, `writes to`, `connects to`, `depends on`, `triggers`, `subscribes to`, `publishes to`, `syncs with`, `authenticates via`, `routes to`
+
+### UI & Theme
+- **Dark / light theme** — full CSS design token system, switchable via toolbar
+- **Checkerboard canvas** — distinct preview background pattern, theme-aware
+- **Pan & zoom** — drag to pan, Ctrl+scroll or Ctrl+±/−, fit-to-window button
+- **Resizable panels** — drag the divider to adjust input/preview split
+- **Fullscreen preview** — expand diagram to full viewport
+
+### Productivity
+- **8 templates** — quick-start presets covering microservices, ETL, network architecture, enterprise domains, authentication flow, file processing, class hierarchy, and more
+- **Snippet library** — save, name, and reload your own diagram snippets
+- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, download SVG, download PNG (2×)
+- **Shareable URLs** — encode full diagram state (input, type, theme) into a URL hash
 - **Help modal** — built-in reference panel (press `?` or `F1`)
-- **Keyboard shortcuts** — `Ctrl+Enter` render, `Ctrl+Shift+C` copy, `Ctrl+Shift+S` share, `Ctrl+Shift+F` fullscreen, `Ctrl+±` zoom
 - **Auto-save** — state persisted to `localStorage`
-- **Single file** — zero build step, zero dependencies beyond CDN
+
+### Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+Enter` | Render diagram |
+| `Ctrl+Shift+C` | Copy Mermaid code |
+| `Ctrl+Shift+S` | Copy share URL |
+| `Ctrl+Shift+F` | Toggle fullscreen |
+| `Ctrl++` / `Ctrl+-` | Zoom in / out |
+| `?` or `F1` | Open help |
+| `Escape` | Close modal |
+
+---
 
 ## Quick Start
 
-Open `index.html` in any modern browser — no server required.
+Open `index.html` in any modern browser — no server, no build step required.
 
 ```
 app:Frontend --> api:Backend --> db:Postgres
 ```
 
-Renders instantly. Add groupings:
+Add groupings:
 
 ```
 env:Production {
@@ -56,6 +89,8 @@ domain:Data {
 }
 ```
 
+---
+
 ## Syntax Reference
 
 ### Entity Types
@@ -65,12 +100,12 @@ domain:Data {
 | `app:` | Application | Rounded rectangle |
 | `db:` | Database | Cylinder |
 | `server:` | Server | Rectangle |
-| `instance:` | Container/Instance | Subroutine |
+| `instance:` | Container / Instance | Subroutine |
 | `interface:` / `api:` | API / Interface | Parallelogram |
-| `config:` | Config/Setting | Trapezoid |
+| `config:` | Config / Setting | Trapezoid |
 | `batch:` | Batch Job / ETL | Hexagon |
-| `watcher:` | File Watcher | Stadium |
-| `ftp:` | FTP / SFTP | Rectangle |
+| `watcher:` | File Watcher / Monitor | Stadium |
+| `ftp:` | FTP / SFTP Server | Rectangle |
 | `env:` | Environment | Subgraph |
 | `net:` | Network Zone | Subgraph |
 | `domain:` | Business Domain | Subgraph |
@@ -84,7 +119,7 @@ domain:Data {
 | `A <--> B` | Bidirectional |
 | `A --o B` | Pre-dashed |
 | `A ==> B` | Post-thick |
-| `A >> B >> C` | Chain |
+| `A >> B >> C` | Chained arrows |
 
 ### Grouping Blocks
 
@@ -106,44 +141,60 @@ domain:Finance {
 
 ### Natural Language Connectors
 
-The following phrases are recognised as arrows:
-
-`calls`, `sends to`, `reads from`, `writes to`, `connects to`,
-`depends on`, `triggers`, `subscribes to`, `publishes to`,
-`syncs with`, `authenticates via`, `routes to`
-
-Example:
 ```
 app:Frontend calls app:Backend
 app:Backend reads from db:Postgres
+batch:ETL writes to db:Warehouse
+app:Auth authenticates via config:JWT
 ```
+
+### Comments
+
+Lines beginning with `//` are ignored:
+
+```
+// This is a comment
+app:Frontend --> app:Backend
+```
+
+---
 
 ## Tips
 
 - Use underscores for multi-word names: `app:Payment_Service`
-- Nodes are deduplicated automatically — define the same entity in multiple blocks freely
-- Comments start with `//`
-- Domain subgraphs only render for entities not already inside an `env:` block; those entities receive fill-colour overrides instead
+- Nodes are deduplicated — the same entity can appear in multiple blocks
+- Domain subgraphs only render for entities not inside an `env:` block; those entities receive colour overrides instead
+- Auto-detection works on compound names: `ec2_instance` → server, `rest_api` → interface
+
+---
 
 ## Templates
 
-Press **Templates** in the toolbar to load any of the built-in presets:
+Press **Templates** in the toolbar to load any built-in preset:
 
-1. Microservices Architecture
-2. Data Pipeline (ETL)
-3. Authentication Flow (Sequence)
-4. Class Hierarchy
-5. Enterprise Domain Architecture
-6. ETL Pipeline
-7. File Processing Pipeline
-8. Network Architecture
+| # | Name | Covers |
+|---|------|--------|
+| 1 | Microservices Architecture | Service mesh, API gateway, databases |
+| 2 | Data Pipeline (ETL) | Batch jobs, data warehouse, orchestration |
+| 3 | Authentication Flow | Sequence diagram, OAuth/JWT |
+| 4 | Class Hierarchy | Class diagram with inheritance |
+| 5 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
+| 6 | ETL Pipeline | File watchers, FTP, batch processing |
+| 7 | File Processing Pipeline | Ingestion, transformation, storage |
+| 8 | Network Architecture | DMZ, internal, external zones |
+
+---
 
 ## Dependencies (CDN)
 
-- [Mermaid.js v10](https://mermaid.js.org/) — diagram rendering
-- [Tailwind CSS v3](https://tailwindcss.com/) — utility styling
+| Library | Version | Purpose |
+|---------|---------|---------|
+| [Mermaid.js](https://mermaid.js.org/) | v10 | Diagram rendering |
+| [Tailwind CSS](https://tailwindcss.com/) | v3 | Utility styling |
 
-No npm, no build step.
+No npm install. No build step. Open and use.
+
+---
 
 ## License
 
