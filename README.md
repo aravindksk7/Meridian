@@ -10,7 +10,7 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 ## Overview
 
-Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types — all in a zero-dependency single HTML file.
+Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
 
 ## Features
 
@@ -37,10 +37,11 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **12 natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, `sends to`, `talks to`, `uses`, `forwards to`, `publishes to`, `subscribes to`
 
 ### Cloud Service Icon Picker (☁️ Icons ▾)
-- **140+ named cloud services** across four provider tabs — AWS, GCP, Azure, General
+- **210+ named services** across five provider tabs — AWS, GCP, Azure, General, and **AI**
+- **AI tab** — 70+ icons spanning LLM providers (OpenAI, Anthropic Claude, Google Gemini, Meta LLaMA, Mistral), orchestration frameworks (LangChain, LlamaIndex, AutoGen, CrewAI, LangGraph), ML libraries (PyTorch, TensorFlow, scikit-learn, Hugging Face), vector databases (Pinecone, Qdrant, Weaviate, Milvus, Chroma), MLOps (MLflow, W&B, DVC), AI observability (Langfuse, Arize, Evidently), and LLM serving (vLLM, TGI, Triton, LiteLLM)
 - **Emoji-embedded labels** — clicking an icon inserts the entity with the service's icon embedded in the diagram node
 - **Search** — filter across all icons in the active tab by service name
-- Correct type prefix inserted automatically (e.g. `instance:⚡ Lambda`, `db:🗄️ RDS`)
+- Correct type prefix inserted automatically (e.g. `instance:⚡ Lambda`, `db:🗄️ RDS`, `instance:🤖 OpenAI_GPT`)
 
 ### Appearance Settings (⚙️)
 - **6 editor colour themes** — Meridian (default), One Dark, Dracula, Nord, Monokai, Solarized Light — hot-swapped without page reload
@@ -54,7 +55,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 ### UI & Theme
 - **Dark / light theme** — full CSS design token system, switchable via toolbar
 - **Checkerboard canvas** — distinct preview background pattern, theme-aware
-- **Pan & zoom** — drag to pan, Ctrl+scroll or Ctrl+±/−, fit-to-window button
+- **Pan & zoom** — drag to pan, Ctrl+scroll or Ctrl+±/−, fit-to-window button; click the zoom percentage to open a quick-pick dropdown (25% – 500%)
 - **Resizable panels** — drag the divider to adjust input/preview split
 - **Fullscreen preview** — expand diagram to full viewport
 
@@ -68,7 +69,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Drag on empty canvas** — pans the preview
 
 ### Productivity
-- **8 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, and enterprise domains
+- **9 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, and an AI/RAG application
 - **Architecture views** — focused presets for system context, container, deployment, and domain ownership views
 - **Diagram library** — save, name, and reload your own diagram snippets (`Ctrl+Shift+L`)
 - **Persistent node positions** — drag nodes to rearrange; positions survive re-renders and page reloads
@@ -239,6 +240,8 @@ app:Frontend --> app:Backend
 - Auto-detection works on compound names: `ec2_instance` → server, `rest_api` → interface
 - Custom diagram colours (⚙️ → Diagram tab) work best when the diagram theme is set to **Base**
 - Cloud icons (☁️ Icons ▾) insert emoji-embedded labels that appear inside diagram nodes
+- The **AI** icon tab covers the full modern AI stack — use it with the **AI / RAG App** template to get started quickly
+- Click the zoom percentage (e.g. `100%`) in the preview toolbar to open the zoom preset picker; max zoom is 500%
 
 ---
 
@@ -277,6 +280,7 @@ Press **Templates** in the toolbar to load any built-in preset:
 | 6 | File Processing Pipeline | FTP / watcher / batch processing |
 | 7 | Network Architecture | External, DMZ, and internal net zones |
 | 8 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
+| 9 | AI / RAG App | LLM-powered RAG pipeline — client, gateway, orchestration (LangChain), LLM providers (OpenAI, Claude), retrieval, vector DB (Pinecone), and observability (Langfuse) |
 
 ---
 

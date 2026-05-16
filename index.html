@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <!-- ── CodeMirror 6 bootstrap (module) ── -->
 <script type="module">
 import {EditorView, keymap, drawSelection, highlightActiveLine, lineNumbers,
@@ -92,6 +92,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
             cursor:pointer;user-select:none;transition:background .15s;
             background:var(--surface-2);color:var(--text);border:1px solid var(--border); }
 .zoom-btn:hover { background:var(--surface-3); }
+
+/* Zoom display button & quick-pick dropdown */
+.zoom-display-btn {
+  display:inline-flex;align-items:center;justify-content:center;
+  height:22px;padding:0 5px;border-radius:4px;font-size:11px;font-family:monospace;
+  font-weight:600;cursor:pointer;user-select:none;transition:background .15s;
+  background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border);
+  min-width:40px;
+}
+.zoom-display-btn:hover { background:var(--surface-3);color:var(--text); }
+.zoom-picker {
+  position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);
+  background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.25);padding:4px;
+  display:flex;flex-direction:column;gap:1px;min-width:72px;z-index:999;
+}
+.zoom-pick-item {
+  display:block;width:100%;text-align:center;padding:4px 8px;
+  font-size:11px;font-family:monospace;font-weight:600;
+  background:transparent;border:none;border-radius:4px;
+  color:var(--text);cursor:pointer;transition:background .12s;
+}
+.zoom-pick-item:hover { background:var(--surface-3); }
 
 /* Preview header */
 #previewHeader { background:var(--surface-1);border-bottom:1px solid var(--border); }
@@ -242,6 +265,25 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 #mermaidOutput svg g.node-src-hl > ellipse,
 #mermaidOutput svg g.node-src-hl > path { stroke:#818cf8!important;stroke-width:2px!important;stroke-dasharray:3,2!important; }
 
+/* ── Dark mode: Mermaid edge & arrowhead visibility ── */
+/* Mermaid's default/neutral themes render edges as near-black (#333).
+   These rules lift them to a readable gray when the app is in dark mode.
+   They only apply when the user has NOT set a custom lineColor (because
+   a custom lineColor is already injected as a themeVariable in renderDiagram). */
+[data-theme="dark"] #mermaidOutput svg .edgePaths path,
+[data-theme="dark"] #mermaidOutput svg .edgePath > path {
+  stroke: #9ca3af !important;
+}
+[data-theme="dark"] #mermaidOutput svg defs marker path,
+[data-theme="dark"] #mermaidOutput svg defs marker polygon {
+  fill: #9ca3af !important;
+}
+[data-theme="dark"] #mermaidOutput svg .edgeLabel .label,
+[data-theme="dark"] #mermaidOutput svg .edgeLabel span.edgeLabel {
+  color: #e2e8f0 !important;
+  background: transparent !important;
+}
+
 /* ── Floating node "+" handle ── */
 #nodeHandle {
   position:fixed;display:none;z-index:150;flex-direction:column;align-items:center;gap:4px;
@@ -366,6 +408,29 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
             white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px; }
 .ip-type  { font-size:8px;color:var(--text-faint);font-family:monospace;margin-top:1px; }
 .ip-empty { grid-column:1/-1;text-align:center;padding:24px;font-size:12px;color:var(--text-faint); }
+.ip-tools { display:flex;gap:6px;margin-bottom:8px; }
+.ip-tool-btn {
+  flex:1;padding:5px 8px;border-radius:5px;border:1px solid var(--border);
+  background:var(--surface-0);color:var(--text-muted);font-size:11px;font-weight:700;
+  cursor:pointer;text-align:center;
+}
+.ip-tool-btn:hover { background:var(--surface-2);color:var(--text); }
+.ip-custom-form {
+  display:grid;grid-template-columns:1fr 92px;gap:6px;margin-bottom:8px;padding:8px;
+  border:1px solid var(--border);border-radius:7px;background:var(--surface-0);
+}
+.ip-custom-form.hidden { display:none; }
+.ip-custom-form input,
+.ip-custom-form select,
+.ip-custom-form textarea {
+  background:var(--surface-1);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-size:11px;padding:5px 7px;outline:none;
+}
+.ip-custom-form textarea { grid-column:1/-1;min-height:54px;resize:vertical;font-family:monospace; }
+.ip-custom-form input[type="file"] { grid-column:1/-1;padding:4px;font-size:10px; }
+.ip-custom-actions { grid-column:1/-1;display:flex;gap:6px;align-items:center; }
+.ip-preview-img, .ip-preview-svg svg { width:18px;height:18px;object-fit:contain;display:inline-block;vertical-align:middle; }
+.ip-delete { margin-top:3px;font-size:8px;color:#fca5a5;background:none;border:0;cursor:pointer; }
 
 /* ── Template picker dropdown ── */
 #tplPicker, #viewPicker {
@@ -523,7 +588,9 @@ domain:Platform {
           <li>Switch views with the Diagram type dropdown — Flowchart, Sequence, Class</li>
           <li>Use <span class="hcode">🏷️ Entities ▾</span> to pick an entity type — it inserts the prefix and you just type the name</li>
           <li>Use <span class="hcode">📋 Templates ▾</span> to load a working example instantly</li>
-          <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 140+ AWS / GCP / Azure / General service icons and insert them with their cloud icon embedded in the label</li>
+          <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 210+ service icons across AWS, GCP, Azure, General, and AI tabs — click any icon to insert it with its emoji embedded in the label</li>
+          <li>Use the <strong>🤖 AI</strong> icon tab for AI stack diagrams — LLMs, frameworks, vector DBs, MLOps, and more. Pair with the <span class="hcode">🤖 AI / RAG App</span> template to start quickly</li>
+          <li>Click the zoom percentage (e.g. <span class="hcode">100%</span>) in the preview toolbar to open a zoom preset picker — from 25% to 500%</li>
         </ul>
       </div>
 
@@ -715,7 +782,7 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-400 mb-3">Opens a grid of all 12 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
 
         <div class="help-h3">📋 Templates ▾</div>
-        <p class="text-xs text-gray-400 mb-3">Eight pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
+        <p class="text-xs text-gray-400 mb-3">Nine pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
         <table class="help-tbl" style="margin-bottom:12px">
           <thead><tr><th>Template</th><th>What it shows</th></tr></thead>
           <tbody>
@@ -727,6 +794,7 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>📁 File Processing</td><td>FTP / watcher / batch processing pipeline</td></tr>
             <tr><td>🌐 Network Arch</td><td>External, DMZ, and internal net zones</td></tr>
             <tr><td>🏢 Enterprise Domains</td><td>Multi-domain ownership with env grouping</td></tr>
+            <tr><td>🤖 AI / RAG App</td><td>Full LLM-powered RAG pipeline — client, API gateway, AI orchestration (LangChain), LLM providers (OpenAI GPT, Anthropic Claude), retrieval service, vector database (Pinecone), knowledge base, and observability (Langfuse). Uses AI icon tab entities.</td></tr>
           </tbody>
         </table>
 
@@ -734,7 +802,7 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-400 mb-3">Loads focused architecture presets for system context, container, deployment, and domain ownership views. Each preset uses the same Smart Input syntax and can be edited like any other diagram.</p>
 
         <div class="help-h3">☁️ Icons ▾ — cloud service icon picker</div>
-        <p class="text-xs text-gray-400 mb-2">Browse 140+ named cloud services across four provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
+        <p class="text-xs text-gray-400 mb-2">Browse 210+ named services across five provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
         <table class="help-tbl" style="margin-bottom:12px">
           <thead><tr><th>Tab</th><th>Services included</th></tr></thead>
           <tbody>
@@ -742,9 +810,10 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>GCP</td><td>Cloud Functions, GKE, Cloud Run, BigQuery, Firestore, Pub/Sub, Cloud Armor, Vertex AI…</td></tr>
             <tr><td>Azure</td><td>Azure Functions, AKS, Cosmos DB, Service Bus, Event Hubs, Key Vault, Azure Monitor…</td></tr>
             <tr><td>General</td><td>Docker, Kubernetes, PostgreSQL, Kafka, RabbitMQ, Nginx, Grafana, Prometheus, Terraform, ArgoCD…</td></tr>
+            <tr><td>🤖 AI</td><td><strong>LLM providers</strong> — OpenAI GPT, Anthropic Claude, Google Gemini, Meta LLaMA, Mistral, Cohere, xAI Grok… <strong>Frameworks</strong> — LangChain, LlamaIndex, AutoGen, CrewAI, LangGraph, Haystack, DSPy, Semantic Kernel… <strong>ML libs</strong> — PyTorch, TensorFlow, Hugging Face, scikit-learn, JAX, ONNX… <strong>Vector DBs</strong> — Pinecone, Qdrant, Weaviate, Milvus, Chroma, pgvector… <strong>MLOps</strong> — MLflow, W&amp;B, DVC, ZenML… <strong>Observability</strong> — Langfuse, Arize, Evidently, Helicone… <strong>Serving</strong> — vLLM, TGI, Triton, LiteLLM…</td></tr>
           </tbody>
         </table>
-        <p class="text-xs text-gray-500 mb-4">Use the search box at the top of the picker to filter by service name across all items in the active tab. The inserted entity uses the correct type prefix automatically (e.g. <span class="hcode">instance:⚡ Lambda</span>, <span class="hcode">db:🗄️ RDS</span>).</p>
+        <p class="text-xs text-gray-500 mb-4">Use the search box at the top of the picker to filter by service name across all items in the active tab. The inserted entity uses the correct type prefix automatically (e.g. <span class="hcode">instance:⚡ Lambda</span>, <span class="hcode">db:🗄️ RDS</span>, <span class="hcode">instance:🤖 OpenAI_GPT</span>).</p>
 
         <div class="help-h3">⚙️ Appearance settings</div>
         <p class="text-xs text-gray-400 mb-3">Opens the Appearance panel with two tabs.</p>
@@ -788,9 +857,9 @@ BatchJob writes to db:Warehouse</div>
             <tr><td><kbd class="hkbd">Ctrl+Z</kbd></td><td>Undo last change</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Y</kbd> / <kbd class="hkbd">Ctrl+Shift+Z</kbd></td><td>Redo</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Enter</kbd></td><td>Force re-render the diagram immediately</td></tr>
-            <tr><td><kbd class="hkbd">Ctrl++</kbd> / <kbd class="hkbd">Ctrl+-</kbd></td><td>Zoom preview in / out</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl++</kbd> / <kbd class="hkbd">Ctrl+-</kbd></td><td>Zoom preview in / out (25% steps, max 500%)</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+0</kbd></td><td>Reset zoom to 100%</td></tr>
-            <tr><td><kbd class="hkbd">Ctrl+Scroll</kbd></td><td>Zoom (while hovering the preview panel)</td></tr>
+            <tr><td><kbd class="hkbd">Ctrl+Scroll</kbd></td><td>Fine zoom (10% steps) while hovering the preview panel</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+F</kbd></td><td>Open node search bar (highlight matching nodes)</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Shift+C</kbd></td><td>Copy generated Mermaid code</td></tr>
             <tr><td><kbd class="hkbd">Ctrl+Shift+F</kbd></td><td>Toggle fullscreen preview</td></tr>
@@ -815,6 +884,7 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>Export ▾</td><td>Download a complete project bundle with input, type, theme, settings, layout, and saved node positions</td></tr>
             <tr><td>Copy embed &lt;iframe&gt;</td><td>Generates an <code>&lt;iframe&gt;</code> snippet pointing to the current diagram in read-only embed mode — paste into any HTML page or Notion/Confluence block</td></tr>
             <tr><td>⊞ Fit</td><td>Auto-fit zoom to the preview window</td></tr>
+            <tr><td>100% (zoom display)</td><td>Click to open the zoom preset picker — 25% / 50% / 75% / 100% / 125% / 150% / 200% / 300% / 400% / 500%</td></tr>
             <tr><td>⛶ Fullscreen</td><td>Expand preview panel to full width</td></tr>
             <tr><td>🌙 / ☀️ Theme</td><td>Toggle dark / light app theme (saved automatically)</td></tr>
           </tbody>
@@ -1088,11 +1158,37 @@ BatchJob writes to db:Warehouse</div>
     <div id="iconPicker">
       <input id="ipSearch" class="ip-search" placeholder="Search services…" autocomplete="off" spellcheck="false"
         oninput="renderIconGrid(_ipProvider, this.value)">
+      <div class="ip-tools">
+        <button class="ip-tool-btn" onclick="toggleCustomIconForm()">+ Custom icon</button>
+        <button class="ip-tool-btn" onclick="document.getElementById('ipSearch').value='';renderIconGrid(_ipProvider,'')">Reset</button>
+      </div>
+      <div id="ipCustomForm" class="ip-custom-form hidden">
+        <input id="ipCustomName" placeholder="Name" autocomplete="off">
+        <select id="ipCustomType">
+          <option value="app">app:</option>
+          <option value="instance">instance:</option>
+          <option value="db">db:</option>
+          <option value="server">server:</option>
+          <option value="interface">interface:</option>
+          <option value="config">config:</option>
+          <option value="batch">batch:</option>
+          <option value="watcher">watcher:</option>
+        </select>
+        <input id="ipCustomUrl" placeholder="https://example.com/icon.svg or data:image/..." autocomplete="off">
+        <textarea id="ipCustomSvg" placeholder="<svg ...> optional inline SVG"></textarea>
+        <input id="ipCustomFile" type="file" accept=".svg,image/svg+xml">
+        <div class="ip-custom-actions">
+          <button class="ip-tool-btn" onclick="saveCustomIconFromForm()">Save custom icon</button>
+          <button class="ip-tool-btn" onclick="clearCustomIconForm()">Clear</button>
+        </div>
+      </div>
       <div class="ip-tabs">
         <button class="ip-tab active" data-provider="aws"     onclick="document.getElementById('ipSearch').value='';renderIconGrid('aws','')">AWS</button>
         <button class="ip-tab"        data-provider="gcp"     onclick="document.getElementById('ipSearch').value='';renderIconGrid('gcp','')">GCP</button>
         <button class="ip-tab"        data-provider="azure"   onclick="document.getElementById('ipSearch').value='';renderIconGrid('azure','')">Azure</button>
         <button class="ip-tab"        data-provider="general" onclick="document.getElementById('ipSearch').value='';renderIconGrid('general','')">General</button>
+        <button class="ip-tab"        data-provider="ai"      onclick="document.getElementById('ipSearch').value='';renderIconGrid('ai','')">🤖 AI</button>
+        <button class="ip-tab"        data-provider="custom"  onclick="document.getElementById('ipSearch').value='';renderIconGrid('custom','')">Custom</button>
       </div>
       <div id="ipGrid" class="ip-grid"></div>
     </div>
@@ -1107,6 +1203,8 @@ BatchJob writes to db:Warehouse</div>
       <button class="tpl-item" onclick="loadTemplate('threeTier');toggleTplPicker(true)"><span class="tpl-item-icon">🏗️</span>3-Tier App</button>
       <button class="tpl-item" onclick="loadTemplate('cicd');toggleTplPicker(true)"><span class="tpl-item-icon">🔄</span>CI/CD Pipeline</button>
       <button class="tpl-item" onclick="loadTemplate('cloud');toggleTplPicker(true)"><span class="tpl-item-icon">☁️</span>Cloud Infra</button>
+      <div class="tpl-divider"></div>
+      <button class="tpl-item" onclick="loadTemplate('aiApp');toggleTplPicker(true)"><span class="tpl-item-icon">🤖</span>AI / RAG App</button>
       <div class="tpl-divider"></div>
       <button class="tpl-item" onclick="loadTemplate('etlPipeline');toggleTplPicker(true)"><span class="tpl-item-icon">🔃</span>ETL Pipeline</button>
       <button class="tpl-item" onclick="loadTemplate('fileProcessing');toggleTplPicker(true)"><span class="tpl-item-icon">📁</span>File Processing</button>
@@ -1172,7 +1270,21 @@ BatchJob writes to db:Warehouse</div>
       <!-- Zoom controls -->
       <div class="flex items-center gap-1" title="Zoom (Ctrl+scroll or Ctrl+± )">
         <button class="zoom-btn" id="zoomOut" title="Zoom out (Ctrl+-)">−</button>
-        <span id="zoomDisplay" class="text-xs w-10 text-center font-mono select-none" style="color:var(--text-muted)">100%</span>
+        <div class="zoom-pick-wrap" style="position:relative;">
+          <button id="zoomDisplay" class="zoom-display-btn" title="Quick zoom (click for presets)">100%</button>
+          <div id="zoomPicker" class="zoom-picker" hidden>
+            <button class="zoom-pick-item" onclick="setZoom(0.25);closeZoomPicker()">25%</button>
+            <button class="zoom-pick-item" onclick="setZoom(0.5);closeZoomPicker()">50%</button>
+            <button class="zoom-pick-item" onclick="setZoom(0.75);closeZoomPicker()">75%</button>
+            <button class="zoom-pick-item" onclick="setZoom(1);closeZoomPicker()">100%</button>
+            <button class="zoom-pick-item" onclick="setZoom(1.25);closeZoomPicker()">125%</button>
+            <button class="zoom-pick-item" onclick="setZoom(1.5);closeZoomPicker()">150%</button>
+            <button class="zoom-pick-item" onclick="setZoom(2);closeZoomPicker()">200%</button>
+            <button class="zoom-pick-item" onclick="setZoom(3);closeZoomPicker()">300%</button>
+            <button class="zoom-pick-item" onclick="setZoom(4);closeZoomPicker()">400%</button>
+            <button class="zoom-pick-item" onclick="setZoom(5);closeZoomPicker()">500%</button>
+          </div>
+        </div>
         <button class="zoom-btn" id="zoomIn"  title="Zoom in (Ctrl++)">+</button>
         <button class="zoom-btn text-xs" id="zoomFit" title="Fit to window">⊞</button>
       </div>
@@ -1291,13 +1403,30 @@ BatchJob writes to db:Warehouse</div>
 // ════════════════════════════════════════════════════════════════
 const BASE_MERMAID_CONFIG = {
   startOnLoad: false,
-  flowchart: { curve: 'basis', padding: 20, useMaxWidth: true },
+  flowchart: { curve: 'basis', padding: 20, useMaxWidth: true, htmlLabels: true },
   sequence:   { useMaxWidth: true },
-  securityLevel: 'antiscript',
+  securityLevel: 'loose',
   fontSize: 14,
 };
 
 mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: 'default' });
+
+let _mermaidIconPacksRegistered = false;
+function ensureMermaidIconPacks() {
+  if (_mermaidIconPacksRegistered || typeof mermaid.registerIconPacks !== 'function') return;
+  mermaid.registerIconPacks([
+    {
+      name: 'logos',
+      loader: () => fetch('https://unpkg.com/@iconify-json/logos@1/icons.json').then(res => res.json()),
+    },
+    {
+      name: 'simple-icons',
+      loader: () => fetch('https://unpkg.com/@iconify-json/simple-icons@1/icons.json').then(res => res.json()),
+    },
+  ]);
+  _mermaidIconPacksRegistered = true;
+}
+ensureMermaidIconPacks();
 
 // ════════════════════════════════════════════════════════════════
 //  APPEARANCE SETTINGS
@@ -1829,6 +1958,88 @@ ftp:Supplier_FTP --SFTP--> watcher:Event_Collector
 ftp:Supplier_FTP --feeds--> batch:Stock_Sync
 batch:Stock_Sync --> db:Warehouse_DB`,
 
+  aiApp: `// LLM-Powered RAG Application
+// Shows a production AI pipeline: ingestion, retrieval, orchestration, and observability.
+
+domain:Client {
+  app:Web_App
+  app:Mobile_App
+}
+
+domain:Gateway {
+  interface:API_Gateway [icon: aws-api-gateway]
+  app:Auth_Service
+  config:Rate_Limiter
+}
+
+domain:AI_Orchestration {
+  app:LangChain [icon: ai-langchain]
+  app:LangGraph_Agent [icon: ai-langgraph]
+  config:Prompt_Registry [icon: ai-prompt-registry]
+  config:Context_Window [icon: ai-context-window]
+}
+
+domain:LLM_Providers {
+  instance:OpenAI_GPT [icon: ai-openai-gpt]
+  instance:Claude [icon: ai-anthropic-claude]
+  instance:LiteLLM_Router [icon: ai-litellm]
+}
+
+domain:Retrieval {
+  batch:RAG_Pipeline [icon: ai-rag-pipeline]
+  instance:Embeddings [icon: ai-embeddings-api]
+  db:Pinecone [icon: ai-pinecone]
+  instance:Reranker [icon: ai-reranker]
+}
+
+domain:Knowledge_Base {
+  db:Postgres_Docs [icon: postgresql]
+  app:S3_Docs [icon: aws-s3]
+  batch:Doc_Ingestion [icon: ai-rag-pipeline]
+}
+
+domain:Observability {
+  watcher:Langfuse [icon: ai-langfuse]
+  watcher:LangSmith [icon: ai-langsmith]
+  watcher:WandB [icon: ai-weights-and-biases]
+}
+
+// ── Client → Gateway ──
+app:Web_App --> interface:API_Gateway
+app:Mobile_App --> interface:API_Gateway
+interface:API_Gateway --verify--> app:Auth_Service
+config:Rate_Limiter --> interface:API_Gateway
+
+// ── Gateway → Orchestration ──
+interface:API_Gateway --prompt--> app:LangChain
+app:LangChain --agent loop--> app:LangGraph_Agent
+config:Prompt_Registry --templates--> app:LangChain
+config:Context_Window --limits--> app:LangChain
+
+// ── Orchestration → LLMs (via router) ──
+app:LangChain --infer--> instance:LiteLLM_Router
+app:LangGraph_Agent --infer--> instance:LiteLLM_Router
+instance:LiteLLM_Router --primary--> instance:OpenAI_GPT
+instance:LiteLLM_Router --fallback--> instance:Claude
+
+// ── Retrieval / RAG flow ──
+app:LangChain --retrieve--> batch:RAG_Pipeline
+batch:RAG_Pipeline --> instance:Embeddings
+instance:Embeddings --embed query--> db:Pinecone
+db:Pinecone --top-k chunks--> instance:Reranker
+instance:Reranker --ranked context--> app:LangChain
+
+// ── Knowledge-base ingestion ──
+batch:Doc_Ingestion --> db:Postgres_Docs
+batch:Doc_Ingestion --> app:S3_Docs
+batch:Doc_Ingestion --embed docs--> db:Pinecone
+instance:Embeddings --index--> db:Pinecone
+
+// ── Observability ──
+app:LangChain --traces--> watcher:Langfuse
+instance:LiteLLM_Router --cost & latency--> watcher:LangSmith
+instance:OpenAI_GPT --evals--> watcher:WandB`,
+
   cloud: `// Cloud Infrastructure
 env:VPC_us_east_1 {
   server:ALB
@@ -1991,6 +2202,7 @@ app:BI_Dashboard --> db:Warehouse`,
 const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu';
 const _pfxTest  = new RegExp(`^(?:${_PFX_STR}):`, 'i');
 const _splitRe  = new RegExp(`\\s*,\\s*|\\s+(?=(?:${_PFX_STR}):)`, 'i');
+const _adjacentPrefixRe = new RegExp(`\\](?=(?:${_PFX_STR}):)`, 'ig');
 const TYPE_ALIAS_MAP = {
   env:'env', app:'app', db:'db', database:'db',
   server:'server', srv:'server',
@@ -2004,6 +2216,35 @@ const TYPE_ALIAS_MAP = {
   domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
 };
 const CONTAINER_TYPES = new Set(['env', 'net', 'domain']);
+
+function normalizeIconId(value) {
+  return String(value || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+}
+
+function iconMetaFromTag(key, value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  const k = String(key || 'icon').toLowerCase();
+  if (k === 'icon-url') return { kind: 'url', value: raw };
+  if (k === 'icon-svg') return { kind: 'svg', value: raw };
+  if (k === 'icon-custom') return { kind: 'custom', ref: normalizeIconId(raw) };
+  if (/^custom:/i.test(raw)) return { kind: 'custom', ref: normalizeIconId(raw.replace(/^custom:/i, '')) };
+  if (/^https?:\/\//i.test(raw) || /^data:image\//i.test(raw)) return { kind: 'url', value: raw };
+  if (/^<svg[\s>]/i.test(raw)) return { kind: 'svg', value: raw };
+  return { kind: 'catalog', ref: normalizeIconId(raw) };
+}
+
+function extractIconMetadata(text) {
+  let label = String(text || '').trim();
+  let icon = null;
+  let match;
+  const tagRe = /\s*\[(icon|icon-url|icon-svg|icon-custom)\s*:\s*([^\]]+)\]\s*$/i;
+  while ((match = label.match(tagRe))) {
+    icon = iconMetaFromTag(match[1], match[2]) || icon;
+    label = label.slice(0, match.index).trim();
+  }
+  return { label, icon };
+}
 
 class SmartParser {
   constructor() { this.reset(); }
@@ -2029,16 +2270,45 @@ class SmartParser {
     let bKids    = [];
     let bLine    = 1;
 
+    // Detect arrow lines (must have whitespace around the operator to avoid false positives in labels)
+    const _blockArrowRe = /\s(?:<-+>|--[^>]*-->?|-->|-+>|>>)\s/;
+
+    const closeBlock = (lineNo, raw) => {
+      out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw });
+      inBlock = false; bPrefix = 'env'; bName = ''; bKids = []; bLine = lineNo;
+    };
+
+    const processBlockContent = (content, lineNo, raw) => {
+      if (!content || content.startsWith('//') || content.startsWith('#')) return;
+      if (_blockArrowRe.test(content)) {
+        // Emit arrow as a standalone relationship line to be parsed normally
+        out.push({ text: content, line: lineNo, raw });
+        // Also register the endpoint entities as group children (for subgraph membership)
+        const sides = content.split(/\s+(?:<-+>|--[^>]*-->?|-->|-+>|>>)\s+/);
+        sides.forEach(side => {
+          side.trim().split(_splitRe).filter(Boolean).forEach(tok => {
+            const t = tok.trim();
+            if (t && _pfxTest.test(t)) bKids.push(t);
+          });
+        });
+      } else {
+        bKids.push(...content.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
+      }
+    };
+
     input.split('\n').forEach((raw, idx) => {
       const lineNo = idx + 1;
       const line = raw.trim();
 
       if (inBlock) {
         if (line === '}') {
-          out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw });
-          inBlock = false; bPrefix = 'env'; bName = ''; bKids = []; bLine = lineNo;
-        } else if (line && !line.startsWith('//') && !line.startsWith('#')) {
-          bKids.push(...line.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
+          closeBlock(lineNo, raw);
+        } else if (line.endsWith('}') && line !== '}' && !line.startsWith('//') && !line.startsWith('#')) {
+          // Inline closing brace: e.g. "instance:A --> instance:B}"
+          processBlockContent(line.slice(0, -1).trim(), lineNo, raw);
+          closeBlock(lineNo, raw);
+        } else {
+          processBlockContent(line, lineNo, raw);
         }
       } else {
         // Multi-line opener: env:X {  or  net:X {  or  domain:X {
@@ -2067,12 +2337,13 @@ class SmartParser {
     this.parseIssues.push({ severity, code, message, line, ...meta });
   }
 
-  addEntity(type, label, source = null) {
+  addEntity(type, label, source = null, icon = null) {
     const id = this.makeId(type, label);
-    if (!this.entities.has(id)) this.entities.set(id, { type, label, id });
+    if (!this.entities.has(id)) this.entities.set(id, { type, label, id, icon: icon || null });
+    else if (icon) this.entities.get(id).icon = icon;
     if (source) {
       const list = this.entitySources.get(id) || [];
-      list.push({ ...source, id, type, label });
+      list.push({ ...source, id, type, label, icon: icon || null });
       this.entitySources.set(id, list);
     }
     return id;
@@ -2123,21 +2394,29 @@ class SmartParser {
     if (pm) {
       const prefix = pm[1].toLowerCase();
       const type  = TYPE_ALIAS_MAP[prefix];
-      const label = pm[2].replace(/["']/g, '').trim();
-      return { type, label, id: this.addEntity(type, label, { line, raw, token, prefix }) };
+      const meta  = extractIconMetadata(pm[2]);
+      const label = meta.label.replace(/["']/g, '').trim();
+      if (!label) return null;
+      return { type, label, icon: meta.icon, id: this.addEntity(type, label, { line, raw, token, prefix }, meta.icon) };
     }
 
     // Auto-detect
-    const label = token.replace(/["']/g, '').trim();
+    const meta = extractIconMetadata(token);
+    const label = meta.label.replace(/["']/g, '').trim();
     if (!label) return null;
     const type = this.autoType(label);
-    return { type, label, id: this.addEntity(type, label, { line, raw, token, prefix: '' }) };
+    return { type, label, icon: meta.icon, id: this.addEntity(type, label, { line, raw, token, prefix: '' }, meta.icon) };
   }
 
   parseLine(line, lineNo = 1, rawLine = line) {
     const raw = rawLine || line;
     line = line.trim();
+    line = line.replace(_adjacentPrefixRe, '] ');
     if (!line || /^[/#]/.test(line)) return;
+    if (/^\[(?:icon|icon-url|icon-svg|icon-custom)\s*:\s*[^\]]+\]$/i.test(line)) {
+      this.addIssue('warning', 'ORPHAN_ICON_METADATA', 'Icon metadata must be attached to an entity, e.g. instance:Lambda [icon: aws-lambda]', lineNo, { raw });
+      return;
+    }
 
     // Single-line env/net/domain block: env:X { … } | net:X { … } | domain:X { … }
     const envBlock = line.match(/^(env|net|domain):\s*([^\s{]+)\s*\{([^}]*)\}/i);
@@ -2263,12 +2542,31 @@ class SmartParser {
     return label.replace(/"/g, "'").replace(/[[\]{}|<>]/g, '');
   }
 
-  nodeShape(type, label) {
-    const l = this.safeLabel(label);
+  htmlLabel(label, iconUrl = '') {
+    const text = String(label || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    if (!iconUrl) return text;
+    const src = String(iconUrl)
+      .replace(/&/g, '&amp;')
+      .replace(/'/g, '&#39;')
+      .replace(/</g, '')
+      .replace(/>/g, '');
+    return `<span class='meridian-node-label'><img src='${src}' style='width:18px;height:18px;vertical-align:middle;margin-right:7px;object-fit:contain;'/>${text}</span>`;
+  }
+
+  nodeSyntax(id, entity) {
+    return `${id}${this.nodeShape(entity.type, entity.label, !entity.icon, iconImageUrlForEntityIcon(entity.icon))}`;
+  }
+
+  nodeShape(type, label, addTypeIcon = true, iconUrl = '') {
+    const l = iconUrl ? this.htmlLabel(label, iconUrl) : this.safeLabel(label);
     // If label already starts with a non-ASCII char (e.g. emoji from icon picker), skip the type icon
     const _icons = {env:'🌐',app:'📦',db:'🗄️',server:'🖥️',instance:'⚙️',
       interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢'};
-    const lbl = l.codePointAt(0) > 127 ? l : (_icons[type] ? `${_icons[type]} ${l}` : l);
+    const lbl = !addTypeIcon || l.codePointAt(0) > 127 ? l : (_icons[type] ? `${_icons[type]} ${l}` : l);
     switch (type) {
       case 'db':        return `[("${lbl}")]`;
       case 'server':    return `[["${lbl}"]]`;
@@ -2342,7 +2640,7 @@ class SmartParser {
       L.push(`    subgraph ${envId}["${icon} ${this.safeLabel(env.label)}"]`);
       for (const kid of kids) {
         const e = this.entities.get(kid);
-        if (e) L.push(`        ${kid}${this.nodeShape(e.type, e.label)}`);
+        if (e) L.push(`        ${this.nodeSyntax(kid, e)}`);
       }
       L.push('    end');
       if (zt && NET_STYLES[zt]) L.push(`    style ${envId} ${NET_STYLES[zt]}`);
@@ -2361,7 +2659,7 @@ class SmartParser {
         L.push(`    subgraph ${domId}["🏢 ${this.safeLabel(dom.label)}"]`);
         for (const kid of ownKids) {
           const e = this.entities.get(kid);
-          if (e) L.push(`        ${kid}${this.nodeShape(e.type, e.label)}`);
+          if (e) L.push(`        ${this.nodeSyntax(kid, e)}`);
         }
         L.push('    end');
         L.push(`    style ${domId} fill:${pal.fill},stroke:${pal.stroke},stroke-width:3px,stroke-dasharray:6 3,color:${pal.color}`);
@@ -2374,7 +2672,7 @@ class SmartParser {
     for (const [id, e] of this.entities) {
       const isContainer = this.environments.has(id) || this.domains.has(id);
       if (!isContainer && !inEnv.has(id) && !inDomainOnly.has(id)) {
-        L.push(`    ${id}${this.nodeShape(e.type, e.label)}`);
+        L.push(`    ${this.nodeSyntax(id, e)}`);
       }
     }
 
@@ -2889,9 +3187,333 @@ const CLOUD_ICONS = {
     ['🔌','GraphQL',         'interface:GraphQL'],
     ['⚡','gRPC',            'interface:gRPC'],
   ],
+
+  ai: [
+    // ── Foundation Models & LLM APIs ──────────────────────────────────────
+    ['🤖','OpenAI GPT',           'instance:OpenAI_GPT'],
+    ['🪶','Anthropic Claude',     'instance:Anthropic_Claude'],
+    ['💎','Google Gemini',        'instance:Google_Gemini'],
+    ['🦙','Meta LLaMA',           'instance:Meta_LLaMA'],
+    ['💫','Mistral AI',           'instance:Mistral_AI'],
+    ['🌊','Perplexity AI',        'instance:Perplexity_AI'],
+    ['🔮','xAI Grok',             'instance:xAI_Grok'],
+    ['🪸','Cohere Command',       'instance:Cohere'],
+    ['🏠','Ollama',               'instance:Ollama'],
+    ['🎯','Together AI',          'instance:TogetherAI'],
+    // ── AI Cloud Services ─────────────────────────────────────────────────
+    ['🛏️','AWS Bedrock',          'instance:AWS_Bedrock'],
+    ['🔬','AWS SageMaker',        'instance:AWS_SageMaker'],
+    ['✨','Azure OpenAI Svc',     'instance:Azure_OpenAI_Svc'],
+    ['🧬','Azure AI Studio',      'instance:Azure_AI_Studio'],
+    ['🖥️','Azure ML',             'instance:Azure_ML'],
+    ['🌟','Vertex AI',            'instance:Vertex_AI'],
+    ['🎨','Google AI Studio',     'instance:Google_AI_Studio'],
+    ['🏭','Amazon Titan',         'instance:Amazon_Titan'],
+    // ── Orchestration & Agent Frameworks ──────────────────────────────────
+    ['⛓️','LangChain',            'app:LangChain'],
+    ['📇','LlamaIndex',           'app:LlamaIndex'],
+    ['🗺️','LangGraph',            'app:LangGraph'],
+    ['🤝','AutoGen',              'app:AutoGen'],
+    ['🚣','CrewAI',               'app:CrewAI'],
+    ['🌀','DSPy',                 'app:DSPy'],
+    ['🔍','Haystack',             'app:Haystack'],
+    ['🧩','Semantic Kernel',      'app:SemanticKernel'],
+    ['🤗','Hugging Face',         'app:HuggingFace'],
+    // ── ML Frameworks ─────────────────────────────────────────────────────
+    ['🔥','PyTorch',              'instance:PyTorch'],
+    ['🌊','TensorFlow',           'instance:TensorFlow'],
+    ['⚡','JAX',                  'instance:JAX'],
+    ['📐','scikit-learn',         'instance:ScikitLearn'],
+    ['💡','Keras',                'instance:Keras'],
+    ['🐼','Pandas',               'instance:Pandas'],
+    ['🔢','NumPy',                'instance:NumPy'],
+    // ── Vector Databases ──────────────────────────────────────────────────
+    ['🌲','Pinecone',             'db:Pinecone'],
+    ['🕸️','Weaviate',             'db:Weaviate'],
+    ['🎯','Qdrant',               'db:Qdrant'],
+    ['🌈','Chroma DB',            'db:ChromaDB'],
+    ['🔷','Milvus',               'db:Milvus'],
+    ['📎','pgvector',             'db:PGVector'],
+    ['🦔','Redis VSS',            'db:RedisVSS'],
+    ['🔍','FAISS',                'db:FAISS'],
+    // ── LLM Serving & Inference ───────────────────────────────────────────
+    ['⚡','vLLM',                 'instance:vLLM'],
+    ['🚂','TGI (HF)',             'instance:TGI'],
+    ['🧮','Triton Server',        'instance:TritonServer'],
+    ['🦙','llama.cpp',            'instance:LlamaCpp'],
+    ['🐦','LiteLLM',             'instance:LiteLLM'],
+    ['🌐','OpenRouter',           'instance:OpenRouter'],
+    // ── Embeddings & Retrieval ────────────────────────────────────────────
+    ['📝','Embeddings API',       'interface:EmbeddingsAPI'],
+    ['🔄','Sentence Xformers',    'instance:SentenceTransformers'],
+    ['📚','RAG Pipeline',         'batch:RAG_Pipeline'],
+    ['🧲','Reranker',             'instance:Reranker'],
+    ['🔗','Prompt Cache',         'config:PromptCache'],
+    ['🗃️','Context Window',       'config:ContextWindow'],
+    // ── MLOps & Experiment Tracking ───────────────────────────────────────
+    ['📊','MLflow',               'app:MLflow'],
+    ['📈','Weights & Biases',     'watcher:WandB'],
+    ['🔄','Kubeflow',             'batch:Kubeflow'],
+    ['💾','DVC',                  'config:DVC'],
+    ['🌊','Ray',                  'instance:Ray'],
+    ['🏗️','ZenML',               'batch:ZenML'],
+    ['🚀','BentoML',             'batch:BentoML'],
+    ['🌾','Airflow (AI)',         'batch:Airflow_AI'],
+    // ── AI Observability & Safety ─────────────────────────────────────────
+    ['🔭','Langfuse',             'watcher:Langfuse'],
+    ['🕵️','LangSmith',            'watcher:LangSmith'],
+    ['🧪','Evidently AI',         'watcher:EvidentlyAI'],
+    ['🔍','Helicone',             'watcher:Helicone'],
+    ['📡','Arize AI',             'watcher:ArizeAI'],
+    ['🛡️','Guardrails AI',        'config:GuardrailsAI'],
+    ['🚧','AI Gateway',           'interface:AI_Gateway'],
+    ['📋','Prompt Registry',      'config:PromptRegistry'],
+  ],
+};
+
+const CUSTOM_ICONS_KEY = 'meridian_custom_icons_v1';
+
+const ICONIFY_OVERRIDES = {
+  // AI providers & frameworks
+  'ai-openai-gpt':            'logos:openai-icon',
+  'ai-anthropic-claude':      'simple-icons:anthropic',
+  'ai-google-gemini':         'logos:google-gemini',
+  'ai-meta-llama':            'logos:meta-icon',
+  'ai-mistral-ai':            'simple-icons:mistral',
+  'ai-hugging-face':          'logos:hugging-face-icon',
+  'ai-pytorch':               'logos:pytorch-icon',
+  'ai-tensorflow':            'logos:tensorflow',
+  'ai-scikit-learn':          'logos:scikit-learn',
+  'ai-keras':                 'logos:keras',
+  'ai-pandas':                'logos:pandas-icon',
+  'ai-numpy':                 'logos:numpy',
+  'ai-aws-bedrock':           'logos:aws',
+  'ai-aws-sagemaker':         'logos:aws',
+  'ai-azure-openai-svc':      'logos:microsoft-azure',
+  'ai-azure-ai-studio':       'logos:microsoft-azure',
+  'ai-azure-ml':              'logos:microsoft-azure',
+  'ai-vertex-ai':             'logos:google-cloud',
+  'ai-google-ai-studio':      'logos:google-cloud',
+  'ai-ray':                   'logos:ray-icon',
+  'ai-mlflow':                'logos:mlflow-icon',
+  'ai-kubeflow':              'logos:kubeflow',
+  'ai-dvc':                   'logos:dvc-icon',
+  'ai-langchain':             'simple-icons:langchain',
+  // Cloud icons (existing providers)
+  'aws-lambda': 'logos:aws-lambda',
+  'aws-ec2': 'logos:aws-ec2',
+  'aws-s3': 'logos:aws-s3',
+  'aws-dynamodb': 'logos:aws-dynamodb',
+  'aws-rds': 'logos:aws-rds',
+  'aws-ecs': 'logos:aws-ecs',
+  'aws-eks': 'logos:aws-eks',
+  'aws-cloudfront': 'logos:aws-cloudfront',
+  'aws-api-gateway': 'logos:aws-api-gateway',
+  'aws-amplify': 'logos:aws-amplify',
+  'gcp-cloud-functions': 'logos:google-cloud-functions',
+  'gcp-compute-engine': 'logos:google-cloud',
+  'gcp-gke': 'logos:google-cloud',
+  'gcp-cloud-run': 'logos:google-cloud-run',
+  'gcp-app-engine': 'logos:google-cloud',
+  'gcp-bigquery': 'logos:google-bigquery',
+  'gcp-firebase': 'logos:firebase',
+  'gcp-firestore': 'logos:firebase',
+  'azure-azure-functions': 'logos:azure-functions',
+  'azure-virtual-machine': 'logos:microsoft-azure',
+  'azure-aks': 'logos:microsoft-azure',
+  'azure-app-service': 'logos:microsoft-azure',
+  'azure-azure-sql': 'logos:microsoft-azure',
+  'azure-cosmos-db': 'logos:microsoft-azure',
+  'docker': 'logos:docker-icon',
+  'kubernetes': 'logos:kubernetes',
+  'helm': 'logos:helm',
+  'postgresql': 'logos:postgresql',
+  'mysql': 'logos:mysql',
+  'mongodb': 'logos:mongodb-icon',
+  'redis': 'logos:redis',
+  'elasticsearch': 'logos:elasticsearch',
+  'kafka': 'logos:kafka-icon',
+  'rabbitmq': 'logos:rabbitmq-icon',
+  'nginx': 'logos:nginx',
+  'apache': 'logos:apache',
+  'grafana': 'logos:grafana',
+  'prometheus': 'logos:prometheus',
+  'datadog': 'logos:datadog',
+  'sentry': 'logos:sentry-icon',
+  'jenkins': 'logos:jenkins',
+  'gitlab-ci': 'logos:gitlab',
+  'github-actions': 'logos:github-actions',
+  'terraform': 'logos:terraform-icon',
+  'ansible': 'logos:ansible',
+  'graphql': 'logos:graphql',
+};
+
+const PROVIDER_DEFAULT_ICON = {
+  aws:   'logos:aws',
+  gcp:   'logos:google-cloud',
+  azure: 'logos:microsoft-azure',
+  ai:    'logos:openai-icon',
 };
 
 let _ipProvider = 'aws';
+
+function slugIconName(value) {
+  return String(value || '').trim().toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'icon';
+}
+
+function normalizeCustomIconId(value) {
+  return slugIconName(value);
+}
+
+function staticIconId(provider, label) {
+  const slug = slugIconName(label);
+  return provider === 'general' ? slug : `${provider}-${slug}`;
+}
+
+function nativeIconRefFor(provider, id) {
+  return ICONIFY_OVERRIDES[id] || PROVIDER_DEFAULT_ICON[provider] || '';
+}
+
+function staticIconItems(provider) {
+  return (CLOUD_ICONS[provider] || []).map(([emoji, label, pfx]) => {
+    const type = pfx.split(':')[0];
+    const id = staticIconId(provider, label);
+    return {
+      id,
+      provider,
+      category: provider.toUpperCase(),
+      name: label,
+      type,
+      emoji,
+      nativeRef: nativeIconRefFor(provider, id),
+      tags: [provider, type, pfx],
+      custom: false,
+    };
+  });
+}
+
+function loadCustomIcons() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(CUSTOM_ICONS_KEY) || '[]');
+    return Array.isArray(raw) ? raw.map(normalizeCustomIcon).filter(Boolean) : [];
+  } catch { return []; }
+}
+
+function saveCustomIcons(items) {
+  try {
+    localStorage.setItem(CUSTOM_ICONS_KEY, JSON.stringify((items || []).map(normalizeCustomIcon).filter(Boolean)));
+    return true;
+  } catch {
+    toast('Custom icon storage is full');
+    return false;
+  }
+}
+
+function isSafeIconUrl(url) {
+  const v = String(url || '').trim();
+  return /^https?:\/\//i.test(v) || /^data:image\/(?:svg\+xml|png|jpe?g|gif|webp);/i.test(v);
+}
+
+function sanitizeSvgString(svg) {
+  const raw = String(svg || '').trim();
+  if (!/^<svg[\s>]/i.test(raw)) return '';
+  try {
+    const doc = new DOMParser().parseFromString(raw, 'image/svg+xml');
+    const root = doc.documentElement;
+    if (!root || root.nodeName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) return '';
+    doc.querySelectorAll('script,foreignObject,iframe,object,embed,link,style').forEach(el => el.remove());
+    doc.querySelectorAll('*').forEach(el => {
+      [...el.attributes].forEach(attr => {
+        const name = attr.name.toLowerCase();
+        const value = attr.value.trim();
+        if (name.startsWith('on') || /^javascript:/i.test(value)) el.removeAttribute(attr.name);
+        if ((name === 'href' || name === 'xlink:href') && !/^#/.test(value)) el.removeAttribute(attr.name);
+        if (name === 'style' && /url\s*\(|expression\s*\(|javascript:/i.test(value)) el.removeAttribute(attr.name);
+      });
+    });
+    root.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    return new XMLSerializer().serializeToString(root);
+  } catch { return ''; }
+}
+
+function svgToDataUrl(svg) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function iconifyImageUrl(ref) {
+  const m = String(ref || '').trim().toLowerCase().match(/^([a-z0-9-]+):([a-z0-9-]+)$/);
+  return m ? `https://api.iconify.design/${m[1]}/${m[2]}.svg` : '';
+}
+
+function normalizeCustomIcon(icon) {
+  if (!icon || typeof icon !== 'object') return null;
+  const name = String(icon.name || '').trim();
+  const id = normalizeCustomIconId(icon.id || name);
+  const type = TYPE_ALIAS_MAP[String(icon.type || 'app').toLowerCase()] || 'app';
+  const out = { id, name: name || id, type, custom: true, tags: icon.tags || [], category: 'Custom' };
+  if (icon.svg) {
+    const svg = sanitizeSvgString(icon.svg);
+    if (!svg) return null;
+    out.svg = svg;
+  } else if (icon.url && isSafeIconUrl(icon.url)) {
+    out.url = String(icon.url).trim();
+  } else {
+    return null;
+  }
+  return out;
+}
+
+function iconCatalogMap() {
+  const map = new Map();
+  ['aws', 'gcp', 'azure', 'general', 'ai'].forEach(provider => {
+    staticIconItems(provider).forEach(item => map.set(item.id, item));
+  });
+  return map;
+}
+
+function resolveEntityIcon(meta) {
+  if (!meta) return null;
+  if (meta.kind === 'url' && isSafeIconUrl(meta.value)) return { kind: 'image', url: meta.value };
+  if (meta.kind === 'svg') {
+    const svg = sanitizeSvgString(meta.value);
+    return svg ? { kind: 'image', url: svgToDataUrl(svg) } : null;
+  }
+  if (meta.kind === 'custom') {
+    const item = loadCustomIcons().find(icon => icon.id === normalizeCustomIconId(meta.ref));
+    if (!item) return null;
+    if (item.svg) return { kind: 'image', url: svgToDataUrl(item.svg) };
+    if (item.url && isSafeIconUrl(item.url)) return { kind: 'image', url: item.url };
+  }
+  if (meta.kind === 'catalog') {
+    const ref = normalizeIconId(meta.ref);
+    const item = iconCatalogMap().get(ref);
+    if (item?.nativeRef) return { kind: 'mermaidIcon', ref: item.nativeRef };
+    if (/^[a-z0-9-]+:[a-z0-9-]+$/i.test(String(meta.ref || ''))) {
+      return { kind: 'mermaidIcon', ref: String(meta.ref).trim().toLowerCase() };
+    }
+  }
+  return null;
+}
+
+function currentIconItems(provider) {
+  return provider === 'custom' ? loadCustomIcons() : staticIconItems(provider);
+}
+
+function iconPreviewHtml(item) {
+  if (item.svg) return `<span class="ip-preview-svg">${item.svg}</span>`;
+  if (item.url) return `<img class="ip-preview-img" alt="" src="${esc(item.url)}">`;
+  if (item.nativeRef) return `<img class="ip-preview-img" alt="" src="${esc(iconifyImageUrl(item.nativeRef))}">`;
+  return esc(item.emoji || '*');
+}
+
+function iconInsertText(item) {
+  const name = String(item.name || item.id).trim().replace(/\s+/g, '_').replace(/["'\[\]{}|<>]/g, '');
+  const tag = item.custom ? `icon-custom: ${item.id}` : `icon: ${item.id}`;
+  return `${item.type || 'app'}:${name || item.id} [${tag}]`;
+}
 
 function toggleIconPicker(forceClose) {
   const p = document.getElementById('iconPicker');
@@ -2913,23 +3535,80 @@ function renderIconGrid(provider, filter) {
   document.querySelectorAll('.ip-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.provider === provider));
   const q       = (filter || '').toLowerCase().trim();
-  const raw     = CLOUD_ICONS[provider] || [];
-  const items   = q ? raw.filter(([,lbl]) => lbl.toLowerCase().includes(q)) : raw;
+  const raw     = currentIconItems(provider);
+  const items   = q ? raw.filter(item =>
+    [item.name, item.id, item.type, item.category, ...(item.tags || [])].some(v => String(v || '').toLowerCase().includes(q))
+  ) : raw;
   const grid    = document.getElementById('ipGrid');
   if (!items.length) {
     grid.innerHTML = '<div class="ip-empty">No services match "' + q + '"</div>';
     return;
   }
-  grid.innerHTML = items.map(([icon, lbl, pfx]) => {
-    const type = pfx.split(':')[0];
-    const insertVal = `${type}:${icon} ${lbl}`;
-    return `<button class="ip-item" title="${pfx}" onclick='insertPrefix(${JSON.stringify(insertVal)});toggleIconPicker(true)'>
-      <div class="ip-icon">${icon}</div>
-      <div class="ip-label">${lbl}</div>
-      <div class="ip-type">${type}:</div>
+  grid.innerHTML = items.map(item => {
+    const insertVal = iconInsertText(item);
+    const del = item.custom ? `<span class="ip-delete" onclick="event.stopPropagation();event.preventDefault();deleteCustomIcon('${item.id}')">Delete</span>` : '';
+    return `<button class="ip-item" title="${esc(item.id)}" onclick='insertPrefix(${JSON.stringify(insertVal)});toggleIconPicker(true)'>
+      <div class="ip-icon">${iconPreviewHtml(item)}</div>
+      <div class="ip-label">${esc(item.name)}</div>
+      <div class="ip-type">${esc(item.type)}:</div>
+      ${del}
     </button>`;
   }).join('');
 }
+
+function toggleCustomIconForm(forceClose) {
+  const form = document.getElementById('ipCustomForm');
+  if (forceClose) form.classList.add('hidden');
+  else form.classList.toggle('hidden');
+}
+
+function clearCustomIconForm() {
+  ['ipCustomName', 'ipCustomUrl', 'ipCustomSvg'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const file = document.getElementById('ipCustomFile');
+  if (file) file.value = '';
+}
+
+function saveCustomIconFromForm() {
+  const name = document.getElementById('ipCustomName').value.trim();
+  const type = document.getElementById('ipCustomType').value;
+  const url = document.getElementById('ipCustomUrl').value.trim();
+  const svg = document.getElementById('ipCustomSvg').value.trim();
+  if (!name) { toast('Name the custom icon first'); return; }
+  const baseId = normalizeCustomIconId(name);
+  const items = loadCustomIcons();
+  let id = baseId;
+  let n = 2;
+  while (items.some(item => item.id === id)) id = `${baseId}-${n++}`;
+  const item = normalizeCustomIcon({ id, name, type, url, svg });
+  if (!item) { toast('Add a valid HTTPS/data image URL or safe inline SVG'); return; }
+  items.unshift(item);
+  if (!saveCustomIcons(items)) return;
+  clearCustomIconForm();
+  toggleCustomIconForm(true);
+  document.getElementById('ipSearch').value = '';
+  renderIconGrid('custom', '');
+  toast(`Saved custom icon "${item.name}"`);
+}
+
+function deleteCustomIcon(id) {
+  const next = loadCustomIcons().filter(item => item.id !== id);
+  saveCustomIcons(next);
+  renderIconGrid('custom', document.getElementById('ipSearch').value);
+  onInput();
+}
+
+document.getElementById('ipCustomFile').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    document.getElementById('ipCustomSvg').value = await file.text();
+    if (!document.getElementById('ipCustomName').value.trim()) {
+      document.getElementById('ipCustomName').value = file.name.replace(/\.svg$/i, '');
+    }
+  } catch {
+    toast('Could not read SVG file');
+  }
+});
 
 // ════════════════════════════════════════════════════════════════
 //  NODE CANVAS INTERACTIONS
@@ -2948,6 +3627,113 @@ const $nodeAddForm = document.getElementById('nodeAddForm');
 const $nodeConnect = document.getElementById('nodeConnectPanel');
 const $dragSvg     = document.getElementById('dragSvg');
 const $dragLine    = document.getElementById('dragLine');
+
+function entityIdFromSvgGroup(g) {
+  if (!g) return null;
+  if (g.closest('g.edgeLabel, g.edgePaths, g.edgePath, g.cluster, g.clusters')) return null;
+  const cached = g.getAttribute('data-meridian-entity-id');
+  if (cached && parser.entities.has(cached)) return cached;
+
+  const ids = [...parser.entities.keys()].sort((a, b) => b.length - a.length);
+  const attrs = [g.id, g.getAttribute('data-id'), g.getAttribute('data-node-id'), g.getAttribute('data-node')].filter(Boolean);
+  for (const raw of attrs) {
+    const value = String(raw);
+    for (const id of ids) {
+      if (value === id || value === `flowchart-${id}` || value.startsWith(`${id}-`) ||
+          value.startsWith(`flowchart-${id}-`) || value.includes(`-flowchart-${id}-`)) {
+        g.setAttribute('data-meridian-entity-id', id);
+        g.classList.add('node');
+        return id;
+      }
+    }
+  }
+
+  if (g.classList.contains('node')) {
+    const text = (g.textContent || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase();
+    const matches = ids.filter(id => {
+      const label = String(parser.entities.get(id)?.label || '').replace(/_/g, ' ').toLowerCase();
+      return label && text.includes(label);
+    });
+    if (matches.length === 1) {
+      g.setAttribute('data-meridian-entity-id', matches[0]);
+      return matches[0];
+    }
+  }
+  return null;
+}
+
+function meridianNodeGroups(svg) {
+  const out = [];
+  const seen = new Set();
+  if (!svg) return out;
+  const candidates = svg.querySelectorAll('g.node, g[id^="flowchart-"], g[data-id], g[data-node-id], g[data-node]');
+  candidates.forEach(g => {
+    const eid = entityIdFromSvgGroup(g);
+    if (!eid || seen.has(eid)) return;
+    seen.add(eid);
+    out.push({ el: g, eid });
+  });
+  return out;
+}
+
+function meridianNodeGroup(svg, entityId) {
+  return meridianNodeGroups(svg).find(n => n.eid === entityId)?.el || null;
+}
+
+function closestMeridianNode(el) {
+  const svg = $preview.querySelector('svg');
+  for (let n = el; n && n !== svg; n = n.parentElement) {
+    if (String(n.tagName || '').toLowerCase() !== 'g') continue;
+    const eid = entityIdFromSvgGroup(n);
+    if (eid) return { el: n, eid };
+  }
+  return null;
+}
+
+function meridianNodeFromEvent(e) {
+  const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
+  for (const el of path) {
+    if (!el || String(el.tagName || '').toLowerCase() !== 'g') continue;
+    const eid = entityIdFromSvgGroup(el);
+    if (eid) return { el, eid };
+  }
+  const direct = closestMeridianNode(e.target);
+  if (direct) return direct;
+
+  const text = String(e.target?.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  if (text) {
+    for (const [id, ent] of parser.entities) {
+      const label = String(ent.label || '').replace(/_/g, ' ').toLowerCase();
+      if (label && text.includes(label)) {
+        const svg = $preview.querySelector('svg');
+        const el = meridianNodeGroup(svg, id);
+        if (el) return { el, eid: id };
+      }
+    }
+  }
+  return null;
+}
+
+function nearestMeridianNodeAtPoint(x, y) {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return null;
+  const nodes = meridianNodeGroups(svg);
+  let best = null;
+  let bestDist = Infinity;
+  for (const node of nodes) {
+    const r = node.el.getBoundingClientRect();
+    const inside = x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const dist = inside ? 0 : Math.hypot(x - cx, y - cy);
+    if (dist < bestDist) {
+      best = node;
+      bestDist = dist;
+    }
+    if (inside) break;
+  }
+  return bestDist <= 48 ? best : null;
+}
 
 // ── Handle show / hide ──────────────────────────────────────────
 function showHandle(entityId, rect) {
@@ -2991,16 +3777,13 @@ $nhBtn.addEventListener('mousedown', (e) => {
 
     // Highlight target node
     const el = document.elementFromPoint(me.clientX, me.clientY);
-    const ng = el && el.closest('g[id^="flowchart-"]');
+    const targetNode = closestMeridianNode(el);
     const svg = $preview.querySelector('svg');
     if (svg) svg.querySelectorAll('g.node-hl').forEach(n => n.classList.remove('node-hl'));
     dragTargetId = null;
-    if (ng) {
-      const m = ng.id.match(/^flowchart-(.+)-\d+$/);
-      if (m && parser.entities.has(m[1]) && m[1] !== dragFrom.entityId) {
-        dragTargetId = m[1];
-        ng.classList.add('node-hl');
-      }
+    if (targetNode && targetNode.eid !== dragFrom.entityId) {
+      dragTargetId = targetNode.eid;
+      targetNode.el.classList.add('node-hl');
     }
   };
 
@@ -3137,7 +3920,8 @@ function highlightSourceLine() {
   parser.entities.forEach((ent, id) => {
     const esc = ent.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     if (new RegExp(esc, 'i').test(line)) {
-      svg.querySelectorAll(`g[id^="flowchart-${id}-"]`).forEach(g => g.classList.add('node-src-hl'));
+      const g = meridianNodeGroup(svg, id);
+      if (g) g.classList.add('node-src-hl');
     }
   });
 }
@@ -3146,27 +3930,59 @@ function attachNodeInteractions() {
   const svg = $preview.querySelector('svg');
   if (!svg) return;
 
-  svg.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
-    const m = g.id.match(/^flowchart-(.+)-\d+$/);
-    if (!m || !parser.entities.has(m[1])) return;
-    const eid = m[1];
+  const openNodeContextFromEvent = (e, node = meridianNodeFromEvent(e)) => {
+    node = node || nearestMeridianNodeAtPoint(e.clientX, e.clientY);
+    if (!node) return false;
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    e.stopImmediatePropagation?.();
+    $nodeHandle.style.display = 'none';
+    highlightEntityInInput(node.eid);
+    showNodeCtx(node.eid, e.clientX, e.clientY);
+    return true;
+  };
+
+  const renameNodeFromEvent = (e, node = meridianNodeFromEvent(e)) => {
+    node = node || nearestMeridianNodeAtPoint(e.clientX, e.clientY);
+    if (!node) return false;
+    e.preventDefault?.();
+    e.stopPropagation?.();
+    e.stopImmediatePropagation?.();
+    $nodeHandle.style.display = 'none';
+    showNodeCtx(node.eid, e.clientX, e.clientY);
+    setTimeout(startRename, 0);
+    return true;
+  };
+
+  svg.addEventListener('click', (e) => openNodeContextFromEvent(e), true);
+  svg.addEventListener('contextmenu', (e) => openNodeContextFromEvent(e), true);
+  svg.addEventListener('dblclick', (e) => renameNodeFromEvent(e), true);
+
+  const scroll = document.getElementById('previewScroll');
+  scroll.oncontextmenu = (e) => {
+    if (!e.target.closest('#mermaidOutput')) return;
+    if (openNodeContextFromEvent(e, nearestMeridianNodeAtPoint(e.clientX, e.clientY))) return false;
+  };
+
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
     g.style.cursor = 'pointer';
 
     g.addEventListener('mouseenter', () => showHandle(eid, g.getBoundingClientRect()));
     g.addEventListener('mouseleave', scheduleHideHandle);
 
-    g.addEventListener('click', (e) => {
-      e.stopPropagation();
-      $nodeHandle.style.display = 'none';
-      highlightEntityInInput(eid);
-      showNodeCtx(eid, e.clientX, e.clientY);
-    });
+    const openCtx = (e) => openNodeContextFromEvent(e, { el: g, eid });
 
-    g.addEventListener('dblclick', (e) => {
-      e.stopPropagation();
-      $nodeHandle.style.display = 'none';
-      showNodeCtx(eid, e.clientX, e.clientY);
-      setTimeout(startRename, 0);
+    const renameCtx = (e) => renameNodeFromEvent(e, { el: g, eid });
+
+    g.addEventListener('click', openCtx);
+    g.addEventListener('contextmenu', (e) => { e.preventDefault(); openCtx(e); });
+    g.addEventListener('dblclick', renameCtx);
+
+    g.querySelectorAll('foreignObject, foreignObject *').forEach(el => {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', openCtx);
+      el.addEventListener('contextmenu', (e) => { e.preventDefault(); openCtx(e); });
+      el.addEventListener('dblclick', renameCtx);
     });
   });
 
@@ -3193,14 +4009,12 @@ function attachDragToNodes() {
   // Nodes are direct children of the un-transformed <g class="nodes"> group,
   // so their translate values ARE SVG-root coordinates. Use them directly.
   const nodes = new Map(); // entityId → {el, cx, cy}
-  svg.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
-    const m = g.id.match(/^flowchart-(.+)-\d+$/);
-    if (!m || !parser.entities.has(m[1])) return;
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
     const t  = g.getAttribute('transform') || 'translate(0,0)';
     const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
     const cx = tm ? parseFloat(tm[1]) : 0;
     const cy = tm ? parseFloat(tm[2]) : 0;
-    nodes.set(m[1], { el: g, cx, cy });
+    nodes.set(eid, { el: g, cx, cy });
   });
 
   // ── Edge map ──────────────────────────────────────────────────
@@ -3545,7 +4359,7 @@ document.addEventListener('click', (e) => {
 //  ZOOM
 // ════════════════════════════════════════════════════════════════
 function setZoom(val) {
-  zoom = Math.round(Math.max(0.25, Math.min(4, val)) * 100) / 100;
+  zoom = Math.round(Math.max(0.25, Math.min(5, val)) * 100) / 100;
   $wrapper.style.transform = `scale(${zoom})`;
   $wrapper.style.transformOrigin = 'top left';
   $zoomDisp.textContent = Math.round(zoom * 100) + '%';
@@ -3567,6 +4381,17 @@ function fitZoom() {
 document.getElementById('zoomIn').addEventListener('click',  () => setZoom(zoom + 0.25));
 document.getElementById('zoomOut').addEventListener('click', () => setZoom(zoom - 0.25));
 document.getElementById('zoomFit').addEventListener('click', fitZoom);
+
+// Zoom quick-pick
+const $zoomPicker = document.getElementById('zoomPicker');
+document.getElementById('zoomDisplay').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $zoomPicker.hidden = !$zoomPicker.hidden;
+});
+function closeZoomPicker() { $zoomPicker.hidden = true; }
+document.addEventListener('click', (e) => {
+  if (!$zoomPicker.hidden && !e.target.closest('.zoom-pick-wrap')) closeZoomPicker();
+});
 
 document.getElementById('previewScroll').addEventListener('wheel', (e) => {
   if (e.ctrlKey) {
@@ -3604,7 +4429,7 @@ function scrollToNewNodes() {
   _lastRenderedIds = currentIds;
   if (!newId) return;
   const svgEl = $preview.querySelector('svg');
-  const node  = svgEl?.querySelector(`g[id^="flowchart-${newId}-"]`);
+  const node  = meridianNodeGroup(svgEl, newId);
   if (node) node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
 
@@ -3648,6 +4473,50 @@ function renderSemanticIssues(issues) {
     </div>`).join('');
 }
 
+function iconImageUrlForEntityIcon(meta) {
+  const resolved = resolveEntityIcon(meta);
+  if (!resolved) return '';
+  if (resolved.kind === 'image') return resolved.url;
+  if (resolved.kind === 'mermaidIcon') return iconifyImageUrl(resolved.ref);
+  return '';
+}
+
+function decorateRichIcons(svg) {
+  if (!svg) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  parser.entities.forEach((ent, id) => {
+    const url = iconImageUrlForEntityIcon(ent.icon);
+    if (!url) return;
+    const g = meridianNodeGroup(svg, id);
+    if (!g || g.querySelector('image.meridian-rich-icon')) return;
+
+    const label = [...g.querySelectorAll('text, foreignObject')]
+      .find(el => !el.closest('g.edgeLabel') && (el.textContent || '').trim());
+    let box, labelBox;
+    try {
+      box = g.getBBox();
+      labelBox = label ? label.getBBox() : box;
+    } catch { return; }
+    if (!Number.isFinite(box.width) || !Number.isFinite(box.height) ||
+        !Number.isFinite(labelBox.width) || !Number.isFinite(labelBox.height)) return;
+
+    const size = Math.max(16, Math.min(22, Math.max(16, labelBox.height * 1.15)));
+    const gap = 6;
+
+    const img = document.createElementNS(NS, 'image');
+    img.classList.add('meridian-rich-icon');
+    img.setAttribute('href', url);
+    img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', url);
+    img.setAttribute('width', size);
+    img.setAttribute('height', size);
+    img.setAttribute('x', labelBox.x - size - gap);
+    img.setAttribute('y', labelBox.y + (labelBox.height - size) / 2);
+    img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    img.style.pointerEvents = 'none';
+    g.appendChild(img);
+  });
+}
+
 async function renderDiagram(code) {
   if (!code.trim()) { clearCmLintError(); showPlaceholder(); return; }
   try {
@@ -3659,11 +4528,18 @@ async function renderDiagram(code) {
     if (_diagramSettings.primaryBorderColor) _dv.primaryBorderColor = _diagramSettings.primaryBorderColor;
     if (_diagramSettings.lineColor)          _dv.lineColor          = _diagramSettings.lineColor;
     if (_diagramSettings.background)         _dv.background         = _diagramSettings.background;
+    // When the app is in dark mode and no custom edge colour has been set, inject a
+    // visible default so Mermaid's light-themed edge colours (#333) don't disappear.
+    const _isDarkApp = document.documentElement.getAttribute('data-theme') === 'dark';
+    if (_isDarkApp && !_diagramSettings.lineColor && ['default', 'neutral', 'forest'].includes(currentTheme)) {
+      _dv.lineColor = '#9ca3af';
+    }
     mermaid.initialize({
       ...BASE_MERMAID_CONFIG,
       theme: currentTheme,
       ...(Object.keys(_dv).length ? { themeVariables: _dv } : {}),
     });
+    ensureMermaidIconPacks();
     const { svg } = await mermaid.render(id, code);
     $preview.innerHTML = svg;
     // Ensure SVG fills wrapper nicely
@@ -3859,7 +4735,7 @@ document.addEventListener('click', () => {
 //  EXPORT
 // ════════════════════════════════════════════════════════════════
 const PROJECT_FORMAT = 'meridian.project';
-const PROJECT_VERSION = 1;
+const PROJECT_VERSION = 2;
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value || {}));
@@ -3904,6 +4780,7 @@ function currentProjectBundle() {
       zoom,
     },
     nodePositions: cleanNodePositions(_nodePositions),
+    customIcons: loadCustomIcons(),
   };
 }
 
@@ -3987,6 +4864,13 @@ function applyProjectBundle(bundle) {
   posLoad();
   _nodePositions = cleanNodePositions(bundle.nodePositions || bundle.positions);
   posSave();
+
+  if (Array.isArray(bundle.customIcons)) {
+    const existing = loadCustomIcons();
+    const merged = new Map(existing.map(icon => [icon.id, icon]));
+    bundle.customIcons.map(normalizeCustomIcon).filter(Boolean).forEach(icon => merged.set(icon.id, icon));
+    saveCustomIcons([...merged.values()]);
+  }
 
   if (bundle.layout?.split) document.getElementById('leftPanel').style.width = bundle.layout.split;
   if (Number.isFinite(Number(bundle.layout?.zoom))) setZoom(Number(bundle.layout.zoom));
@@ -4137,7 +5021,7 @@ function toggleFullscreen() {
 
   scroll.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return;
-    if (e.target.closest('g[id^="flowchart-"], #nhBtn, button, input')) return;
+    if (closestMeridianNode(e.target) || e.target.closest('#nhBtn, button, input')) return;
     if (!$preview.querySelector('svg')) return;
     panAnchor = { x: e.clientX, y: e.clientY, sl: scroll.scrollLeft, st: scroll.scrollTop };
     $wrapper.classList.add('is-panning');
@@ -4235,7 +5119,14 @@ function loadFromStorage(skipText) {
     if (s.type && !isSupportedDiagramType(s.type)) return false;
     if (!skipText && s.input) $input.value = s.input;
     setDiagramType(s.type);
-    if (s.theme) document.getElementById('mermaidTheme').value = s.theme;
+    if (s.theme) {
+      document.getElementById('mermaidTheme').value = s.theme;
+    } else {
+      // No saved diagram theme: default to 'dark' when the app is in dark mode.
+      if (document.documentElement.getAttribute('data-theme') === 'dark') {
+        document.getElementById('mermaidTheme').value = 'dark';
+      }
+    }
     if (s.split) document.getElementById('leftPanel').style.width = s.split;
     if (s.zoom)  setZoom(s.zoom);
     return true;
@@ -4267,9 +5158,10 @@ function insertPrefix(prefix) {
   const pre  = $input.value.slice(0, pos);
   const post = $input.value.slice(pos);
   const nl   = pos > 0 && !pre.endsWith('\n') ? '\n' : '';
-  const ins  = nl + prefix;
+  const endNl = post && !post.startsWith('\n') ? '\n' : '';
+  const ins  = nl + prefix + endNl;
   $input.value = pre + ins + post;
-  const newPos = pos + ins.length;
+  const newPos = pos + nl.length + prefix.length + endNl.length;
   $input.focus();
   $input.setSelectionRange(newPos, newPos);
   _savedCursor = newPos;
@@ -4401,7 +5293,8 @@ document.getElementById('nodeFindInput').addEventListener('input', (e) => {
   document.getElementById('nodeFindCount').textContent =
     count ? `${count} match${count !== 1 ? 'es' : ''}` : 'no matches';
   if (svg) _findMatches.forEach(id => {
-    svg.querySelectorAll(`g[id^="flowchart-${id}-"]`).forEach(g => g.classList.add('node-find-hl'));
+    const g = meridianNodeGroup(svg, id);
+    if (g) g.classList.add('node-find-hl');
   });
 });
 
@@ -4412,7 +5305,7 @@ document.getElementById('nodeFindInput').addEventListener('keydown', (e) => {
     _findIdx = (_findIdx + (e.shiftKey ? -1 : 1) + _findMatches.length) % _findMatches.length;
     const id  = _findMatches[_findIdx];
     const svg = $preview.querySelector('svg');
-    const g   = svg?.querySelector(`g[id^="flowchart-${id}-"]`);
+    const g   = meridianNodeGroup(svg, id);
     if (g) {
       g.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       g.classList.add('node-hl');
@@ -4705,6 +5598,13 @@ document.addEventListener('keydown', (e) => {
   document.getElementById('themeToggle').addEventListener('click', () => {
     const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
     apply(next, true);
+    // Sync the Mermaid diagram theme: default ↔ dark (only when using the paired defaults).
+    const mt = document.getElementById('mermaidTheme');
+    if (mt && (mt.value === 'default' || mt.value === 'dark')) {
+      mt.value = next === 'dark' ? 'dark' : 'default';
+    }
+    // Re-render so edge colours update immediately.
+    if (typeof lastCode !== 'undefined' && lastCode) renderDiagram(lastCode);
   });
 })();
 
@@ -4842,9 +5742,7 @@ function applyNodePositions() {
   if (!Object.keys(_nodePositions).length) return;
   const svgEl = $preview.querySelector('svg');
   if (!svgEl) return;
-  svgEl.querySelectorAll('g[id^="flowchart-"]').forEach(g => {
-    const raw  = g.id.replace('flowchart-', '');
-    const eid  = raw.replace(/-\d+$/, '');
+  meridianNodeGroups(svgEl).forEach(({ el: g, eid }) => {
     const pos  = _nodePositions[eid];
     if (!pos) return;
     const cur = (g.getAttribute('transform') || '').match(/translate\(([^,]+),([^)]+)\)/);
@@ -5074,6 +5972,21 @@ function boot(skipText) {
       if (!skipText) loadTemplate('microservices');
     }
   }
+
+  // Sync mermaid diagram theme to app theme when no explicit preference has been saved.
+  // "No preference saved" = the select is still on its HTML default ('default' / light).
+  // This covers both fresh installs and existing saved states that pre-date this feature.
+  (function syncMermaidThemeToAppTheme() {
+    const mt = document.getElementById('mermaidTheme');
+    if (!mt || mt.value !== 'default') return;   // already set to something else
+    const savedTheme = (() => {
+      try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}').theme; } catch { return null; }
+    })();
+    if (!savedTheme && document.documentElement.getAttribute('data-theme') === 'dark') {
+      mt.value = 'dark';
+    }
+  })();
+
   onInput();
   resetHistory();
 }
