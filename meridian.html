@@ -406,6 +406,7 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 }
 .ip-subcat:hover { border-color:#6366f1;color:var(--text); }
 .ip-subcat.active { background:var(--accent-bg);border-color:#6366f1;color:var(--accent-text);font-weight:700; }
+.ip-subcat-cnt { font-size:9px;opacity:.65;margin-left:2px; }
 .ip-grid {
   display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
   max-height:260px;overflow-y:auto;
@@ -4302,6 +4303,14 @@ const CLOUD_ICONS = {
     ['🪸','Cohere Command'            ,'instance:Cohere'         ,'LLM Providers'],
     ['🏠','Ollama'                    ,'instance:Ollama'         ,'LLM Providers'],
     ['🎯','Together AI'               ,'instance:TogetherAI'     ,'LLM Providers'],
+    ['🌀','DeepSeek'                  ,'instance:DeepSeek'       ,'LLM Providers'],
+    ['🐉','Qwen'                      ,'instance:Qwen'           ,'LLM Providers'],
+    ['⚡','Groq'                      ,'instance:Groq'           ,'LLM Providers'],
+    ['🪄','AI21 Jamba'                ,'instance:AI21_Jamba'     ,'LLM Providers'],
+    ['🔵','Phi-3'                     ,'instance:Phi3'           ,'LLM Providers'],
+    ['🎆','Fireworks AI'              ,'instance:Fireworks_AI'   ,'LLM Providers'],
+    ['✍️','Writer AI'                 ,'instance:WriterAI'       ,'LLM Providers'],
+    ['🎨','Stability AI'              ,'instance:StabilityAI'    ,'LLM Providers'],
     // AI Cloud
     ['🛏️','AWS Bedrock'               ,'instance:AWS_Bedrock'    ,'AI Cloud'],
     ['🔬','AWS SageMaker'             ,'instance:AWS_SageMaker'  ,'AI Cloud'],
@@ -4309,8 +4318,14 @@ const CLOUD_ICONS = {
     ['🧬','Azure AI Studio'           ,'instance:Azure_AI_Studio','AI Cloud'],
     ['🖥️','Azure ML'                  ,'instance:Azure_ML'       ,'AI Cloud'],
     ['🌟','Vertex AI'                 ,'instance:Vertex_AI'      ,'AI Cloud'],
-    ['🎨','Google AI Studio'          ,'instance:Google_AI_Studio','AI Cloud'],
+    ['🎭','Google AI Studio'          ,'instance:Google_AI_Studio','AI Cloud'],
     ['🏭','Amazon Titan'              ,'instance:Amazon_Titan'   ,'AI Cloud'],
+    ['🔷','IBM watsonx'               ,'instance:IBM_Watsonx'    ,'AI Cloud'],
+    ['🧱','Databricks DBRX'           ,'instance:Databricks_DBRX','AI Cloud'],
+    ['❄️','Snowflake Cortex'          ,'instance:Snowflake_Cortex','AI Cloud'],
+    ['🔁','Replicate'                 ,'instance:Replicate'      ,'AI Cloud'],
+    ['☁️','Modal'                     ,'instance:Modal'          ,'AI Cloud'],
+    ['🤗','HF Inference API'          ,'instance:HF_Inference_API','AI Cloud'],
     // Frameworks
     ['⛓️','LangChain'                 ,'app:LangChain'           ,'Frameworks'],
     ['📇','LlamaIndex'                ,'app:LlamaIndex'          ,'Frameworks'],
@@ -4321,6 +4336,14 @@ const CLOUD_ICONS = {
     ['🔍','Haystack'                  ,'app:Haystack'            ,'Frameworks'],
     ['🧩','Semantic Kernel'           ,'app:SemanticKernel'      ,'Frameworks'],
     ['🤗','Hugging Face'              ,'app:HuggingFace'         ,'Frameworks'],
+    ['🐍','Pydantic AI'               ,'app:PydanticAI'          ,'Frameworks'],
+    ['🔗','OpenAI Agents SDK'         ,'app:OpenAI_Agents_SDK'   ,'Frameworks'],
+    ['🤏','Smolagents'                ,'app:Smolagents'          ,'Frameworks'],
+    ['🧠','MemGPT'                    ,'app:MemGPT'              ,'Frameworks'],
+    ['💎','Phidata'                   ,'app:Phidata'             ,'Frameworks'],
+    ['🌊','LangFlow'                  ,'app:LangFlow'            ,'Frameworks'],
+    ['🌸','Flowise'                   ,'app:Flowise'             ,'Frameworks'],
+    ['🧬','Agno'                      ,'app:Agno'                ,'Frameworks'],
     // ML Libraries
     ['🔥','PyTorch'                   ,'instance:PyTorch'        ,'ML Libraries'],
     ['🌊','TensorFlow'                ,'instance:TensorFlow'     ,'ML Libraries'],
@@ -4329,6 +4352,12 @@ const CLOUD_ICONS = {
     ['💡','Keras'                     ,'instance:Keras'          ,'ML Libraries'],
     ['🐼','Pandas'                    ,'instance:Pandas'         ,'ML Libraries'],
     ['🔢','NumPy'                     ,'instance:NumPy'          ,'ML Libraries'],
+    ['🌲','XGBoost'                   ,'instance:XGBoost'        ,'ML Libraries'],
+    ['💡','LightGBM'                  ,'instance:LightGBM'       ,'ML Libraries'],
+    ['🔄','ONNX Runtime'              ,'instance:ONNX_Runtime'   ,'ML Libraries'],
+    ['👁️','OpenCV'                    ,'instance:OpenCV'         ,'ML Libraries'],
+    ['🤗','Transformers'              ,'instance:Transformers'   ,'ML Libraries'],
+    ['🚀','Accelerate'                ,'instance:Accelerate'     ,'ML Libraries'],
     // Vector DBs
     ['🌲','Pinecone'                  ,'db:Pinecone'             ,'Vector DBs'],
     ['🕸️','Weaviate'                  ,'db:Weaviate'             ,'Vector DBs'],
@@ -4338,6 +4367,10 @@ const CLOUD_ICONS = {
     ['📎','pgvector'                  ,'db:PGVector'             ,'Vector DBs'],
     ['🦔','Redis VSS'                 ,'db:RedisVSS'             ,'Vector DBs'],
     ['🔍','FAISS'                     ,'db:FAISS'                ,'Vector DBs'],
+    ['🏹','LanceDB'                   ,'db:LanceDB'              ,'Vector DBs'],
+    ['🔎','Typesense'                 ,'db:Typesense'            ,'Vector DBs'],
+    ['🚀','Vespa'                     ,'db:Vespa'                ,'Vector DBs'],
+    ['🔍','Elasticsearch Vector'      ,'db:Elasticsearch_Vector' ,'Vector DBs'],
     // LLM Serving
     ['⚡','vLLM'                      ,'instance:vLLM'           ,'LLM Serving'],
     ['🚂','TGI (HF)'                  ,'instance:TGI'            ,'LLM Serving'],
@@ -4345,6 +4378,10 @@ const CLOUD_ICONS = {
     ['🦙','llama.cpp'                 ,'instance:LlamaCpp'       ,'LLM Serving'],
     ['🐦','LiteLLM'                   ,'instance:LiteLLM'        ,'LLM Serving'],
     ['🌐','OpenRouter'                ,'instance:OpenRouter'     ,'LLM Serving'],
+    ['🏠','LocalAI'                   ,'instance:LocalAI'        ,'LLM Serving'],
+    ['⚡','SGLang'                    ,'instance:SGLang'         ,'LLM Serving'],
+    ['🌹','Aphrodite Engine'          ,'instance:Aphrodite_Engine','LLM Serving'],
+    ['🦙','ExLlama'                   ,'instance:ExLlama'        ,'LLM Serving'],
     // Retrieval
     ['📝','Embeddings API'            ,'interface:EmbeddingsAPI' ,'Retrieval'],
     ['🔄','Sentence Xformers'         ,'instance:SentenceTransformers','Retrieval'],
@@ -4352,6 +4389,10 @@ const CLOUD_ICONS = {
     ['🧲','Reranker'                  ,'instance:Reranker'       ,'Retrieval'],
     ['🔗','Prompt Cache'              ,'config:PromptCache'      ,'Retrieval'],
     ['🗃️','Context Window'            ,'config:ContextWindow'    ,'Retrieval'],
+    ['🔢','BM25 Search'               ,'instance:BM25_Search'    ,'Retrieval'],
+    ['🔀','Hybrid Search'             ,'config:HybridSearch'     ,'Retrieval'],
+    ['🕸️','Knowledge Graph'           ,'db:KnowledgeGraph'       ,'Retrieval'],
+    ['📄','Document Store'            ,'db:DocumentStore'        ,'Retrieval'],
     // MLOps
     ['📊','MLflow'                    ,'app:MLflow'              ,'MLOps'],
     ['📈','Weights & Biases'          ,'watcher:WandB'           ,'MLOps'],
@@ -4361,6 +4402,12 @@ const CLOUD_ICONS = {
     ['🏗️','ZenML'                     ,'batch:ZenML'             ,'MLOps'],
     ['🚀','BentoML'                   ,'batch:BentoML'           ,'MLOps'],
     ['🌾','Airflow (AI)'              ,'batch:Airflow_AI'        ,'MLOps'],
+    ['🌀','Prefect AI'                ,'batch:PrefectAI'         ,'MLOps'],
+    ['🔬','ClearML'                   ,'app:ClearML'             ,'MLOps'],
+    ['🔱','Neptune AI'                ,'watcher:NeptuneAI'       ,'MLOps'],
+    ['☄️','Comet ML'                  ,'watcher:CometML'         ,'MLOps'],
+    ['🐘','Pachyderm'                 ,'batch:Pachyderm'         ,'MLOps'],
+    ['🪁','Flyte'                     ,'batch:Flyte'             ,'MLOps'],
     // Observability
     ['🔭','Langfuse'                  ,'watcher:Langfuse'        ,'Observability'],
     ['🕵️','LangSmith'                 ,'watcher:LangSmith'       ,'Observability'],
@@ -4370,6 +4417,48 @@ const CLOUD_ICONS = {
     ['🛡️','Guardrails AI'             ,'config:GuardrailsAI'     ,'Observability'],
     ['🚧','AI Gateway'                ,'interface:AI_Gateway'    ,'Observability'],
     ['📋','Prompt Registry'           ,'config:PromptRegistry'   ,'Observability'],
+    ['🔂','Traceloop'                 ,'watcher:Traceloop'       ,'Observability'],
+    ['👥','Humanloop'                 ,'watcher:Humanloop'       ,'Observability'],
+    ['📊','PromptLayer'               ,'watcher:PromptLayer'     ,'Observability'],
+    ['🧠','Braintrust'                ,'watcher:Braintrust'      ,'Observability'],
+    // Fine-tuning
+    ['🔧','LoRA'                      ,'config:LoRA'             ,'Fine-tuning'],
+    ['🔩','QLoRA'                     ,'config:QLoRA'            ,'Fine-tuning'],
+    ['🦎','Axolotl'                   ,'app:Axolotl'             ,'Fine-tuning'],
+    ['🏭','LLaMA Factory'             ,'app:LLaMA_Factory'       ,'Fine-tuning'],
+    ['🦥','Unsloth'                   ,'app:Unsloth'             ,'Fine-tuning'],
+    ['🔀','PEFT'                      ,'app:PEFT'                ,'Fine-tuning'],
+    ['🎯','TRL'                       ,'app:TRL'                 ,'Fine-tuning'],
+    ['🔀','Mergekit'                  ,'app:Mergekit'            ,'Fine-tuning'],
+    ['🏅','Predibase'                 ,'instance:Predibase'      ,'Fine-tuning'],
+    ['🎛️','Together Fine-tune'        ,'instance:TogetherFinetune','Fine-tuning'],
+    // Data & Eval
+    ['📦','HF Datasets'               ,'db:HF_Datasets'          ,'Data & Eval'],
+    ['🧪','DeepEval'                  ,'app:DeepEval'            ,'Data & Eval'],
+    ['📐','RAGAS'                     ,'app:RAGAS'               ,'Data & Eval'],
+    ['🔭','TruLens'                   ,'watcher:TruLens'         ,'Data & Eval'],
+    ['🏟️','LMSYS Arena'               ,'app:LMSYS_Arena'         ,'Data & Eval'],
+    ['📊','OpenAI Evals'              ,'app:OpenAI_Evals'        ,'Data & Eval'],
+    ['🔍','Promptfoo'                 ,'app:Promptfoo'           ,'Data & Eval'],
+    ['🏷️','Label Studio'              ,'app:LabelStudio'         ,'Data & Eval'],
+    // Speech & Vision
+    ['🎤','Whisper'                   ,'instance:Whisper'        ,'Speech & Vision'],
+    ['🔊','ElevenLabs'                ,'instance:ElevenLabs'     ,'Speech & Vision'],
+    ['🖼️','DALL-E'                    ,'instance:DALL_E'         ,'Speech & Vision'],
+    ['🌈','Stable Diffusion'          ,'instance:StableDiffusion','Speech & Vision'],
+    ['🎨','Midjourney'                ,'instance:Midjourney'     ,'Speech & Vision'],
+    ['🎛️','ComfyUI'                   ,'app:ComfyUI'             ,'Speech & Vision'],
+    ['📎','CLIP'                      ,'instance:CLIP'           ,'Speech & Vision'],
+    ['🌸','Florence-2'                ,'instance:Florence2'      ,'Speech & Vision'],
+    // Agents
+    ['🔧','Tool Use'                  ,'instance:ToolUse'        ,'Agents'],
+    ['📞','Function Calling'          ,'instance:FunctionCalling','Agents'],
+    ['🔌','MCP Server'                ,'server:MCP_Server'       ,'Agents'],
+    ['🎭','AI Orchestrator'           ,'instance:AI_Orchestrator','Agents'],
+    ['🕸️','Multi-Agent System'        ,'instance:MultiAgent_System','Agents'],
+    ['🧠','Agent Memory'              ,'db:AgentMemory'          ,'Agents'],
+    ['🙋','Human in the Loop'         ,'config:HumanInLoop'      ,'Agents'],
+    ['🏖️','Sandbox Executor'          ,'instance:SandboxExecutor','Agents'],
   ],
 };
 
@@ -4500,18 +4589,32 @@ const ICONIFY_OVERRIDES = {
   'ai-vertex-ai'                          : 'logos:google-cloud',
   'ai-google-ai-studio'                   : 'logos:google-cloud',
   'ai-amazon-titan'                       : 'logos:aws',
+  'ai-databricks-dbrx'                    : 'logos:databricks-icon',
+  'ai-snowflake-cortex'                   : 'logos:snowflake-icon',
+  'ai-hf-inference-api'                   : 'logos:hugging-face-icon',
   'ai-langchain'                          : 'simple-icons:langchain',
   'ai-hugging-face'                       : 'logos:hugging-face-icon',
+  'ai-openai-agents-sdk'                  : 'logos:openai-icon',
+  'ai-smolagents'                         : 'logos:hugging-face-icon',
   'ai-pytorch'                            : 'logos:pytorch-icon',
   'ai-tensorflow'                         : 'logos:tensorflow',
   'ai-scikit-learn'                       : 'logos:scikit-learn',
   'ai-keras'                              : 'logos:keras',
   'ai-pandas'                             : 'logos:pandas-icon',
   'ai-numpy'                              : 'logos:numpy',
+  'ai-transformers'                       : 'logos:hugging-face-icon',
+  'ai-accelerate'                         : 'logos:hugging-face-icon',
   'ai-mlflow'                             : 'logos:mlflow-icon',
   'ai-kubeflow'                           : 'logos:kubeflow',
   'ai-dvc'                                : 'logos:dvc-icon',
   'ai-ray'                                : 'logos:ray-icon',
+  'ai-peft'                               : 'logos:hugging-face-icon',
+  'ai-trl'                                : 'logos:hugging-face-icon',
+  'ai-hf-datasets'                        : 'logos:hugging-face-icon',
+  'ai-openai-evals'                       : 'logos:openai-icon',
+  'ai-whisper'                            : 'logos:openai-icon',
+  'ai-dall-e'                             : 'logos:openai-icon',
+  'ai-clip'                               : 'logos:openai-icon',
 };
 // @@END_CLOUD_ICONS_GENERATED@@
 
@@ -4552,7 +4655,7 @@ function staticIconItems(provider) {
     return {
       id,
       provider,
-      category: subcat || provider.toUpperCase(),
+      category: String(subcat || provider.toUpperCase()).trim(),
       name: label,
       type,
       emoji,
@@ -4670,6 +4773,10 @@ function currentIconItems(provider) {
   return provider === 'custom' ? loadCustomIcons() : staticIconItems(provider);
 }
 
+function sameSubcat(a, b) {
+  return String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
+}
+
 function iconPreviewHtml(item) {
   if (item.svg) return `<span class="ip-preview-svg">${item.svg}</span>`;
   if (item.url) return `<img class="ip-preview-img" alt="" src="${esc(item.url)}">`;
@@ -4709,31 +4816,35 @@ function renderSubcatChips(provider) {
   const wrap = document.getElementById('ipSubcats');
   if (!wrap) return;
   if (provider === 'custom') { wrap.innerHTML = ''; return; }
-  const seen = new Set(), order = [];
+  const counts = {}, order = [];
   (CLOUD_ICONS[provider] || []).forEach(([,, , sub]) => {
-    if (sub && !seen.has(sub)) { seen.add(sub); order.push(sub); }
+    if (!sub) return;
+    counts[sub] = (counts[sub] || 0) + 1;
+    if (!order.includes(sub)) order.push(sub);
   });
-  const chip = (label, val) => {
-    const active = _ipSubcat === val ? ' active' : '';
-    const safeVal = val.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return `<button class="ip-subcat${active}" onclick="filterBySubcat('${safeVal}')">${esc(label)}</button>`;
+  const total = (CLOUD_ICONS[provider] || []).length;
+  const chip = (label, val, n) => {
+    const active = sameSubcat(_ipSubcat, val) ? ' active' : '';
+    const cnt = n !== undefined ? ` <span class="ip-subcat-cnt">${n}</span>` : '';
+    return `<button class="ip-subcat${active}" data-subcat-val="${esc(val)}">${esc(label)}${cnt}</button>`;
   };
-  wrap.innerHTML = chip('All', '') + order.map(s => chip(s, s)).join('');
+  wrap.innerHTML = chip('All', '', total) + order.map(s => chip(s, s, counts[s])).join('');
 }
 
 function filterBySubcat(subcat) {
+  subcat = String(subcat || '').trim();
   _ipSubcat = subcat;
   renderSubcatChips(_ipProvider);
   const q = document.getElementById('ipSearch').value;
   const raw = currentIconItems(_ipProvider);
-  const filtered = subcat ? raw.filter(item => item.category === subcat) : raw;
+  const filtered = subcat ? raw.filter(item => sameSubcat(item.category, subcat)) : raw;
   const q2 = q.toLowerCase().trim();
   const items = q2 ? filtered.filter(item =>
     [item.name, item.id, item.type, item.category, ...(item.tags || [])].some(v => String(v || '').toLowerCase().includes(q2))
   ) : filtered;
   const grid = document.getElementById('ipGrid');
   if (!items.length) {
-    grid.innerHTML = `<div class="ip-empty">No services${q2 ? ' match "' + q2 + '"' : ' in ' + (subcat || 'All')}</div>`;
+    grid.innerHTML = `<div class="ip-empty">No services${q2 ? ' match "' + q2 + '"' : ' in ' + esc(subcat || 'All')}</div>`;
     return;
   }
   grid.innerHTML = items.map(item => {
@@ -4755,7 +4866,7 @@ function renderIconGrid(provider, filter) {
   renderSubcatChips(provider);
   const q       = (filter || '').toLowerCase().trim();
   const raw     = currentIconItems(provider);
-  const bySubcat = _ipSubcat ? raw.filter(item => item.category === _ipSubcat) : raw;
+  const bySubcat = _ipSubcat ? raw.filter(item => sameSubcat(item.category, _ipSubcat)) : raw;
   const items   = q ? bySubcat.filter(item =>
     [item.name, item.id, item.type, item.category, ...(item.tags || [])].some(v => String(v || '').toLowerCase().includes(q))
   ) : bySubcat;
@@ -5881,6 +5992,22 @@ function wireInputListeners() {
     }
   });
 }
+
+function handleIconSubcatClick(e) {
+  const btn = e.target.closest('.ip-subcat');
+  if (!btn) return;
+  const val = btn.hasAttribute('data-subcat-val')
+    ? btn.getAttribute('data-subcat-val')
+    : btn.textContent.replace(/\d+$/, '').trim();
+  e.preventDefault();
+  e.stopPropagation();
+  filterBySubcat(val === 'All' ? '' : val);
+}
+
+document.addEventListener('click', handleIconSubcatClick, true);
+
+window.switchProvider = switchProvider;
+window.filterBySubcat = filterBySubcat;
 
 document.getElementById('diagramType').addEventListener('change', onInput);
 document.getElementById('mermaidTheme').addEventListener('change', () => {
