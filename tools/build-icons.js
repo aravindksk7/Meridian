@@ -91,9 +91,11 @@ function buildCloudIconsBlock(allProviders) {
       const emoji  = jsStringLiteral(e.emoji);
       const label  = jsStringLiteral(e.label);
       const prefix = jsStringLiteral(e.prefix);
+      const subcat = jsStringLiteral(e.subcategory);
       // Pad for alignment (cosmetic)
       const labelPadded  = label.padEnd(28);
-      lines.push(`    [${emoji},${labelPadded},${prefix}],`);
+      const prefixPadded = prefix.padEnd(26);
+      lines.push(`    [${emoji},${labelPadded},${prefixPadded},${subcat}],`);
     }
 
     lines.push('  ],');

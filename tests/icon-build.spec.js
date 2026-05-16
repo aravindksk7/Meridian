@@ -35,13 +35,14 @@ test.describe('Icon build pipeline — CLOUD_ICONS', () => {
     });
   }
 
-  test('every CLOUD_ICONS entry has exactly 3 string elements', async ({ page }) => {
+  test('every CLOUD_ICONS entry has exactly 4 string elements', async ({ page }) => {
     const badEntries = await page.evaluate(() => {
       const bad = [];
       for (const [provider, icons] of Object.entries(CLOUD_ICONS)) {
         icons.forEach((entry, i) => {
-          if (!Array.isArray(entry) || entry.length !== 3 ||
-              typeof entry[0] !== 'string' || typeof entry[1] !== 'string' || typeof entry[2] !== 'string') {
+          if (!Array.isArray(entry) || entry.length !== 4 ||
+              typeof entry[0] !== 'string' || typeof entry[1] !== 'string' ||
+              typeof entry[2] !== 'string' || typeof entry[3] !== 'string') {
             bad.push(`${provider}[${i}]: ${JSON.stringify(entry)}`);
           }
         });
