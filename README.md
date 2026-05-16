@@ -104,7 +104,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 
 ## Quick Start
 
-Open `index.html` in any modern browser — no server, no build step required.
+Open `meridian.html` in any modern browser — no server, no build step required.
 
 ```
 app:Frontend --> interface:Backend --> db:Postgres
