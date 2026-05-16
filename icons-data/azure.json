@@ -244,5 +244,99 @@
   { "label": "Azure Speaker Recognition","emoji":"🗣️","prefix":"instance:SpeakerRecognition", "subcategory": "AI/ML",      "iconifyRef": null },
   { "label": "Azure Anomaly Detector","emoji": "⚠️", "prefix": "watcher:AnomalyDetector",     "subcategory": "AI/ML",      "iconifyRef": null },
   { "label": "Azure Content Moderator","emoji":"🛡️","prefix": "instance:ContentModerator",    "subcategory": "AI/ML",      "iconifyRef": null },
-  { "label": "Azure Health Data Svc", "emoji": "🏥", "prefix": "instance:HealthDataServices", "subcategory": "AI/ML",      "iconifyRef": null }
+  { "label": "Azure Health Data Svc", "emoji": "🏥", "prefix": "instance:HealthDataServices", "subcategory": "AI/ML",      "iconifyRef": null },
+
+  { "label": "Azure Service Bus Premium","emoji":"📨","prefix": "interface:ServiceBusPremium","subcategory": "Messaging",  "iconifyRef": null },
+  { "label": "Azure Event Hubs Kafka", "emoji": "📊", "prefix": "interface:EventHubsKafka",  "subcategory": "Messaging",  "iconifyRef": null },
+  { "label": "Azure Notification Hubs","emoji": "🔔", "prefix": "interface:NotifHubs",       "subcategory": "Messaging",  "iconifyRef": null },
+
+  { "label": "Azure Dev Center",       "emoji": "🖥️", "prefix": "app:DevCenter",              "subcategory": "DevOps",     "iconifyRef": null },
+  { "label": "Azure Managed Dev Box",  "emoji": "💻", "prefix": "app:ManagedDevBox",          "subcategory": "DevOps",     "iconifyRef": null },
+  { "label": "Azure Deployment Env",   "emoji": "🌍", "prefix": "config:DeploymentEnvironment","subcategory": "DevOps",    "iconifyRef": null },
+  { "label": "Azure Load Testing",     "emoji": "🧪", "prefix": "batch:LoadTesting",          "subcategory": "DevOps",     "iconifyRef": null },
+  { "label": "Azure Chaos Studio",     "emoji": "🌀", "prefix": "batch:ChaosStudio",          "subcategory": "DevOps",     "iconifyRef": null },
+
+  { "label": "Azure Cosmos DB Free",   "emoji": "🆓", "prefix": "db:CosmosDBFree",            "subcategory": "Database",   "iconifyRef": null },
+  { "label": "Azure Cache Enterprise", "emoji": "🔴", "prefix": "instance:CacheEnterprise",   "subcategory": "Database",   "iconifyRef": null },
+  { "label": "Azure SQL Server IaaS",  "emoji": "🗄️", "prefix": "db:SQLServerIaaS",           "subcategory": "Database",   "iconifyRef": null },
+  { "label": "Azure Database for PG Flex","emoji":"🐘","prefix":"db:AzurePostgresFlex",        "subcategory": "Database",   "iconifyRef": null },
+
+  { "label": "Azure Blob Storage NFSv3","emoji":"🪣","prefix": "config:BlobNFSv3",            "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Premium SSD",      "emoji": "💾", "prefix": "config:PremiumSSD",          "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Ultra Disk",       "emoji": "⚡", "prefix": "config:UltraDisk",           "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Storage Lifecycle","emoji": "🔄", "prefix": "config:StorageLifecycle",    "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Immutable Storage","emoji": "🔒", "prefix": "config:ImmutableStorage",    "subcategory": "Storage",    "iconifyRef": null },
+
+  { "label": "Azure Kubernetes Service Fleet","emoji":"☸️","prefix":"instance:AKSFleet",       "subcategory": "Compute",    "iconifyRef": null },
+  { "label": "Azure Spot VMs",         "emoji": "💰", "prefix": "instance:AzureSpotVMs",      "subcategory": "Compute",    "iconifyRef": null },
+  { "label": "Azure Confidential Ctr", "emoji": "🔒", "prefix": "instance:ConfidentialCtr",   "subcategory": "Compute",    "iconifyRef": null },
+  { "label": "Azure SAP on Azure",     "emoji": "🏭", "prefix": "app:SAPonAzure",             "subcategory": "Compute",    "iconifyRef": null },
+
+  { "label": "Azure Monitor SCOM",     "emoji": "👁️", "prefix": "watcher:MonitorSCOM",        "subcategory": "Monitoring", "iconifyRef": null },
+  { "label": "Azure Monitor DCR",      "emoji": "📋", "prefix": "config:MonitorDCR",          "subcategory": "Monitoring", "iconifyRef": null },
+  { "label": "Azure Monitor Workspace","emoji": "📊", "prefix": "config:MonitorWorkspace",    "subcategory": "Monitoring", "iconifyRef": null },
+
+  { "label": "Azure Private DNS",      "emoji": "🔒", "prefix": "server:PrivateDNS",          "subcategory": "Networking", "iconifyRef": null },
+  { "label": "Azure Firewall Policy",  "emoji": "🛡️", "prefix": "config:FirewallPolicy",      "subcategory": "Networking", "iconifyRef": null },
+  { "label": "Azure Virtual Hub",      "emoji": "🌐", "prefix": "server:VirtualHub",          "subcategory": "Networking", "iconifyRef": null },
+  { "label": "Azure Network Policy",   "emoji": "📋", "prefix": "config:NetworkPolicy",       "subcategory": "Networking", "iconifyRef": null },
+
+  { "label": "Azure Container Storage","emoji": "💾", "prefix": "config:ContainerStorage",    "subcategory": "Storage",    "iconifyRef": null },
+
+  { "label": "Azure AI Search (GA)",   "emoji": "🔍", "prefix": "instance:AISearchGA",        "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure AI Content Safety","emoji": "🛡️", "prefix": "instance:ContentSafety",     "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure Document Intell",  "emoji": "📄", "prefix": "instance:DocumentIntell",    "subcategory": "AI/ML",      "iconifyRef": null },
+
+  { "label": "Azure Machine Learning Ops","emoji":"🔄","prefix":"batch:AzureMLOps",           "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure Prompt Flow",      "emoji": "🔀", "prefix": "instance:AzurePromptFlow",   "subcategory": "AI/ML",      "iconifyRef": null },
+
+  { "label": "Microsoft Entra Suite",  "emoji": "🔑", "prefix": "config:EntraSuite",          "subcategory": "Security",   "iconifyRef": null },
+  { "label": "Azure Resource Lock",    "emoji": "🔒", "prefix": "config:ResourceLock",        "subcategory": "Governance", "iconifyRef": null },
+  { "label": "Azure Policy Exemption", "emoji": "📋", "prefix": "config:PolicyExemption",     "subcategory": "Governance", "iconifyRef": null },
+
+  { "label": "Azure Healthcare APIs",  "emoji": "🏥", "prefix": "interface:HealthcareAPIs",   "subcategory": "Integration","iconifyRef": null },
+  { "label": "Azure API Center",       "emoji": "🔌", "prefix": "interface:APICenter",        "subcategory": "Integration","iconifyRef": null },
+
+  { "label": "Azure IoT Firmware",     "emoji": "💾", "prefix": "config:IoTFirmware",         "subcategory": "IoT",        "iconifyRef": null },
+  { "label": "Azure MQTT Broker",      "emoji": "📡", "prefix": "interface:AzureMQTT",        "subcategory": "IoT",        "iconifyRef": null },
+
+  { "label": "Azure Remote App",       "emoji": "🖥️", "prefix": "app:RemoteApp",              "subcategory": "Web",        "iconifyRef": null },
+  { "label": "Azure Container Web App","emoji": "🌐", "prefix": "app:ContainerWebApp",        "subcategory": "Web",        "iconifyRef": null },
+
+  { "label": "Azure Managed Identity Pool","emoji":"🪪","prefix":"config:ManagedIdentityPool","subcategory": "Security",   "iconifyRef": null },
+  { "label": "Azure App Proxy",        "emoji": "🔐", "prefix": "server:AppProxy",             "subcategory": "Security",   "iconifyRef": null },
+  { "label": "Azure Global Secure Access","emoji":"🌐","prefix":"config:GlobalSecureAccess",   "subcategory": "Security",   "iconifyRef": null },
+  { "label": "Azure Attestation Svc",  "emoji": "✅", "prefix": "config:AttestationSvc",      "subcategory": "Security",   "iconifyRef": null },
+
+  { "label": "Azure Elastic SAN",      "emoji": "💾", "prefix": "config:ElasticSAN",          "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Files Premium",    "emoji": "📁", "prefix": "config:AzureFilesPremium",   "subcategory": "Storage",    "iconifyRef": null },
+  { "label": "Azure Object Replication","emoji":"🔁","prefix": "batch:ObjectReplication",     "subcategory": "Storage",    "iconifyRef": null },
+
+  { "label": "Azure VM Image Gallery", "emoji": "🖼️", "prefix": "config:VMImageGallery",       "subcategory": "Compute",    "iconifyRef": null },
+  { "label": "Azure Managed Apps",     "emoji": "📦", "prefix": "app:AzureManagedApps",       "subcategory": "Compute",    "iconifyRef": null },
+  { "label": "Azure Update Manager",   "emoji": "🔄", "prefix": "config:UpdateManager",       "subcategory": "Compute",    "iconifyRef": null },
+
+  { "label": "Azure Application Grp",  "emoji": "📋", "prefix": "config:ApplicationGroup",    "subcategory": "Networking", "iconifyRef": null },
+  { "label": "Azure DNS Private Resolv","emoji":"🗺️","prefix": "server:DNSPrivateResolver",   "subcategory": "Networking", "iconifyRef": null },
+  { "label": "Azure IP Groups",        "emoji": "📌", "prefix": "config:IPGroups",             "subcategory": "Networking", "iconifyRef": null },
+
+  { "label": "Azure Elastic Jobs",     "emoji": "🔄", "prefix": "batch:ElasticJobs",          "subcategory": "Database",   "iconifyRef": null },
+  { "label": "Azure SQL Ledger",       "emoji": "📒", "prefix": "db:SQLLedger",               "subcategory": "Database",   "iconifyRef": null },
+  { "label": "Azure Cosmos DB PITR",   "emoji": "⏪", "prefix": "config:CosmosDBPITR",        "subcategory": "Database",   "iconifyRef": null },
+
+  { "label": "Azure Power BI Service", "emoji": "📊", "prefix": "app:PowerBIService",         "subcategory": "Analytics",  "iconifyRef": null },
+  { "label": "Azure Fabric Lakehouse", "emoji": "🏞️", "prefix": "db:FabricLakehouse",          "subcategory": "Analytics",  "iconifyRef": null },
+  { "label": "Azure Fabric Warehouse", "emoji": "🏭", "prefix": "db:FabricWarehouse",          "subcategory": "Analytics",  "iconifyRef": null },
+  { "label": "Azure Fabric Data Eng",  "emoji": "⚙️", "prefix": "batch:FabricDataEng",        "subcategory": "Analytics",  "iconifyRef": null },
+  { "label": "Azure Fabric Pipelines", "emoji": "🔀", "prefix": "batch:FabricPipelines",      "subcategory": "Analytics",  "iconifyRef": null },
+
+  { "label": "Azure AI Foundry",       "emoji": "🏭", "prefix": "instance:AIFoundry",          "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure AI Agent Service", "emoji": "🤖", "prefix": "instance:AIAgentService",     "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure OpenAI Realtime",  "emoji": "⚡", "prefix": "instance:OpenAIRealtime",     "subcategory": "AI/ML",      "iconifyRef": null },
+  { "label": "Azure AI Evaluation",    "emoji": "📊", "prefix": "watcher:AIEvaluation",        "subcategory": "AI/ML",      "iconifyRef": null },
+
+  { "label": "Azure DevTest Labs",     "emoji": "🧪", "prefix": "instance:DevTestLabs",        "subcategory": "DevOps",     "iconifyRef": null },
+  { "label": "Azure Mobile Apps",      "emoji": "📱", "prefix": "app:AzureMobileApps",        "subcategory": "Web",        "iconifyRef": null },
+  { "label": "Azure Migrate Hubs",     "emoji": "🔍", "prefix": "watcher:MigrateHubs",        "subcategory": "Hybrid",     "iconifyRef": null },
+  { "label": "Azure Cloud Shell",      "emoji": "💻", "prefix": "app:AzureCloudShell",        "subcategory": "Governance", "iconifyRef": null }
 ]
