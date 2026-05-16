@@ -6,6 +6,8 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
+![Meridian — Enterprise Domain Architecture](screenshot.png)
+
 ---
 
 ## Overview
