@@ -184,5 +184,44 @@
   { "label": "BFF",                 "emoji": "🔀", "prefix": "server:BFF",              "subcategory": "Architecture","iconifyRef": null },
   { "label": "Sidecar",             "emoji": "🏍️", "prefix": "instance:Sidecar",        "subcategory": "Architecture","iconifyRef": null },
   { "label": "CQRS",                "emoji": "↔️", "prefix": "interface:CQRS",          "subcategory": "Architecture","iconifyRef": null },
-  { "label": "Saga Pattern",        "emoji": "📖", "prefix": "batch:Saga",              "subcategory": "Architecture","iconifyRef": null }
+  { "label": "Saga Pattern",        "emoji": "📖", "prefix": "batch:Saga",              "subcategory": "Architecture","iconifyRef": null },
+
+  { "label": "Elasticsearch Stack",  "emoji": "🔷", "prefix": "instance:ElasticStack",    "subcategory": "Database",    "iconifyRef": null },
+  { "label": "ClickHouse",           "emoji": "🖱️", "prefix": "db:ClickHouse",            "subcategory": "Database",    "iconifyRef": null },
+  { "label": "TiDB",                 "emoji": "🐯", "prefix": "db:TiDB",                  "subcategory": "Database",    "iconifyRef": null },
+  { "label": "ScyllaDB",             "emoji": "🦈", "prefix": "db:ScyllaDB",              "subcategory": "Database",    "iconifyRef": null },
+  { "label": "YugabyteDB",           "emoji": "🐘", "prefix": "db:YugabyteDB",            "subcategory": "Database",    "iconifyRef": null },
+
+  { "label": "Crossplane",           "emoji": "✈️", "prefix": "config:Crossplane",        "subcategory": "CI/CD",       "iconifyRef": null },
+  { "label": "Kustomize",            "emoji": "🎨", "prefix": "config:Kustomize",         "subcategory": "CI/CD",       "iconifyRef": null },
+  { "label": "Backstage",            "emoji": "🎭", "prefix": "app:Backstage",            "subcategory": "CI/CD",       "iconifyRef": null },
+  { "label": "Atlantis",             "emoji": "🌊", "prefix": "batch:Atlantis",           "subcategory": "CI/CD",       "iconifyRef": null },
+  { "label": "Renovate",             "emoji": "🔄", "prefix": "batch:Renovate",           "subcategory": "CI/CD",       "iconifyRef": null },
+
+  { "label": "Cilium",               "emoji": "🐝", "prefix": "server:Cilium",            "subcategory": "Servers",     "iconifyRef": null },
+  { "label": "Calico",               "emoji": "🐱", "prefix": "server:Calico",            "subcategory": "Servers",     "iconifyRef": null },
+  { "label": "KEDA",                 "emoji": "📈", "prefix": "instance:KEDA",            "subcategory": "Servers",     "iconifyRef": null },
+
+  { "label": "OpenTelemetry Collector","emoji":"🔭","prefix": "watcher:OTelCollector",    "subcategory": "Monitoring",  "iconifyRef": null },
+  { "label": "Vector (logging)",      "emoji": "📊", "prefix": "watcher:VectorLogging",   "subcategory": "Monitoring",  "iconifyRef": null },
+  { "label": "Thanos",               "emoji": "🔭", "prefix": "watcher:Thanos",           "subcategory": "Monitoring",  "iconifyRef": null },
+  { "label": "Mimir",                "emoji": "📊", "prefix": "watcher:Mimir",            "subcategory": "Monitoring",  "iconifyRef": null },
+  { "label": "Tempo",                "emoji": "🎵", "prefix": "watcher:Tempo",            "subcategory": "Monitoring",  "iconifyRef": null },
+
+  { "label": "Socket.IO",            "emoji": "🔌", "prefix": "interface:SocketIO",       "subcategory": "Auth & API",  "iconifyRef": null },
+  { "label": "LDAP",                 "emoji": "📋", "prefix": "interface:LDAP",           "subcategory": "Auth & API",  "iconifyRef": null },
+  { "label": "mTLS",                 "emoji": "🔐", "prefix": "interface:mTLS",           "subcategory": "Auth & API",  "iconifyRef": null },
+
+  { "label": "Nuxt.js",              "emoji": "💚", "prefix": "app:NuxtJS",              "subcategory": "Frontend",    "iconifyRef": "logos:nuxt-icon" },
+  { "label": "SvelteKit",            "emoji": "🔶", "prefix": "app:SvelteKit",           "subcategory": "Frontend",    "iconifyRef": null },
+  { "label": "Gatsby",               "emoji": "💜", "prefix": "app:Gatsby",              "subcategory": "Frontend",    "iconifyRef": "logos:gatsby" },
+  { "label": "Storybook",            "emoji": "📖", "prefix": "app:Storybook",           "subcategory": "Frontend",    "iconifyRef": "logos:storybook-icon" },
+
+  { "label": "Vercel",               "emoji": "▲",  "prefix": "server:Vercel",           "subcategory": "Networking",  "iconifyRef": "logos:vercel-icon" },
+  { "label": "Netlify",              "emoji": "🌐", "prefix": "server:Netlify",          "subcategory": "Networking",  "iconifyRef": "logos:netlify-icon" },
+
+  { "label": "PagerDuty AIOps",      "emoji": "🚨", "prefix": "watcher:PagerDutyAIOps",  "subcategory": "SaaS & APIs", "iconifyRef": null },
+  { "label": "LaunchDarkly",         "emoji": "🚀", "prefix": "config:LaunchDarkly",     "subcategory": "SaaS & APIs", "iconifyRef": null },
+  { "label": "Cloudinary",           "emoji": "🌥️", "prefix": "instance:Cloudinary",     "subcategory": "SaaS & APIs", "iconifyRef": null },
+  { "label": "Algolia",              "emoji": "🔍", "prefix": "instance:Algolia",        "subcategory": "SaaS & APIs", "iconifyRef": null }
 ]
