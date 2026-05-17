@@ -14,6 +14,100 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
 
+---
+
+## Getting Started
+
+Meridian is a **single HTML file** — no installs, no dependencies, no build step. It runs entirely in your browser.
+
+### Download or Clone
+
+**Option 1 — Clone with Git** (recommended):
+
+```bash
+git clone https://github.com/aravindksk7/meridian.git
+cd meridian
+```
+
+**Option 2 — Download the ZIP**:
+
+1. Go to the [repository page](https://github.com/aravindksk7/meridian)
+2. Click **Code → Download ZIP**
+3. Extract the archive to any folder
+
+**Option 3 — Download just the file**:
+
+Right-click → Save As on [`meridian.html`](meridian.html) from the repository — that single file is the entire application.
+
+---
+
+### Run the App
+
+Open `meridian.html` directly in any modern browser (Chrome, Firefox, Edge, Safari):
+
+```bash
+# macOS / Linux
+open meridian.html
+
+# Windows (PowerShell)
+Start-Process meridian.html
+
+# Or simply double-click meridian.html in your file explorer
+```
+
+No server. No internet connection required after the first load (CDN assets are cached by the browser).
+
+---
+
+### Example Usage
+
+Once the file is open, type your diagram description into the **Smart Input** panel on the left. The preview updates in real time.
+
+**Basic flow:**
+
+```
+app:Frontend --> interface:API --> db:Postgres
+```
+
+**Add groupings to show environments and ownership:**
+
+```
+env:Production {
+  app:Frontend
+  app:API
+  db:Postgres
+}
+
+domain:Engineering {
+  app:Frontend
+  app:API
+}
+
+domain:Data {
+  db:Postgres
+}
+```
+
+**Use natural language connectors:**
+
+```
+app:Frontend calls app:API
+app:API reads from db:Postgres
+batch:ETL writes to db:Warehouse
+```
+
+**Chain a pipeline:**
+
+```
+batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
+```
+
+**Pick a template** to jump-start your diagram — click **Templates** in the toolbar and choose from 9 presets (microservices, cloud infra, AI/RAG app, and more).
+
+> **Tip:** Press `?` or `F1` at any time to open the built-in help reference.
+
+---
+
 ## Features
 
 ### Editing
@@ -21,8 +115,9 @@ Meridian lets you describe your architecture, data flows, or system relationship
 - **Auto-detection** — smart type inference from names (e.g. `api_gateway` → interface, `postgres` → db, `ec2_instance` → server)
 - **Compound name support** — underscore and hyphen separators handled correctly in auto-detection
 - **CodeMirror 6 editor** — line numbers, in-place syntax highlighting, undo/redo history, `Ctrl+/` comment toggle
-- **Autocomplete** — type prefixes and known entity names suggested as you type
-- **Semantic linting** — warnings for orphan nodes, duplicate labels, unknown prefixes, invalid arrows, empty groups, and relationships to containers
+- **Context-aware autocomplete** — type prefixes suggested at line start; after an arrow token (`-->`, `>>`, `calls`, `reads from`, …) the list switches to entity names only so you stay in flow
+- **Semantic linting** — warnings for orphan nodes, duplicate labels, unknown prefixes, invalid arrows, empty groups, relationships to containers, **circular dependencies**, and **naming convention violations**
+- **Node Inspector Panel** — a collapsible panel (toggle: **Inspector** button or `Ctrl+Shift+I`) that updates as the cursor moves in Smart Input, showing type badge, name, incoming/outgoing connections, and group membership for the entity at the cursor
 - **Real-time rendering** — diagram updates as you type
 
 ### Grouping & Topology
@@ -64,6 +159,8 @@ Meridian lets you describe your architecture, data flows, or system relationship
 ### Live Preview Interactions
 - **Click a node** — scrolls Smart Input to that entity's definition and briefly highlights the editor border; opens the node context panel
 - **Double-click a node** — opens node context panel and activates the rename input directly
+- **Hover a node** — a floating tooltip shows the entity's type, name, and up to 4 incoming/outgoing connections; dismisses on mouse leave
+- **Click a subgraph title** — collapses the entire `env:` or `domain:` group to a single proxy node ("▶ Production (3 nodes)"); all outgoing/incoming edges are redirected to the proxy; click again to expand; collapsed state persists across page reloads
 - **Drag a node** — repositions the node and redraws edges in real time; positions survive re-renders, page reloads, and export/import
 - **↗ drag handle** — hover a node and drag the handle to a target node to create a new arrow relationship inserted into Smart Input
 - **Node context panel** — Add node (create + connect), Connect to… (connect to any existing entity), Delete (removes entity and all its relationships), jump to arrow lines
@@ -92,6 +189,7 @@ Meridian lets you describe your architecture, data flows, or system relationship
 | `Tab` / `Shift+Tab` | Indent / un-indent line |
 | `Enter` after `{` | Auto-indent + insert closing `}` |
 | `Ctrl+Shift+C` | Copy Mermaid code |
+| `Ctrl+Shift+I` | Toggle Node Inspector Panel |
 | `Ctrl+Shift+S` | Copy share URL |
 | `Ctrl+Shift+F` | Toggle fullscreen |
 | `Ctrl+Shift+L` | Open diagram library |
@@ -222,6 +320,8 @@ Meridian warns while you type without blocking preview rendering:
 | `INVALID_ARROW` | Arrow-like text does not match supported arrow syntax |
 | `EMPTY_GROUP` | `env:`, `net:`, or `domain:` block contains no valid entities |
 | `RELATIONSHIP_TO_CONTAINER` | Relationship targets an `env:`, `net:`, or `domain:` container instead of a concrete entity |
+| `CIRCULAR_DEPENDENCY` | Directed cycle detected in the relationship graph (e.g. A → B → C → A) |
+| `NAMING_CONVENTION` | Entity label does not match the configured case style or exceeds the max label length (⚙️ → Linting) |
 
 ### Comments
 
@@ -312,6 +412,17 @@ Switching themes resets any individual token colour overrides back to the new th
 | Background | Canvas background colour |
 
 > Custom diagram colours only take full effect when the **diagram theme** (top toolbar) is set to **🎨 Base**.
+
+### Linting tab
+
+Configurable lint rules applied on every keystroke:
+
+| Setting | Options | Default |
+|---------|---------|---------|
+| Label case | Any (no rule) · PascalCase · snake_case · UPPER_CASE | Any |
+| Max label length | 0 (disabled) or any positive integer | 0 (disabled) |
+
+Violations appear in the lint panel as `NAMING_CONVENTION` warnings. Clicking a warning jumps to the offending line.
 
 ---
 

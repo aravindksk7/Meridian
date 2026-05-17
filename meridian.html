@@ -304,6 +304,21 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 
 /* ── Find node bar ── */
 #nodeFindBar { flex-shrink:0;border-bottom:1px solid var(--border);background:var(--surface-1); }
+
+/* ── Node inspector panel ── */
+#inspectorPanel { display:none;flex-shrink:0;border-top:1px solid var(--border);background:var(--surface-1);max-height:160px;overflow-y:auto; }
+#inspectorPanel.vis { display:block; }
+.insp-hdr { display:flex;align-items:center;justify-content:space-between;padding:5px 10px 3px;border-bottom:1px solid var(--border);gap:6px; }
+.insp-title { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-dim); }
+.insp-type { font-size:9px;font-weight:700;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--accent);color:#fff; }
+.insp-name { font-size:12px;font-weight:600;color:var(--text-em);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.insp-body { padding:5px 10px 7px;font-size:11px;color:var(--text-dim); }
+.insp-row  { display:flex;gap:4px;align-items:baseline;margin-top:2px;flex-wrap:wrap; }
+.insp-lbl  { font-size:10px;font-weight:600;color:var(--text-muted);min-width:52px;flex-shrink:0; }
+.insp-edges { display:flex;flex-wrap:wrap;gap:3px;flex:1; }
+.insp-edge  { font-size:10px;background:var(--surface-2);border-radius:4px;padding:1px 5px;color:var(--text);white-space:nowrap; }
+.insp-empty { font-size:11px;color:var(--text-muted);padding:6px 10px;font-style:italic; }
+#inspToggleBtn { font-size:10px;padding:1px 6px; }
 #nodeFindInput:focus { border-color:var(--accent) !important; }
 
 /* ── Node context panel ── */
@@ -320,6 +335,18 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 .ncp-x { position:absolute;top:7px;right:7px;width:17px;height:17px;background:var(--surface-2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-muted);cursor:pointer; }
 .ncp-x:hover { background:var(--surface-3);color:var(--text-em); }
 .ncp-sep  { height:1px;background:var(--border);margin:6px 0;flex-shrink:0; }
+
+/* ── Node hover tooltip ── */
+#nodeTooltip {
+  position:fixed;z-index:190;display:none;pointer-events:none;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:8px;
+  padding:8px 11px;box-shadow:0 6px 24px rgba(0,0,0,.5);
+  font-size:11px;color:var(--text);max-width:220px;line-height:1.5;
+}
+#nodeTooltip .nt-type { display:inline-block;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;background:var(--accent);color:#fff;border-radius:4px;padding:1px 5px;margin-bottom:4px; }
+#nodeTooltip .nt-name { font-size:12px;font-weight:600;color:var(--text-em);margin-bottom:5px; }
+#nodeTooltip .nt-row  { color:var(--text-dim);font-size:10px; }
+#nodeTooltip .nt-edge { display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
 .ncp-sec  { font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin-bottom:4px; }
 .ncp-conn { display:flex;align-items:center;gap:5px;padding:3px 6px;border-radius:5px;font-size:11px;color:var(--text-muted);cursor:pointer;transition:background .1s;line-height:1.4; }
 .ncp-conn:hover { background:var(--surface-2);color:var(--text); }
@@ -960,6 +987,7 @@ BatchJob writes to db:Warehouse</div>
       <div class="stt-tabs">
         <button class="stt-tab active" data-stt="editor">Editor</button>
         <button class="stt-tab" data-stt="diagram">Diagram</button>
+        <button class="stt-tab" data-stt="linting">Linting</button>
       </div>
     </div>
 
@@ -1033,6 +1061,29 @@ BatchJob writes to db:Warehouse</div>
             <input type="checkbox" class="color-enable" id="diagBackgroundEnable">
             <input type="color" class="color-sw" id="diagBackground" value="#1f2937" disabled>
             <span style="font-size:11px;color:var(--text-dim)">Canvas background</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Linting panel ── -->
+      <div id="stt-linting" class="stt-panel">
+        <div class="stt-row">
+          <div class="stt-lbl">Label case</div>
+          <div class="stt-ctrl">
+            <select id="lintCaseRule" style="background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;outline:none;cursor:pointer;">
+              <option value="any">Any (no rule)</option>
+              <option value="PascalCase">PascalCase</option>
+              <option value="snake_case">snake_case</option>
+              <option value="UPPER_CASE">UPPER_CASE</option>
+            </select>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Max label length</div>
+          <div class="stt-ctrl" style="align-items:center;gap:8px;">
+            <input type="number" id="lintMaxLength" min="0" max="200" value="0" step="1"
+              style="width:60px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;outline:none;">
+            <span style="font-size:11px;color:var(--text-dim)">0 = disabled</span>
           </div>
         </div>
       </div>
@@ -1251,6 +1302,10 @@ BatchJob writes to db:Warehouse</div>
         <div class="flex items-center gap-2">
           <span id="parseIndicator" class="text-xs text-gray-600"></span>
           <span id="entityCount" class="text-xs text-gray-600"></span>
+          <button id="inspToggleBtn" title="Node Inspector (Ctrl+Shift+I)" onclick="toggleInspector()"
+            class="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded text-xs text-gray-400 transition select-none" style="padding:1px 6px;font-size:10px">
+            Inspector
+          </button>
         </div>
       </div>
       <!-- CM editor host — EditorView mounts here -->
@@ -1264,6 +1319,18 @@ BatchJob writes to db:Warehouse</div>
         <code style="color:#c026d3" class="mx-0.5">domain:BU{…}</code>·
         <kbd>Ctrl+Enter</kbd> re-render
       </p>
+    </div>
+
+    <!-- Node Inspector Panel -->
+    <div id="inspectorPanel">
+      <div class="insp-hdr">
+        <span class="insp-title">Inspector</span>
+        <span id="inspType" class="insp-type" style="display:none"></span>
+        <span id="inspName" class="insp-name" style="flex:1;margin-left:6px"></span>
+      </div>
+      <div id="inspBody" class="insp-body">
+        <div class="insp-empty">Move cursor onto an entity to inspect it</div>
+      </div>
     </div>
 
   </div>
@@ -1389,6 +1456,9 @@ BatchJob writes to db:Warehouse</div>
   <div class="ncp-sep"></div>
   <div id="ncpConns"></div>
 </div>
+
+<!-- ── Node hover tooltip ── -->
+<div id="nodeTooltip"></div>
 
 <!-- ── Add node mini-form ── -->
 <div id="nodeAddForm">
@@ -1522,6 +1592,7 @@ let _editorSettings = {
   fontSize: 13,
   fontFamily: 'system',
   tokenColors: {},
+  linting: { caseRule: 'any', maxLength: 0 },
 };
 
 let _diagramSettings = {
@@ -1540,6 +1611,7 @@ function loadSettings() {
     if (s.editor) {
       _editorSettings = { ..._editorSettings, ...s.editor };
       _editorSettings.tokenColors = { ...(s.editor.tokenColors || {}) };
+      _editorSettings.linting = { ..._editorSettings.linting, ...(s.editor.linting || {}) };
     }
     if (s.diagram) _diagramSettings = { ..._diagramSettings, ...s.diagram };
   } catch {}
@@ -1693,15 +1765,26 @@ function buildMeridianEditorTheme(CM) {
 function meridianCompletion(context) {
   const word = context.matchBefore(/[\w:-]*/);
   if (!word || (word.from === word.to && !context.explicit)) return null;
+
+  // Detect if cursor is after an arrow / NL connector → favour entity targets
+  const lineStart = context.state.doc.lineAt(word.from).from;
+  const before = context.state.sliceDoc(lineStart, word.from);
+  const AFTER_ARROW = /(?:-->|->|<->|>>|\bcalls\b|\breads?\s+from\b|\bsends?\s+to\b|\bconnects?\s+to\b|\bwrites?\s+to\b|\bpublishes?\s+to\b|\bsubscribes?\s+to\b|\bdepends?\s+on\b)\s*$/i.test(before);
+
   const TYPE_PREFIXES = Object.keys(CM_TYPE_TOKENS).map(k => ({
     label: k + ':', type: 'keyword', boost: 5,
   }));
   const entities = (typeof parser !== 'undefined')
-    ? [...parser.entities.keys()].map(k => ({ label: k, type: 'variable' }))
+    ? [...parser.entities.entries()].map(([k, e]) => ({
+        label: k, type: 'variable',
+        detail: e.type,
+        boost: AFTER_ARROW ? 15 : 0,
+      }))
     : [];
+
   return {
     from: word.from,
-    options: [...TYPE_PREFIXES, ...entities],
+    options: AFTER_ARROW ? entities : [...TYPE_PREFIXES, ...entities],
     validFor: /^[\w:-]*$/,
   };
 }
@@ -2821,6 +2904,36 @@ class SmartParser {
           entityId: id,
         });
       }
+
+      // Naming convention lint
+      const lintSettings = (typeof _editorSettings !== 'undefined' && _editorSettings.linting) || {};
+      const { caseRule = 'any', maxLength = 0 } = lintSettings;
+      if (!CONTAINER_TYPES.has(e.type)) {
+        const lbl = e.label;
+        const CASE_RULES = {
+          PascalCase: /^[A-Z][a-z]+(?:[A-Z][a-z0-9]*)*$|^[A-Z][A-Z0-9]*$/,
+          snake_case: /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/,
+          UPPER_CASE: /^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)*$/,
+        };
+        if (caseRule !== 'any' && CASE_RULES[caseRule] && !CASE_RULES[caseRule].test(lbl)) {
+          issues.push({
+            severity: 'warning',
+            code: 'NAMING_CONVENTION',
+            message: `"${lbl}" does not match the ${caseRule} convention`,
+            line: first.line,
+            entityId: id,
+          });
+        }
+        if (maxLength > 0 && lbl.length > maxLength) {
+          issues.push({
+            severity: 'warning',
+            code: 'NAMING_CONVENTION',
+            message: `"${lbl}" exceeds max label length of ${maxLength} (${lbl.length} chars)`,
+            line: first.line,
+            entityId: id,
+          });
+        }
+      }
     }
 
     for (const [groupId, src] of this.groupSources) {
@@ -2852,6 +2965,51 @@ class SmartParser {
       });
     });
 
+    // ── Circular dependency detection (DFS white/grey/black) ─────
+    {
+      const adj = new Map();
+      for (const [id] of this.entities) adj.set(id, []);
+      this.relationships.forEach(rel => {
+        if (adj.has(rel.from) && adj.has(rel.to) && !rel.bidir) {
+          adj.get(rel.from).push(rel.to);
+        }
+      });
+      const WHITE = 0, GREY = 1, BLACK = 2;
+      const color = new Map([...this.entities.keys()].map(k => [k, WHITE]));
+      const stack = [];
+      const reported = new Set();
+      const dfs = (node) => {
+        color.set(node, GREY);
+        stack.push(node);
+        for (const nb of (adj.get(node) || [])) {
+          if (color.get(nb) === GREY) {
+            const ci = stack.indexOf(nb);
+            const cycle = stack.slice(ci);
+            const key = [...cycle].sort().join('\0');
+            if (!reported.has(key)) {
+              reported.add(key);
+              const labels = cycle.map(id => this.entities.get(id)?.label || id);
+              const firstSrc = (this.entitySources.get(cycle[0]) || [{}])[0];
+              issues.push({
+                severity: 'warning',
+                code: 'CIRCULAR_DEPENDENCY',
+                message: `Cycle: ${labels.join(' → ')} → ${labels[0]}`,
+                line: firstSrc.line || 1,
+                entityId: cycle[0],
+              });
+            }
+          } else if (color.get(nb) === WHITE) {
+            dfs(nb);
+          }
+        }
+        stack.pop();
+        color.set(node, BLACK);
+      };
+      for (const [id] of this.entities) {
+        if (color.get(id) === WHITE) dfs(id);
+      }
+    }
+
     return issues.sort((a, b) => (a.line || 1) - (b.line || 1));
   }
 
@@ -2879,6 +3037,64 @@ let isFullscreen     = false;
 let _prevRenderEmpty  = true;
 let _lastRenderedIds  = new Set();
 let semanticIssues    = [];
+const _collapsedGroups = new Set();
+// Load collapsed groups here — after _collapsedGroups is initialized
+loadCollapsedGroups();
+const LS_COLLAPSED_KEY = 'meridian_collapsed_v1';
+
+function loadCollapsedGroups() {
+  try {
+    const raw = localStorage.getItem(LS_COLLAPSED_KEY);
+    if (raw) JSON.parse(raw).forEach(id => _collapsedGroups.add(id));
+  } catch {}
+}
+function saveCollapsedGroups() {
+  try { localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify([..._collapsedGroups])); } catch {}
+}
+
+function _reId(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+function applyGroupCollapse(code) {
+  if (!_collapsedGroups.size) return code;
+  let result = code;
+  for (const gid of _collapsedGroups) {
+    const e = parser.entities.get(gid);
+    if (!e) continue;
+    const envKids = parser.environments.get(gid) || [];
+    const domKids = parser.domains.get(gid) || [];
+    const allKids = [...new Set([...envKids, ...domKids])];
+    if (!allKids.length) continue;
+    const count = allKids.length;
+    const safeLabel = e.label.replace(/["\[\]]/g, '');
+    const proxyLine = `    ${gid}["▶ ${safeLabel} (${count} node${count !== 1 ? 's' : ''})"]`;
+    const lines = result.split('\n');
+    const out = [];
+    let inSub = false;
+    let proxyEmitted = false;
+    for (const line of lines) {
+      const t = line.trim();
+      if (!inSub && (t.startsWith(`subgraph ${gid}[`) || t === `subgraph ${gid}`)) {
+        inSub = true;
+        if (!proxyEmitted) { out.push(proxyLine); proxyEmitted = true; }
+        continue;
+      }
+      if (inSub) {
+        if (t === 'end') inSub = false;
+        continue;
+      }
+      // Redirect child IDs to proxy in relationship lines
+      let outLine = line;
+      if (/-->|--[^>]*-->|>>|==/.test(line)) {
+        for (const kid of allKids) {
+          outLine = outLine.replace(new RegExp(`\\b${_reId(kid)}\\b`, 'g'), gid);
+        }
+      }
+      out.push(outLine);
+    }
+    result = out.join('\n');
+  }
+  return result;
+}
 
 const DEFAULT_DIAGRAM_TYPE = 'LR';
 const SUPPORTED_DIAGRAM_TYPES = new Set(['LR', 'TD', 'sequence', 'class']);
@@ -2931,6 +3147,24 @@ function redo() {
   if (redoDepth(_cmView.state) === 0) { toast('Nothing to redo'); return; }
   cmRedo(_cmView);
   syncUndoUI();
+}
+
+function toggleCommentLine() {
+  if (!_cmView) return;
+  const { state } = _cmView;
+  const { from } = state.selection.main;
+  const line = state.doc.lineAt(from);
+  const txt  = line.text;
+  let changes, newAnchor;
+  if (txt.trimStart().startsWith('//')) {
+    const ci  = line.from + txt.indexOf('//');
+    changes   = { from: ci, to: ci + 2, insert: '' };
+    newAnchor = Math.max(line.from, from - 2);
+  } else {
+    changes   = { from: line.from, to: line.from, insert: '//' };
+    newAnchor = from + 2;
+  }
+  _cmView.dispatch(state.update({ changes, selection: { anchor: newAnchor } }));
 }
 
 function syncUndoUI() {
@@ -4958,6 +5192,45 @@ const $nodeAddForm = document.getElementById('nodeAddForm');
 const $nodeConnect = document.getElementById('nodeConnectPanel');
 const $dragSvg     = document.getElementById('dragSvg');
 const $dragLine    = document.getElementById('dragLine');
+const $nodeTooltip = document.getElementById('nodeTooltip');
+
+function showNodeTooltip(eid, cx, cy) {
+  const entity = parser.entities.get(eid);
+  if (!entity) return;
+  const outgoing = parser.relationships.filter(r => r.from === eid);
+  const incoming = parser.relationships.filter(r => r.to   === eid);
+  const fmtEdge  = (r, dir) => {
+    const otherId = dir === 'out' ? r.to : r.from;
+    const other   = parser.entities.get(otherId)?.label || otherId;
+    const arrow   = dir === 'out' ? '→' : '←';
+    const lbl     = r.label ? ` (${r.label})` : '';
+    return `<span class="nt-edge">${arrow} ${esc(other)}${esc(lbl)}</span>`;
+  };
+  const MAX = 4;
+  const outHtml = outgoing.slice(0, MAX).map(r => fmtEdge(r, 'out')).join('');
+  const inHtml  = incoming.slice(0, MAX).map(r => fmtEdge(r, 'in')).join('');
+  const moreOut = outgoing.length > MAX ? `<span class="nt-edge" style="color:var(--text-muted)">+ ${outgoing.length - MAX} more</span>` : '';
+  const moreIn  = incoming.length > MAX ? `<span class="nt-edge" style="color:var(--text-muted)">+ ${incoming.length - MAX} more</span>` : '';
+  $nodeTooltip.innerHTML = `
+    <div class="nt-type">${esc(entity.type)}</div>
+    <div class="nt-name">${esc(entity.label)}</div>
+    ${outgoing.length ? `<div class="nt-row"><b>${outgoing.length} outgoing</b>${outHtml}${moreOut}</div>` : ''}
+    ${incoming.length ? `<div class="nt-row"><b>${incoming.length} incoming</b>${inHtml}${moreIn}</div>` : ''}
+    ${!outgoing.length && !incoming.length ? `<div class="nt-row" style="color:var(--text-muted)">No connections</div>` : ''}
+  `;
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let left = cx + 14, top = cy + 14;
+  $nodeTooltip.style.display = 'block';
+  const tw = $nodeTooltip.offsetWidth, th = $nodeTooltip.offsetHeight;
+  if (left + tw > vw - 8) left = cx - tw - 14;
+  if (top  + th > vh - 8) top  = cy - th - 14;
+  $nodeTooltip.style.left = left + 'px';
+  $nodeTooltip.style.top  = top  + 'px';
+}
+
+function hideNodeTooltip() {
+  $nodeTooltip.style.display = 'none';
+}
 
 function entityIdFromSvgGroup(g) {
   if (!g) return null;
@@ -5300,6 +5573,8 @@ function attachNodeInteractions() {
 
     g.addEventListener('mouseenter', () => showHandle(eid, g.getBoundingClientRect()));
     g.addEventListener('mouseleave', scheduleHideHandle);
+    g.addEventListener('mousemove', (e) => showNodeTooltip(eid, e.clientX, e.clientY));
+    g.addEventListener('mouseleave', hideNodeTooltip);
 
     const openCtx = (e) => openNodeContextFromEvent(e, { el: g, eid });
 
@@ -5320,6 +5595,56 @@ function attachNodeInteractions() {
   // Click on SVG background → close context panel
   svg.addEventListener('click', () => closeNodeCtx());
 
+}
+
+// ════════════════════════════════════════════════════════════════
+//  SUBGRAPH CLUSTER COLLAPSE
+// ════════════════════════════════════════════════════════════════
+function attachClusterInteractions() {
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    // Resolve group entity ID by matching label text against known group labels
+    const labelEl = cluster.querySelector('.cluster-label') || cluster.querySelector('text');
+    if (!labelEl) return;
+    const rawText = (labelEl.textContent || '').replace(/\s+/g, ' ').trim();
+
+    let matchedId = null;
+    // Sort by label length desc to prefer longer/more specific matches
+    const groupIds = [...parser.entities.keys()].filter(id =>
+      parser.environments.has(id) || parser.domains.has(id)
+    ).sort((a, b) => (parser.entities.get(b)?.label.length || 0) - (parser.entities.get(a)?.label.length || 0));
+
+    for (const gid of groupIds) {
+      const label = parser.entities.get(gid)?.label || '';
+      if (label && rawText.includes(label)) { matchedId = gid; break; }
+    }
+    if (!matchedId) return;
+
+    const clickTarget = cluster.querySelector('.cluster-label') || cluster;
+    clickTarget.style.cursor = 'pointer';
+    clickTarget.title = _collapsedGroups.has(matchedId) ? 'Click to expand group' : 'Click to collapse group';
+
+    // Visual indicator for collapsed state
+    if (_collapsedGroups.has(matchedId)) {
+      cluster.setAttribute('data-collapsed', '1');
+    }
+
+    clickTarget.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      ev.preventDefault();
+      if (_collapsedGroups.has(matchedId)) {
+        _collapsedGroups.delete(matchedId);
+        toast(`Expanded: ${parser.entities.get(matchedId)?.label}`);
+      } else {
+        _collapsedGroups.add(matchedId);
+        toast(`Collapsed: ${parser.entities.get(matchedId)?.label}`);
+      }
+      saveCollapsedGroups();
+      onInput();
+    });
+  });
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -5886,6 +6211,7 @@ async function renderDiagram(code) {
     applyNodePositions();
     attachNodeInteractions();
     attachDragToNodes();
+    attachClusterInteractions();
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
@@ -5925,8 +6251,9 @@ function onInput() {
 
   const type = setDiagramType(document.getElementById('diagramType').value);
 
-  lastCode = parser.parse(input, type);
+  lastCode = applyGroupCollapse(parser.parse(input, type));
   renderSemanticIssues(parser.validate());
+  refreshInspector();
   const ec = parser.entities.size;
   const rc = parser.relationships.length;
   const gc = [...parser.environments.keys()].length;
@@ -6582,6 +6909,11 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('shareBtn').click();
     return;
   }
+  if (e.shiftKey && e.key === 'I') {
+    e.preventDefault();
+    toggleInspector();
+    return;
+  }
   if (e.shiftKey && e.key === 'L') {
     e.preventDefault();
     if (document.getElementById('libraryModal').classList.contains('hidden')) openLibrary();
@@ -6601,6 +6933,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '0') {
     e.preventDefault();
     setZoom(1);
+    return;
+  }
+  if (e.key === '/') {
+    // Only act if CM didn't already handle it (CM sets defaultPrevented when its binding fires)
+    if (!e.defaultPrevented && isInputFocused()) {
+      e.preventDefault();
+      toggleCommentLine();
+    }
     return;
   }
 });
@@ -6676,6 +7016,82 @@ function toast(msg, duration = TOAST_DURATION_MS) {
 // ════════════════════════════════════════════════════════════════
 //  SETTINGS PANEL
 // ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+//  NODE INSPECTOR PANEL
+// ════════════════════════════════════════════════════════════════
+let _inspectorVisible = false;
+
+function toggleInspector() {
+  _inspectorVisible = !_inspectorVisible;
+  const panel = document.getElementById('inspectorPanel');
+  const btn   = document.getElementById('inspToggleBtn');
+  panel.classList.toggle('vis', _inspectorVisible);
+  if (btn) btn.classList.toggle('active-btn', _inspectorVisible);
+  if (_inspectorVisible) refreshInspector();
+}
+
+function resolveEntityAtCursor(state) {
+  if (!state || typeof parser === 'undefined') return null;
+  const head = state.selection.main.head;
+  const line = state.doc.lineAt(head);
+  const lineText = line.text;
+  if (!lineText.trim() || /^[/#]/.test(lineText.trim())) return null;
+  // Walk longest-first to find matching entity in this line
+  const ids = [...parser.entities.keys()].sort((a, b) => b.length - a.length);
+  for (const id of ids) {
+    const e = parser.entities.get(id);
+    if (!e) continue;
+    const esc = e.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`\\b${esc}\\b`, 'i').test(lineText)) return id;
+  }
+  return null;
+}
+
+function refreshInspector() {
+  if (!_inspectorVisible) return;
+  const $body = document.getElementById('inspBody');
+  const $type = document.getElementById('inspType');
+  const $name = document.getElementById('inspName');
+  if (!$body) return;
+  const eid = _cmView ? resolveEntityAtCursor(_cmView.state) : null;
+  if (!eid) {
+    $type.style.display = 'none';
+    $name.textContent = '';
+    $body.innerHTML = '<div class="insp-empty">Move cursor onto an entity to inspect it</div>';
+    return;
+  }
+  const entity = parser.entities.get(eid);
+  if (!entity) return;
+  $type.textContent   = entity.type;
+  $type.style.display = '';
+  $name.textContent   = entity.label;
+
+  const outgoing = parser.relationships.filter(r => r.from === eid);
+  const incoming = parser.relationships.filter(r => r.to   === eid);
+
+  const envGroup = [...(parser.environments || new Map()).entries()].find(([, env]) => env.children?.includes?.(eid) || env.childIds?.includes?.(eid));
+  const domGroup = [...(parser.domains      || new Map()).entries()].find(([, d]) => d.children?.includes?.(eid) || d.childIds?.includes?.(eid));
+
+  const edgeChips = (rels, dir) => rels.map(r => {
+    const otherId = dir === 'out' ? r.to : r.from;
+    const other   = parser.entities.get(otherId)?.label || otherId;
+    const arrow   = dir === 'out' ? '→' : '←';
+    return `<span class="insp-edge" title="${esc(r.label || '')}" onclick="highlightEntityInInput('${otherId}')" style="cursor:pointer">${esc(arrow + ' ' + other)}</span>`;
+  }).join('');
+
+  const groupHtml = [
+    envGroup ? `<div class="insp-row"><span class="insp-lbl">Env:</span><div class="insp-edges"><span class="insp-edge">${esc(parser.entities.get(envGroup[0])?.label || envGroup[0])}</span></div></div>` : '',
+    domGroup ? `<div class="insp-row"><span class="insp-lbl">Domain:</span><div class="insp-edges"><span class="insp-edge">${esc(parser.entities.get(domGroup[0])?.label || domGroup[0])}</span></div></div>` : '',
+  ].join('');
+
+  $body.innerHTML = `
+    ${outgoing.length ? `<div class="insp-row"><span class="insp-lbl">Out (${outgoing.length}):</span><div class="insp-edges">${edgeChips(outgoing, 'out')}</div></div>` : ''}
+    ${incoming.length ? `<div class="insp-row"><span class="insp-lbl">In (${incoming.length}):</span><div class="insp-edges">${edgeChips(incoming, 'in')}</div></div>` : ''}
+    ${!outgoing.length && !incoming.length ? '<div class="insp-empty">No connections</div>' : ''}
+    ${groupHtml}
+  `;
+}
+
 function openSettings() {
   document.getElementById('settingsModal').classList.remove('hidden');
 }
@@ -6854,9 +7270,29 @@ function initSettingsPanel() {
     });
   });
 
+  // ── Linting: case rule & max length ───────────────────────────
+  const lintCaseEl = document.getElementById('lintCaseRule');
+  const lintMaxEl  = document.getElementById('lintMaxLength');
+  if (lintCaseEl && lintMaxEl) {
+    lintCaseEl.value = _editorSettings.linting?.caseRule || 'any';
+    lintMaxEl.value  = _editorSettings.linting?.maxLength || 0;
+    lintCaseEl.addEventListener('change', () => {
+      if (!_editorSettings.linting) _editorSettings.linting = { caseRule: 'any', maxLength: 0 };
+      _editorSettings.linting.caseRule = lintCaseEl.value;
+      saveSettings();
+      onInput();
+    });
+    lintMaxEl.addEventListener('change', () => {
+      if (!_editorSettings.linting) _editorSettings.linting = { caseRule: 'any', maxLength: 0 };
+      _editorSettings.linting.maxLength = parseInt(lintMaxEl.value) || 0;
+      saveSettings();
+      onInput();
+    });
+  }
+
   // ── Reset all ──────────────────────────────────────────────────
   document.getElementById('settingsResetAll').addEventListener('click', () => {
-    _editorSettings  = { theme: 'meridian', fontSize: 13, fontFamily: 'system', tokenColors: {} };
+    _editorSettings  = { theme: 'meridian', fontSize: 13, fontFamily: 'system', tokenColors: {}, linting: { caseRule: 'any', maxLength: 0 } };
     _diagramSettings = { fontSize: '', primaryColor: '', primaryBorderColor: '', lineColor: '', background: '' };
     saveSettings();
     applyEditorTheme();
@@ -6866,6 +7302,8 @@ function initSettingsPanel() {
     swatches.forEach(s => s.classList.toggle('active', s.dataset.themeKey === 'meridian'));
     document.querySelectorAll('.fsz-btn').forEach(b => b.classList.toggle('active', b.textContent === '13px'));
     document.getElementById('fontFamilyPicker').value = 'system';
+    if (lintCaseEl) lintCaseEl.value = 'any';
+    if (lintMaxEl)  lintMaxEl.value  = 0;
     rebuildTokenColorGrid();
     syncDiagramSettingsUI();
     toast('Settings reset to defaults');
@@ -7192,25 +7630,8 @@ function initCM(CM) {
         onInput();
         return true;
     }},
-    // Ctrl+/: toggle comment on current line (mirrors existing handler)
-    { key: 'Ctrl-/', run: (view) => {
-        const { state, dispatch } = view;
-        const { from } = state.selection.main;
-        const line = state.doc.lineAt(from);
-        const txt  = line.text;
-        let changes, newAnchor;
-        if (txt.trimStart().startsWith('//')) {
-          const ci = line.from + txt.indexOf('//');
-          changes  = { from: ci, to: ci + 2, insert: '' };
-          newAnchor = Math.max(line.from, from - 2);
-        } else {
-          changes  = { from: line.from, to: line.from, insert: '//' };
-          newAnchor = from + 2;
-        }
-        dispatch(state.update({ changes, selection: { anchor: newAnchor } }));
-        onInput();
-        return true;
-    }},
+    // Mod-/ (Ctrl+/ on Windows, Cmd+/ on Mac): toggle comment on current line
+    { key: 'Mod-/', run: () => { toggleCommentLine(); return true; }},
     // Ctrl+Enter: force re-render (same as existing shortcut)
     { key: 'Ctrl-Enter', run: () => {
         clearTimeout(renderTimer);
@@ -7250,6 +7671,7 @@ function initCM(CM) {
           } else if (update.selectionSet) {
             _savedCursor = _cmView.state.selection.main.head;
             highlightSourceLine();
+            refreshInspector();
           }
         }),
         EditorView.domEventHandlers({
