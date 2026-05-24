@@ -625,7 +625,7 @@ domain:Platform {
           <li>Use underscores for spaces: <span class="hcode">app:My_Service</span></li>
           <li>Comments: lines starting with <span class="hcode">//</span> or <span class="hcode">#</span> are ignored</li>
           <li>Multi-line blocks: open with <span class="hcode">env:Name {</span> and close with <span class="hcode">}</span> on its own line</li>
-          <li>Switch views with the Diagram type dropdown — Flowchart, Sequence, Class</li>
+          <li>Switch views with the Diagram type dropdown — Flowchart, Design Board, Sequence, Class</li>
           <li>Use <span class="hcode">🏷️ Entities ▾</span> to pick an entity type — it inserts the prefix and you just type the name</li>
           <li>Use <span class="hcode">📋 Templates ▾</span> to load a working example instantly</li>
           <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 210+ service icons across AWS, GCP, Azure, General, and AI tabs — click any icon to insert it with its emoji embedded in the label</li>
@@ -822,7 +822,7 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-400 mb-3">Opens a grid of all 12 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
 
         <div class="help-h3">📋 Templates ▾</div>
-        <p class="text-xs text-gray-400 mb-3">Nine pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
+        <p class="text-xs text-gray-400 mb-3">Ten pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
         <table class="help-tbl" style="margin-bottom:12px">
           <thead><tr><th>Template</th><th>What it shows</th></tr></thead>
           <tbody>
@@ -835,6 +835,7 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>🌐 Network Arch</td><td>External, DMZ, and internal net zones</td></tr>
             <tr><td>🏢 Enterprise Domains</td><td>Multi-domain ownership with env grouping</td></tr>
             <tr><td>🤖 AI / RAG App</td><td>Full LLM-powered RAG pipeline — client, API gateway, AI orchestration (LangChain), LLM providers (OpenAI GPT, Anthropic Claude), retrieval service, vector database (Pinecone), knowledge base, and observability (Langfuse). Uses AI icon tab entities.</td></tr>
+            <tr><td>DB Design Board</td><td>Open-design canvas with colourful lanes, rich cards, gradients, connection curves, and SVG export for product, UX, and architecture storytelling.</td></tr>
           </tbody>
         </table>
 
@@ -1109,6 +1110,7 @@ BatchJob writes to db:Warehouse</div>
       class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
       <option value="LR">Flowchart ⟶</option>
       <option value="TD">Flowchart ↓</option>
+      <option value="design">Design Board</option>
       <option value="sequence">Sequence</option>
       <option value="class">Class</option>
     </select>
@@ -1270,6 +1272,7 @@ BatchJob writes to db:Warehouse</div>
       <button class="tpl-item" onclick="loadTemplate('cloud');toggleTplPicker(true)"><span class="tpl-item-icon">☁️</span>Cloud Infra</button>
       <div class="tpl-divider"></div>
       <button class="tpl-item" onclick="loadTemplate('aiApp');toggleTplPicker(true)"><span class="tpl-item-icon">🤖</span>AI / RAG App</button>
+      <button class="tpl-item" onclick="loadTemplate('designBoard');toggleTplPicker(true)"><span class="tpl-item-icon">DB</span>Design Board</button>
       <div class="tpl-divider"></div>
       <button class="tpl-item" onclick="loadTemplate('etlPipeline');toggleTplPicker(true)"><span class="tpl-item-icon">🔃</span>ETL Pipeline</button>
       <button class="tpl-item" onclick="loadTemplate('fileProcessing');toggleTplPicker(true)"><span class="tpl-item-icon">📁</span>File Processing</button>
@@ -2137,6 +2140,47 @@ app:LangChain --traces--> watcher:Langfuse
 instance:LiteLLM_Router --cost & latency--> watcher:LangSmith
 instance:OpenAI_GPT --evals--> watcher:WandB`,
 
+  designBoard: `// Colorful Design Board
+// Switches Meridian into a rich open-design canvas for product, UX, and architecture storytelling.
+
+domain:Experience {
+  app:Landing_Page
+  app:Mobile_App
+  interface:Design_System_API
+}
+
+domain:Collaboration {
+  app:Whiteboard
+  app:Review_Workflow
+  watcher:Comment_Stream
+}
+
+domain:Platform {
+  app:Canvas_Service
+  interface:Realtime_Sync
+  db:Project_Store
+  config:Theme_Tokens
+}
+
+domain:Intelligence {
+  instance:Prompt_Assistant [icon: ai-openai-gpt]
+  batch:Asset_Generator [icon: ai-stable-diffusion]
+  db:Design_Knowledge_Base
+}
+
+app:Landing_Page --> app:Mobile_App
+app:Mobile_App --uses--> interface:Design_System_API
+interface:Design_System_API --> app:Canvas_Service
+app:Whiteboard --shares frames--> app:Review_Workflow
+app:Review_Workflow --comments--> watcher:Comment_Stream
+watcher:Comment_Stream --> interface:Realtime_Sync
+interface:Realtime_Sync --> app:Canvas_Service
+app:Canvas_Service --> db:Project_Store
+config:Theme_Tokens --> interface:Design_System_API
+instance:Prompt_Assistant --suggests layouts--> app:Canvas_Service
+batch:Asset_Generator --creates assets--> db:Project_Store
+db:Design_Knowledge_Base --> instance:Prompt_Assistant`,
+
   cloud: `// Cloud Infrastructure
 env:VPC_us_east_1 {
   server:ALB
@@ -2873,6 +2917,10 @@ class SmartParser {
   }
 
   // ── Main parse entry ─────────────────────────────────────────
+  toDesignBoard() {
+    return buildDesignBoardSvg(this);
+  }
+
   validate() {
     const issues = [...this.parseIssues];
     const used = new Set(this.relationships.flatMap(r => [r.from, r.to]));
@@ -3019,6 +3067,7 @@ class SmartParser {
     processed.forEach(entry => this.parseLine(entry.text, entry.line, entry.raw || entry.text));
 
     switch (type) {
+      case 'design':   return this.toDesignBoard();
       case 'sequence': return this.toSequence();
       case 'class':    return this.toClassDiagram();
       default:         return this.toFlowchart(type); // LR or TD
@@ -3029,6 +3078,289 @@ class SmartParser {
 // ════════════════════════════════════════════════════════════════
 //  APP STATE
 // ════════════════════════════════════════════════════════════════
+const DESIGN_TYPE_STYLES = {
+  app:       { label: 'App',       fill: '#ecfdf5', stroke: '#10b981', accent: '#22c55e', text: '#064e3b' },
+  db:        { label: 'Data',      fill: '#fffbeb', stroke: '#f59e0b', accent: '#f97316', text: '#713f12' },
+  server:    { label: 'Server',    fill: '#f5f3ff', stroke: '#8b5cf6', accent: '#7c3aed', text: '#4c1d95' },
+  instance:  { label: 'Runtime',   fill: '#fff1f2', stroke: '#f43f5e', accent: '#e11d48', text: '#881337' },
+  interface: { label: 'API',       fill: '#ecfeff', stroke: '#06b6d4', accent: '#0891b2', text: '#164e63' },
+  config:    { label: 'Config',    fill: '#fefce8', stroke: '#eab308', accent: '#ca8a04', text: '#713f12' },
+  batch:     { label: 'Workflow',  fill: '#f0fdfa', stroke: '#14b8a6', accent: '#0d9488', text: '#134e4a' },
+  watcher:   { label: 'Signal',    fill: '#eef2ff', stroke: '#6366f1', accent: '#4f46e5', text: '#312e81' },
+  ftp:       { label: 'Files',     fill: '#fdf2f8', stroke: '#ec4899', accent: '#db2777', text: '#831843' },
+  net:       { label: 'Network',   fill: '#eff6ff', stroke: '#3b82f6', accent: '#2563eb', text: '#1e3a8a' },
+  env:       { label: 'Env',       fill: '#f0f9ff', stroke: '#0ea5e9', accent: '#0284c7', text: '#0c4a6e' },
+  domain:    { label: 'Domain',    fill: '#fdf4ff', stroke: '#d946ef', accent: '#c026d3', text: '#701a75' },
+};
+
+const DESIGN_LANE_STYLES = [
+  { fill: '#fdf4ff', stroke: '#d946ef', accent: '#c026d3', text: '#701a75' },
+  { fill: '#fff7ed', stroke: '#fb923c', accent: '#f97316', text: '#7c2d12' },
+  { fill: '#ecfdf5', stroke: '#34d399', accent: '#059669', text: '#064e3b' },
+  { fill: '#eff6ff', stroke: '#60a5fa', accent: '#2563eb', text: '#1e3a8a' },
+  { fill: '#fef2f2', stroke: '#f87171', accent: '#ef4444', text: '#7f1d1d' },
+  { fill: '#f0fdfa', stroke: '#2dd4bf', accent: '#0d9488', text: '#134e4a' },
+  { fill: '#eef2ff', stroke: '#818cf8', accent: '#4f46e5', text: '#312e81' },
+  { fill: '#f0f9ff', stroke: '#38bdf8', accent: '#0284c7', text: '#0c4a6e' },
+];
+
+function svgEsc(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function designSvgId(value) {
+  return String(value || 'id').replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function designCardInitial(label, type) {
+  const words = String(label || type || 'N').replace(/[_-]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+  const raw = words.length > 1 ? words.slice(0, 2).map(w => w[0]).join('') : (words[0] || type || 'N').slice(0, 2);
+  return raw.toUpperCase();
+}
+
+function designTextLines(label, maxChars = 22, maxLines = 2) {
+  const words = String(label || '').replace(/[_-]+/g, ' ').split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  words.forEach(word => {
+    const next = cur ? `${cur} ${word}` : word;
+    if (next.length <= maxChars) {
+      cur = next;
+    } else {
+      if (cur) lines.push(cur);
+      cur = word.length > maxChars ? word.slice(0, maxChars - 1) + '...' : word;
+    }
+  });
+  if (cur) lines.push(cur);
+  if (!lines.length) lines.push('Untitled');
+  if (lines.length > maxLines) {
+    lines.length = maxLines;
+    lines[maxLines - 1] = lines[maxLines - 1].replace(/\.*$/, '') + '...';
+  }
+  return lines;
+}
+
+function designBuildGroups(p) {
+  const used = new Set(p.relationships.flatMap(r => [r.from, r.to]));
+  const isRenderable = id => {
+    const ent = p.entities.get(id);
+    if (!ent) return false;
+    const isContainer = p.environments.has(id) || p.domains.has(id);
+    return !isContainer || used.has(id);
+  };
+  const groups = [];
+  const assigned = new Set();
+  const addGroup = (kind, id, rawKids, styleIndex) => {
+    const ent = p.entities.get(id);
+    const kids = [...new Set(rawKids || [])].filter(k => k !== id && isRenderable(k) && !assigned.has(k));
+    if (!kids.length) return;
+    kids.forEach(k => assigned.add(k));
+    groups.push({
+      id,
+      kind,
+      title: ent?.label || id,
+      ids: kids,
+      style: DESIGN_LANE_STYLES[styleIndex % DESIGN_LANE_STYLES.length],
+    });
+  };
+
+  let idx = 0;
+  for (const [domId, kids] of p.domains) addGroup('Domain', domId, kids, idx++);
+  for (const [envId, kids] of p.environments) {
+    const kind = p.netZones.has(envId) ? 'Network' : 'Environment';
+    addGroup(kind, envId, kids, idx++);
+  }
+
+  const remaining = [...p.entities.keys()].filter(id => isRenderable(id) && !assigned.has(id));
+  if (!groups.length && remaining.length > 5) {
+    const buckets = [
+      { kind: 'Product', title: 'Product', types: ['app'] },
+      { kind: 'Interfaces', title: 'Interfaces', types: ['interface', 'server'] },
+      { kind: 'Runtime', title: 'Runtime', types: ['instance', 'batch'] },
+      { kind: 'Data', title: 'Data', types: ['db', 'config'] },
+      { kind: 'Ops', title: 'Ops', types: ['watcher', 'ftp', 'net', 'env', 'domain'] },
+    ];
+    buckets.forEach((bucket, bucketIndex) => {
+      const ids = remaining.filter(id => bucket.types.includes(p.entities.get(id)?.type));
+      ids.forEach(id => assigned.add(id));
+      if (ids.length) groups.push({
+        id: `DESIGN_BUCKET_${bucket.title}`,
+        kind: bucket.kind,
+        title: bucket.title,
+        ids,
+        style: DESIGN_LANE_STYLES[bucketIndex % DESIGN_LANE_STYLES.length],
+      });
+    });
+  }
+
+  const ungrouped = [...p.entities.keys()].filter(id => isRenderable(id) && !assigned.has(id));
+  if (ungrouped.length) groups.push({
+    id: 'DESIGN_UNGROUPED',
+    kind: 'Canvas',
+    title: groups.length ? 'Ungrouped' : 'Canvas',
+    ids: ungrouped,
+    style: DESIGN_LANE_STYLES[groups.length % DESIGN_LANE_STYLES.length],
+  });
+  return groups;
+}
+
+function designEdgePath(from, to, cardW) {
+  const leftToRight = to.cx >= from.cx;
+  const sx = from.cx + (leftToRight ? cardW / 2 : -cardW / 2);
+  const tx = to.cx - (leftToRight ? cardW / 2 : -cardW / 2);
+  const sy = from.cy;
+  const ty = to.cy;
+  const bend = Math.max(90, Math.abs(tx - sx) * 0.45);
+  const c1x = sx + (leftToRight ? bend : -bend);
+  const c2x = tx - (leftToRight ? bend : -bend);
+  return `M${sx},${sy} C${c1x},${sy} ${c2x},${ty} ${tx},${ty}`;
+}
+
+function buildDesignBoardSvg(p) {
+  if (!p.entities.size) return '';
+
+  const groups = designBuildGroups(p);
+  const margin = 36;
+  const titleH = 72;
+  const laneW = 286;
+  const laneGap = 30;
+  const laneTop = titleH;
+  const laneHeaderH = 68;
+  const cardW = 220;
+  const cardH = 96;
+  const cardGap = 18;
+  const pos = new Map();
+
+  groups.forEach((group, gi) => {
+    const x = margin + gi * (laneW + laneGap);
+    const startY = laneTop + laneHeaderH + 18;
+    group.x = x;
+    group.y = laneTop;
+    group.w = laneW;
+    group.ids.forEach((id, ni) => {
+      const cx = x + laneW / 2;
+      const cy = startY + cardH / 2 + ni * (cardH + cardGap);
+      pos.set(id, { cx, cy, group: gi });
+    });
+    group.h = laneHeaderH + 36 + Math.max(1, group.ids.length) * cardH + Math.max(0, group.ids.length - 1) * cardGap;
+  });
+
+  const width = Math.max(920, margin * 2 + groups.length * laneW + Math.max(0, groups.length - 1) * laneGap);
+  const height = Math.max(540, laneTop + Math.max(...groups.map(g => g.h), 360) + margin);
+  const edgeCount = p.relationships.filter(r => pos.has(r.from) && pos.has(r.to)).length;
+  const nodeCount = pos.size;
+  const defs = [];
+  Object.entries(DESIGN_TYPE_STYLES).forEach(([type, style]) => {
+    const id = designSvgId(type);
+    defs.push(`<linearGradient id="design-card-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${style.fill}"/><stop offset="1" stop-color="#ffffff"/></linearGradient>`);
+  });
+  DESIGN_LANE_STYLES.forEach((style, i) => {
+    defs.push(`<linearGradient id="design-lane-${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${style.fill}"/><stop offset="1" stop-color="#ffffff" stop-opacity=".72"/></linearGradient>`);
+  });
+
+  const L = [];
+  L.push(`<svg class="meridian-design-board" data-renderer="meridian-design-board" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" aria-label="Meridian Design Board">`);
+  L.push(`<defs>
+    <linearGradient id="design-board-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#f8fafc"/><stop offset=".52" stop-color="#eef2ff"/><stop offset="1" stop-color="#ecfeff"/></linearGradient>
+    <pattern id="design-dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="1.5" cy="1.5" r="1.2" fill="#94a3b8" opacity=".34"/></pattern>
+    <filter id="design-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#0f172a" flood-opacity=".16"/></filter>
+    <marker id="design-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/></marker>
+    ${defs.join('\n    ')}
+  </defs>`);
+  L.push(`<style>
+    .meridian-design-board text { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .meridian-design-board .design-edge { pointer-events: stroke; stroke-linecap: round; stroke-linejoin: round; }
+    .meridian-design-board .design-edge-label text { paint-order: stroke; stroke: #ffffff; stroke-width: 5px; stroke-linejoin: round; }
+    .meridian-design-board .design-node-title { font-size: 14px; font-weight: 800; fill: #0f172a; }
+    .meridian-design-board .design-node-meta { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+    .meridian-design-board .design-lane-title { font-size: 16px; font-weight: 900; fill: #0f172a; }
+    .meridian-design-board .design-lane-kind { font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+  </style>`);
+  L.push(`<rect width="${width}" height="${height}" fill="url(#design-board-bg)"/>`);
+  L.push(`<rect width="${width}" height="${height}" fill="url(#design-dots)"/>`);
+  L.push(`<text x="${margin}" y="32" font-size="22" font-weight="900" fill="#0f172a">Design Board</text>`);
+  L.push(`<text x="${margin}" y="55" font-size="12" font-weight="700" fill="#64748b">${nodeCount} components / ${edgeCount} links / ${groups.length} lanes</text>`);
+
+  L.push('<g class="design-lanes">');
+  groups.forEach((group, gi) => {
+    const style = group.style;
+    L.push(`<g class="design-lane" data-design-group-id="${svgEsc(group.id)}">`);
+    L.push(`<rect x="${group.x}" y="${group.y}" width="${group.w}" height="${group.h}" rx="18" fill="url(#design-lane-${gi % DESIGN_LANE_STYLES.length})" stroke="${style.stroke}" stroke-width="1.5" opacity=".96"/>`);
+    L.push(`<rect x="${group.x + 14}" y="${group.y + 14}" width="42" height="42" rx="13" fill="${style.accent}" opacity=".14"/>`);
+    L.push(`<circle cx="${group.x + 35}" cy="${group.y + 35}" r="10" fill="${style.accent}"/>`);
+    L.push(`<text class="design-lane-kind" x="${group.x + 66}" y="${group.y + 29}" fill="${style.text}">${svgEsc(group.kind)}</text>`);
+    L.push(`<text class="design-lane-title" x="${group.x + 66}" y="${group.y + 51}">${svgEsc(group.title.replace(/_/g, ' '))}</text>`);
+    L.push(`</g>`);
+  });
+  L.push('</g>');
+
+  L.push('<g class="edgePaths">');
+  p.relationships.forEach((rel, i) => {
+    const from = pos.get(rel.from);
+    const to = pos.get(rel.to);
+    if (!from || !to) return;
+    const style = rel.style === 'pre'
+      ? { stroke: '#f59e0b', width: 2.6, dash: '7 7' }
+      : rel.style === 'post'
+        ? { stroke: '#8b5cf6', width: 3.2, dash: '' }
+        : { stroke: '#475569', width: 2.4, dash: '' };
+    L.push(`<path id="design-edge-${i}" class="design-edge" data-from="${svgEsc(rel.from)}" data-to="${svgEsc(rel.to)}" d="${designEdgePath(from, to, cardW)}" fill="none" stroke="${style.stroke}" stroke-width="${style.width}" ${style.dash ? `stroke-dasharray="${style.dash}"` : ''} marker-end="url(#design-arrow)" ${rel.bidir ? 'marker-start="url(#design-arrow)"' : ''} opacity=".74"/>`);
+  });
+  L.push('</g>');
+
+  L.push('<g class="design-edge-labels">');
+  p.relationships.forEach((rel, i) => {
+    const from = pos.get(rel.from);
+    const to = pos.get(rel.to);
+    if (!from || !to || !rel.label) return;
+    const mx = (from.cx + to.cx) / 2;
+    const my = (from.cy + to.cy) / 2 - 8;
+    const label = String(rel.label).replace(/_/g, ' ');
+    const tw = Math.min(150, Math.max(52, label.length * 7 + 18));
+    L.push(`<g class="edgeLabel design-edge-label" data-from="${svgEsc(rel.from)}" data-to="${svgEsc(rel.to)}" transform="translate(${mx},${my})">`);
+    L.push(`<rect x="${-tw / 2}" y="-13" width="${tw}" height="24" rx="12" fill="#ffffff" stroke="#cbd5e1" opacity=".92"/>`);
+    L.push(`<text text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="800" fill="#334155">${svgEsc(label.length > 22 ? label.slice(0, 19) + '...' : label)}</text>`);
+    L.push(`</g>`);
+  });
+  L.push('</g>');
+
+  L.push('<g class="nodes">');
+  groups.flatMap(g => g.ids).forEach(id => {
+    const ent = p.entities.get(id);
+    const at = pos.get(id);
+    if (!ent || !at) return;
+    const style = DESIGN_TYPE_STYLES[ent.type] || DESIGN_TYPE_STYLES.app;
+    const iconUrl = iconImageUrlForEntityIcon(ent.icon);
+    const outgoing = p.relationships.filter(r => r.from === id).length;
+    const incoming = p.relationships.filter(r => r.to === id).length;
+    const titleLines = designTextLines(ent.label, 22, 2);
+    const typeId = designSvgId(ent.type);
+    L.push(`<g class="node design-node" id="design-${designSvgId(id)}" data-meridian-entity-id="${svgEsc(id)}" transform="translate(${at.cx},${at.cy})">`);
+    L.push(`<rect x="${-cardW / 2}" y="${-cardH / 2}" width="${cardW}" height="${cardH}" rx="18" fill="url(#design-card-${typeId})" stroke="${style.stroke}" stroke-width="1.5" filter="url(#design-shadow)"/>`);
+    L.push(`<rect x="${-cardW / 2}" y="${-cardH / 2}" width="${cardW}" height="9" rx="4.5" fill="${style.accent}"/>`);
+    L.push(`<circle cx="${-cardW / 2 + 34}" cy="${-cardH / 2 + 35}" r="20" fill="${style.accent}" opacity=".16"/>`);
+    if (iconUrl) {
+      L.push(`<image class="meridian-rich-icon" href="${svgEsc(iconUrl)}" x="${-cardW / 2 + 18}" y="${-cardH / 2 + 19}" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>`);
+    } else {
+      L.push(`<text x="${-cardW / 2 + 34}" y="${-cardH / 2 + 40}" text-anchor="middle" font-size="14" font-weight="900" fill="${style.text}">${svgEsc(designCardInitial(ent.label, ent.type))}</text>`);
+    }
+    titleLines.forEach((line, li) => {
+      L.push(`<text class="design-node-title" x="${-cardW / 2 + 66}" y="${-cardH / 2 + 31 + li * 17}">${svgEsc(line)}</text>`);
+    });
+    L.push(`<rect x="${-cardW / 2 + 16}" y="${cardH / 2 - 28}" width="74" height="20" rx="10" fill="${style.fill}" stroke="${style.stroke}" opacity=".95"/>`);
+    L.push(`<text class="design-node-meta" x="${-cardW / 2 + 53}" y="${cardH / 2 - 14}" text-anchor="middle" fill="${style.text}">${svgEsc(style.label)}</text>`);
+    L.push(`<text x="${cardW / 2 - 18}" y="${cardH / 2 - 14}" text-anchor="end" font-size="11" font-weight="800" fill="#64748b">${outgoing} out / ${incoming} in</text>`);
+    L.push(`</g>`);
+  });
+  L.push('</g>');
+  L.push('</svg>');
+  return L.join('\n');
+}
+
 const parser     = new SmartParser();
 let lastCode     = '';
 let renderTimer      = null;
@@ -3097,7 +3429,7 @@ function applyGroupCollapse(code) {
 }
 
 const DEFAULT_DIAGRAM_TYPE = 'LR';
-const SUPPORTED_DIAGRAM_TYPES = new Set(['LR', 'TD', 'sequence', 'class']);
+const SUPPORTED_DIAGRAM_TYPES = new Set(['LR', 'TD', 'design', 'sequence', 'class']);
 
 function normalizeDiagramType(type) {
   return SUPPORTED_DIAGRAM_TYPES.has(type) ? type : DEFAULT_DIAGRAM_TYPE;
@@ -3105,6 +3437,10 @@ function normalizeDiagramType(type) {
 
 function isSupportedDiagramType(type) {
   return SUPPORTED_DIAGRAM_TYPES.has(type);
+}
+
+function isDesignBoardType(type) {
+  return normalizeDiagramType(type) === 'design';
 }
 
 function setDiagramType(type) {
@@ -6173,8 +6509,46 @@ function decorateRichIcons(svg) {
   });
 }
 
+function renderDesignBoard(code) {
+  try {
+    if (!code.trim()) { showPlaceholder(); return; }
+    $preview.innerHTML = code;
+    const svgEl = $preview.querySelector('svg');
+    if (!svgEl) throw new Error('Design Board renderer did not produce an SVG');
+    svgEl.style.display = 'block';
+    svgEl.style.maxWidth = 'none';
+    svgEl.setAttribute('overflow', 'visible');
+    svgEl.style.overflow = 'visible';
+    $wrapper.classList.remove('no-diagram');
+    posLoad();
+    applyNodePositions();
+    attachNodeInteractions();
+    attachDragToNodes();
+    if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
+    _prevRenderEmpty = false;
+    clearCmLintError();
+    $pstatus.textContent = 'Design Board';
+    $pstatus.style.color = 'var(--ok)';
+    const warnCount = semanticIssues.length;
+    const lanes = svgEl.querySelectorAll('.design-lane').length;
+    $status.textContent = `Rendered design board · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${lanes} lanes${warnCount ? ` · ${warnCount} warning${warnCount === 1 ? '' : 's'}` : ''}`;
+    scrollToNewNodes();
+  } catch (err) {
+    _prevRenderEmpty = true;
+    setCmLintError(err.message || String(err), 1);
+    $preview.innerHTML = `<div class="render-err"><h4>Design Board Error</h4><pre>${esc(err.message || String(err))}</pre></div>`;
+    $pstatus.textContent = 'Error';
+    $pstatus.style.color = 'var(--err-title)';
+    $status.textContent = 'Design board render error';
+  }
+}
+
 async function renderDiagram(code) {
   if (!code.trim()) { clearCmLintError(); showPlaceholder(); return; }
+  if (isDesignBoardType(document.getElementById('diagramType').value)) {
+    renderDesignBoard(code);
+    return;
+  }
   try {
     const id = 'mg_' + Date.now();
     const currentTheme = document.getElementById('mermaidTheme').value;
@@ -6251,7 +6625,8 @@ function onInput() {
 
   const type = setDiagramType(document.getElementById('diagramType').value);
 
-  lastCode = applyGroupCollapse(parser.parse(input, type));
+  const generatedCode = parser.parse(input, type);
+  lastCode = isDesignBoardType(type) ? generatedCode : applyGroupCollapse(generatedCode);
   renderSemanticIssues(parser.validate());
   refreshInspector();
   const ec = parser.entities.size;
@@ -6375,9 +6750,10 @@ function doCopy(mode = 'plain') {
   }
 
   if (!lastCode) return;
+  const isDesign = isDesignBoardType(document.getElementById('diagramType').value);
   let text = lastCode;
-  if (mode === 'fences')   text = '```mermaid\n' + lastCode + '\n```';
-  if (mode === 'markdown') text = '```mermaid\n' + lastCode + '\n```\n\n> Generated by Meridian';
+  if (mode === 'fences')   text = '```' + (isDesign ? 'svg' : 'mermaid') + '\n' + lastCode + '\n```';
+  if (mode === 'markdown') text = '```' + (isDesign ? 'svg' : 'mermaid') + '\n' + lastCode + '\n```\n\n> Generated by Meridian';
 
   navigator.clipboard.writeText(text).then(() => {
     toast('Copied to clipboard!');
@@ -6845,6 +7221,7 @@ function insertPrefix(prefix) {
 
 const TEMPLATE_TYPES = {
   microservices: 'LR', threeTier: 'LR', cicd: 'LR', cloud: 'LR',
+  aiApp: 'LR', designBoard: 'design',
   etlPipeline: 'LR', fileProcessing: 'LR', networkArch: 'LR', enterpriseDomains: 'LR',
 };
 

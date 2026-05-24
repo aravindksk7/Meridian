@@ -6,13 +6,13 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-![Meridian — Enterprise Domain Architecture](screenshot.png)
+![Meridian — Design Board template](screenshot.png)
 
 ---
 
 ## Overview
 
-Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, and 12 entity types — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
+Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, 12 entity types, and a rich **Design Board** mode for open-design, Figma-style storytelling — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
 
 ---
 
@@ -102,7 +102,7 @@ batch:ETL writes to db:Warehouse
 batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 ```
 
-**Pick a template** to jump-start your diagram — click **Templates** in the toolbar and choose from 9 presets (microservices, cloud infra, AI/RAG app, and more).
+**Pick a template** to jump-start your diagram — click **Templates** in the toolbar and choose from 10 presets (microservices, cloud infra, AI/RAG app, Design Board, and more).
 
 > **Tip:** Press `?` or `F1` at any time to open the built-in help reference.
 
@@ -127,7 +127,8 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **Hybrid mode** — entities can appear in both `env:` and `domain:` simultaneously; domain ownership shown through fill-colour overrides
 
 ### Diagrams
-- **4 diagram types** — Flowchart LR, Flowchart TD, Sequence, Class
+- **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class
+- **Design Board renderer** — colourful open-design SVG canvas with lanes, rich cards, gradients, connection curves, and export/copy support
 - **5 themes** — Default, Dark, Forest, Neutral, Base
 - **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
 - **Arrow aliases** — `--requires-->` = dashed; `--triggers-->` = thick
@@ -168,7 +169,7 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **Drag on empty canvas** — pans the preview
 
 ### Productivity
-- **9 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, and an AI/RAG application
+- **10 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, an AI/RAG application, and a Design Board
 - **Architecture views** — focused presets for system context, container, deployment, and domain ownership views
 - **Diagram library** — save, name, and reload your own diagram snippets (`Ctrl+Shift+L`)
 - **Persistent node positions** — drag nodes to rearrange; positions survive re-renders and page reloads
@@ -383,6 +384,7 @@ Press **Templates** in the toolbar to load any built-in preset:
 | 7 | Network Architecture | External, DMZ, and internal net zones |
 | 8 | Enterprise Domain Architecture | Multi-domain groupings with colour coding |
 | 9 | AI / RAG App | LLM-powered RAG pipeline — client, gateway, orchestration (LangChain), LLM providers (OpenAI, Claude), retrieval, vector DB (Pinecone), and observability (Langfuse) |
+| 10 | Design Board | Open-design canvas for colourful product, UX, and architecture storytelling with rich cards and lanes |
 
 ---
 
