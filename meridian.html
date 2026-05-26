@@ -992,6 +992,7 @@ BatchJob writes to db:Warehouse</div>
           <tbody>
             <tr><td>↓ SVG</td><td>Download the diagram as a scalable SVG file</td></tr>
             <tr><td>↓ PNG</td><td>Download at 2× (retina) resolution</td></tr>
+            <tr><td>&#8595; GIF</td><td>Download an animated GIF when Edge motion is on, or a static GIF when it is off</td></tr>
             <tr><td>Copy ▾</td><td>Copy code · copy with ```mermaid fences · copy as markdown block · copy embed &lt;iframe&gt;</td></tr>
             <tr><td>🔗 Share</td><td>Encode full diagram state into a shareable URL</td></tr>
             <tr><td>Import</td><td>Load a <code>.meridian.json</code> project, Meridian <code>.mmd</code> bundle, or plain <code>.mmd</code> input file</td></tr>
@@ -1462,6 +1463,7 @@ BatchJob writes to db:Warehouse</div>
       <!-- Export -->
       <button id="downloadSvg" class="btn-sm" title="Download SVG">↓ SVG</button>
       <button id="downloadPng" class="btn-sm" title="Download PNG (2×)">↓ PNG</button>
+      <button id="downloadGif" class="btn-sm" title="Download GIF (animated edges when edge motion is on)">&#8595; GIF</button>
       <button id="resetPosBtn" class="btn-sm" title="Reset all manually-dragged node positions">↺ Reset layout</button>
 
       <!-- Fullscreen -->
@@ -1748,6 +1750,9 @@ const HANDLE_HIDE_DELAY_MS = 120;
 const DRAG_CONNECT_THRESH  = 7;
 const NODE_DRAG_THRESH     = 4;
 const TOAST_DURATION_MS    = 2200;
+const GIF_EXPORT_DEFAULT_MAX_DIMENSION = 1280;
+const GIF_EXPORT_FAST_FRAMES = 12;
+const GIF_EXPORT_SLOW_FRAMES = 20;
 
 // ════════════════════════════════════════════════════════════════
 //  CODEMIRROR 6 — MERIDIAN LANGUAGE + THEME  (Steps 2 & 3)
@@ -7748,6 +7753,382 @@ document.getElementById('projectFileInput').addEventListener('change', async (e)
   }
 });
 
+function prefersReducedMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+function svgLengthNumber(value) {
+  const text = String(value || '').trim();
+  if (!text || text.endsWith('%')) return 0;
+  const n = parseFloat(text);
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function svgCoordNumber(value, fallback = 0) {
+  const n = parseFloat(String(value || '').trim());
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getSvgExportDimensions(svg, options = {}) {
+  const vb = svg?.viewBox?.baseVal;
+  const attrW = svgLengthNumber(svg?.getAttribute('width'));
+  const attrH = svgLengthNumber(svg?.getAttribute('height'));
+  const rect = svg?.getBoundingClientRect ? svg.getBoundingClientRect() : { width: 0, height: 0 };
+  let width = vb && vb.width > 0 ? vb.width : attrW || rect.width || 800;
+  let height = vb && vb.height > 0 ? vb.height : attrH || rect.height || 600;
+  width = Math.max(1, Math.ceil(width));
+  height = Math.max(1, Math.ceil(height));
+
+  const requestedMax = Number(options.maxDimension);
+  const maxDimension = Number.isFinite(requestedMax) && requestedMax > 0
+    ? requestedMax
+    : GIF_EXPORT_DEFAULT_MAX_DIMENSION;
+  const scale = Math.min(1, maxDimension / Math.max(width, height));
+  return {
+    width,
+    height,
+    outputWidth: Math.max(1, Math.round(width * scale)),
+    outputHeight: Math.max(1, Math.round(height * scale)),
+  };
+}
+
+function gifNumber(value) {
+  return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : '0';
+}
+
+function sanitizeSvgCloneForCanvas(clone) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const textFill = document.documentElement.getAttribute('data-theme') === 'dark' ? '#e5e7eb' : '#1f2937';
+
+  clone.querySelectorAll('foreignObject').forEach(fo => {
+    const label = (fo.textContent || '').replace(/\s+/g, ' ').trim();
+    if (!label) { fo.remove(); return; }
+    const x = svgCoordNumber(fo.getAttribute('x'));
+    const y = svgCoordNumber(fo.getAttribute('y'));
+    const w = svgLengthNumber(fo.getAttribute('width'));
+    const h = svgLengthNumber(fo.getAttribute('height'));
+    const text = document.createElementNS(NS, 'text');
+    text.textContent = label;
+    text.setAttribute('x', gifNumber(x + (w || 0) / 2));
+    text.setAttribute('y', gifNumber(y + (h || 14) / 2));
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'middle');
+    text.setAttribute('font-family', 'Arial, sans-serif');
+    text.setAttribute('font-size', fo.closest('g.edgeLabel') ? '12' : '14');
+    text.setAttribute('fill', textFill);
+    fo.replaceWith(text);
+  });
+
+  clone.querySelectorAll('image,use').forEach(el => {
+    const href = el.getAttribute('href') || el.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
+    if (/^https?:\/\//i.test(href)) el.remove();
+  });
+}
+
+function edgeStrokeForGif(path) {
+  let stroke = path.getAttribute('stroke') || path.style.stroke || '';
+  try {
+    const computed = window.getComputedStyle(path).stroke;
+    if (!stroke || stroke === 'none') stroke = computed;
+  } catch {}
+  if (!stroke || stroke === 'none' || stroke === 'transparent' || stroke === 'rgba(0, 0, 0, 0)') {
+    stroke = _diagramSettings.lineColor || '#64748b';
+  }
+  return stroke;
+}
+
+function markerStartForGif(path) {
+  const attr = path.getAttribute('marker-start') || path.style.markerStart || '';
+  if (attr && attr !== 'none') return attr;
+  try { return window.getComputedStyle(path).markerStart || ''; } catch { return ''; }
+}
+
+function collectGifEdgeMotion(svg) {
+  if (!svg) return [];
+  return [...svg.querySelectorAll('.edgePaths path')]
+    .filter(path => !path.closest('.meridian-edge-animation'))
+    .map((path, index) => {
+      let length = 0;
+      try { length = path.getTotalLength ? path.getTotalLength() : 0; } catch {}
+      if (!Number.isFinite(length) || length < 18) return null;
+      return {
+        path,
+        index,
+        length,
+        color: edgeStrokeForGif(path),
+        hasReverse: !!(markerStartForGif(path) && markerStartForGif(path) !== 'none'),
+      };
+    })
+    .filter(Boolean);
+}
+
+function sampleGifEdgePoint(edge, progress, reverse = false) {
+  const phase = (progress + ((edge.index % 8) / 8)) % 1;
+  const distance = edge.length * (reverse ? 1 - phase : phase);
+  const before = Math.max(0, distance - 1);
+  const after = Math.min(edge.length, distance + 1);
+  const point = edge.path.getPointAtLength(distance);
+  const p0 = edge.path.getPointAtLength(before);
+  const p1 = edge.path.getPointAtLength(after);
+  let angle = Math.atan2(p1.y - p0.y, p1.x - p0.x) * 180 / Math.PI;
+  if (!Number.isFinite(angle)) angle = 0;
+  if (reverse) angle += 180;
+  return { x: point.x, y: point.y, angle };
+}
+
+function addGifArrow(group, edge, progress, reverse = false) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const p = sampleGifEdgePoint(edge, progress, reverse);
+  const arrow = document.createElementNS(NS, 'g');
+  arrow.setAttribute('class', 'meridian-edge-flow');
+  arrow.setAttribute('data-edge-index', String(edge.index));
+  arrow.setAttribute('opacity', reverse ? '.72' : '.9');
+  arrow.setAttribute('transform', `translate(${gifNumber(p.x)} ${gifNumber(p.y)}) rotate(${gifNumber(p.angle)})`);
+
+  const shape = document.createElementNS(NS, 'path');
+  shape.setAttribute('d', 'M -6 -4 L 7 0 L -6 4 L -2 0 Z');
+  shape.setAttribute('fill', edge.color);
+  shape.setAttribute('stroke', 'none');
+  arrow.appendChild(shape);
+  group.appendChild(arrow);
+}
+
+function createGifFrameSvgText(svg, size, edges, progress = 0, motionMode = 'off') {
+  const NS = 'http://www.w3.org/2000/svg';
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', NS);
+  clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  clone.setAttribute('width', String(size.outputWidth));
+  clone.setAttribute('height', String(size.outputHeight));
+  if (!clone.getAttribute('viewBox')) clone.setAttribute('viewBox', `0 0 ${size.width} ${size.height}`);
+  clone.setAttribute('overflow', 'visible');
+  clone.style.display = 'block';
+  clone.style.maxWidth = 'none';
+  clone.style.width = `${size.outputWidth}px`;
+  clone.style.height = `${size.outputHeight}px`;
+  clone.querySelectorAll('.meridian-edge-animation').forEach(el => el.remove());
+  sanitizeSvgCloneForCanvas(clone);
+
+  if (motionMode !== 'off' && edges.length) {
+    const group = document.createElementNS(NS, 'g');
+    group.setAttribute('class', 'meridian-edge-animation meridian-gif-edge-frame');
+    group.setAttribute('aria-hidden', 'true');
+    edges.forEach(edge => {
+      addGifArrow(group, edge, progress, false);
+      if (edge.hasReverse) addGifArrow(group, edge, progress, true);
+    });
+    const edgePathsGroup = clone.querySelector('.edgePaths');
+    const rootG = edgePathsGroup ? edgePathsGroup.parentNode : null;
+    (rootG || clone).appendChild(group);
+  }
+
+  return new XMLSerializer().serializeToString(clone);
+}
+
+function drawSvgTextToCanvas(svgText, canvas, ctx) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(url);
+        resolve();
+      } catch (err) {
+        URL.revokeObjectURL(url);
+        reject(err);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not render SVG frame'));
+    };
+    img.src = url;
+  });
+}
+
+function GifByteWriter() {
+  this.bytes = [];
+}
+GifByteWriter.prototype.byte = function byte(value) {
+  this.bytes.push(value & 255);
+};
+GifByteWriter.prototype.word = function word(value) {
+  this.byte(value);
+  this.byte(value >> 8);
+};
+GifByteWriter.prototype.text = function text(value) {
+  for (let i = 0; i < value.length; i++) this.byte(value.charCodeAt(i));
+};
+GifByteWriter.prototype.array = function array(values) {
+  for (let i = 0; i < values.length; i++) this.byte(values[i]);
+};
+GifByteWriter.prototype.toUint8Array = function toUint8Array() {
+  return Uint8Array.from(this.bytes);
+};
+
+let _gif332Palette = null;
+function gif332Palette() {
+  if (_gif332Palette) return _gif332Palette;
+  const palette = [];
+  for (let r = 0; r < 8; r++) {
+    for (let g = 0; g < 8; g++) {
+      for (let b = 0; b < 4; b++) {
+        palette.push(Math.round((r / 7) * 255));
+        palette.push(Math.round((g / 7) * 255));
+        palette.push(Math.round((b / 3) * 255));
+      }
+    }
+  }
+  _gif332Palette = palette;
+  return palette;
+}
+
+function imageDataToGifIndices(imageData) {
+  const src = imageData.data;
+  const out = new Uint8Array(imageData.width * imageData.height);
+  for (let i = 0, p = 0; i < src.length; i += 4, p++) {
+    const alpha = src[i + 3];
+    let r = src[i];
+    let g = src[i + 1];
+    let b = src[i + 2];
+    if (alpha < 255) {
+      const a = alpha / 255;
+      r = Math.round(r * a + 255 * (1 - a));
+      g = Math.round(g * a + 255 * (1 - a));
+      b = Math.round(b * a + 255 * (1 - a));
+    }
+    out[p] = ((r >> 5) << 5) | ((g >> 5) << 2) | (b >> 6);
+  }
+  return out;
+}
+
+function gifLzwEncode(indices, minCodeSize = 8) {
+  const clearCode = 1 << minCodeSize;
+  const endCode = clearCode + 1;
+  const codeSize = minCodeSize + 1;
+  let bitBuffer = 0;
+  let bitCount = 0;
+  const bytes = [];
+
+  function writeCode(code) {
+    bitBuffer |= code << bitCount;
+    bitCount += codeSize;
+    while (bitCount >= 8) {
+      bytes.push(bitBuffer & 255);
+      bitBuffer >>= 8;
+      bitCount -= 8;
+    }
+  }
+
+  // Use literal pixel codes and clear before decoders need to grow beyond 9-bit codes.
+  // This is larger than dictionary compression, but much more reliable across GIF viewers.
+  writeCode(clearCode);
+  let sinceClear = 0;
+  for (let i = 0; i < indices.length; i++) {
+    if (sinceClear >= 240) {
+      writeCode(clearCode);
+      sinceClear = 0;
+    }
+    writeCode(indices[i]);
+    sinceClear++;
+  }
+  writeCode(endCode);
+  if (bitCount > 0) bytes.push(bitBuffer & 255);
+  return Uint8Array.from(bytes);
+}
+
+function gifWriteSubBlocks(writer, data) {
+  for (let i = 0; i < data.length; i += 255) {
+    const chunk = data.slice(i, i + 255);
+    writer.byte(chunk.length);
+    writer.array(chunk);
+  }
+  writer.byte(0);
+}
+
+function gifWriteHeader(writer, width, height) {
+  writer.text('GIF89a');
+  writer.word(width);
+  writer.word(height);
+  writer.byte(0xf7);
+  writer.byte(255);
+  writer.byte(0);
+  writer.array(gif332Palette());
+  writer.array([0x21, 0xff, 0x0b]);
+  writer.text('NETSCAPE2.0');
+  writer.array([0x03, 0x01, 0x00, 0x00, 0x00]);
+}
+
+function gifWriteFrame(writer, indices, width, height, delayCs) {
+  writer.array([0x21, 0xf9, 0x04, 0x08]);
+  writer.word(delayCs);
+  writer.array([0x00, 0x00]);
+  writer.byte(0x2c);
+  writer.word(0);
+  writer.word(0);
+  writer.word(width);
+  writer.word(height);
+  writer.byte(0);
+  writer.byte(8);
+  gifWriteSubBlocks(writer, gifLzwEncode(indices, 8));
+}
+
+async function createDiagramGifBlob(svg, options = {}) {
+  if (!svg) throw new Error('Render the diagram first');
+  const size = getSvgExportDimensions(svg, options);
+  const canvas = document.createElement('canvas');
+  canvas.width = size.outputWidth;
+  canvas.height = size.outputHeight;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Canvas export is not available');
+
+  let motionMode = String(options.motionMode || edgeAnimationMode()).toLowerCase();
+  if (!EDGE_ANIMATION_VALUES.has(motionMode)) motionMode = 'off';
+  if (prefersReducedMotion()) motionMode = 'off';
+  const edges = motionMode === 'off' ? [] : collectGifEdgeMotion(svg);
+  if (motionMode !== 'off' && !edges.length) motionMode = 'off';
+
+  const defaultFrames = motionMode === 'fast'
+    ? GIF_EXPORT_FAST_FRAMES
+    : motionMode === 'slow'
+      ? GIF_EXPORT_SLOW_FRAMES
+      : 1;
+  const requestedFrames = Number(options.frameCount);
+  const frameCount = Math.max(1, Math.min(60, Math.floor(Number.isFinite(requestedFrames) ? requestedFrames : defaultFrames)));
+  const durationSeconds = motionMode === 'fast' ? 1.15 : motionMode === 'slow' ? 2.8 : 1;
+  const requestedDelay = Number(options.delayCs);
+  const delayCs = Math.max(2, Math.floor(Number.isFinite(requestedDelay) ? requestedDelay : (durationSeconds * 100) / frameCount));
+
+  const writer = new GifByteWriter();
+  gifWriteHeader(writer, size.outputWidth, size.outputHeight);
+  for (let i = 0; i < frameCount; i++) {
+    const progress = frameCount <= 1 ? 0 : i / frameCount;
+    const svgText = createGifFrameSvgText(svg, size, edges, progress, motionMode);
+    await drawSvgTextToCanvas(svgText, canvas, ctx);
+    const indices = imageDataToGifIndices(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    gifWriteFrame(writer, indices, canvas.width, canvas.height, delayCs);
+    if (!options.skipYield && i < frameCount - 1) {
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    }
+  }
+  writer.byte(0x3b);
+  return new Blob([writer.toUint8Array()], { type: 'image/gif' });
+}
+
+function downloadBlob(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
 document.getElementById('downloadSvg').addEventListener('click', () => {
   const svg = $preview.querySelector('svg');
   if (!svg) return;
@@ -7757,6 +8138,40 @@ document.getElementById('downloadSvg').addEventListener('click', () => {
   document.body.appendChild(a); a.click();
   document.body.removeChild(a); URL.revokeObjectURL(url);
   toast('SVG downloaded');
+});
+
+document.getElementById('downloadGif').addEventListener('click', async () => {
+  const svg = $preview.querySelector('svg');
+  if (!svg) { toast('Render the diagram first'); return; }
+
+  const btn = document.getElementById('downloadGif');
+  const originalText = btn.textContent;
+  const originalTitle = btn.title;
+  btn.disabled = true;
+  btn.textContent = 'GIF...';
+  btn.title = 'Building GIF...';
+  const modeAtStart = edgeAnimationMode();
+  const willAnimate = modeAtStart !== 'off' && !prefersReducedMotion();
+  toast(willAnimate ? 'Building animated GIF...' : 'Building GIF...');
+
+  try {
+    const blob = await createDiagramGifBlob(svg);
+    downloadBlob('diagram.gif', blob);
+    if (willAnimate) {
+      toast('Animated GIF downloaded');
+    } else if (modeAtStart === 'off') {
+      toast('GIF downloaded (enable Edge motion for animated arrows)', 3600);
+    } else {
+      toast('GIF downloaded (reduced motion is on)', 3600);
+    }
+  } catch (err) {
+    console.error(err);
+    toast(`GIF export failed: ${err.message || err}`, 5000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    btn.title = originalTitle;
+  }
 });
 
 document.getElementById('downloadPng').addEventListener('click', () => {

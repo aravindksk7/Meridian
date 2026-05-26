@@ -180,7 +180,7 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **Diagram library** — save, name, and reload your own diagram snippets (`Ctrl+Shift+L`)
 - **Persistent node positions** — drag nodes to rearrange; positions survive re-renders and page reloads
 - **Project import/export** — save or restore `.meridian.json` and `.mmd` bundles with input, type, theme, settings, and node positions
-- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, copy as embed `<iframe>`, download SVG, download PNG (2×)
+- **Copy & export** — copy Mermaid code, copy as fenced block, copy as Markdown, copy as embed `<iframe>`, download SVG, download PNG (2×), download GIF with animated edges
 - **Shareable URLs** — encode full diagram state (input, type, theme) into a URL hash
 - **Help modal** — built-in reference panel (press `?` or `F1`)
 - **Auto-save** — state persisted to `localStorage`
@@ -449,6 +449,7 @@ Violations appear in the lint panel as `NAMING_CONVENTION` warnings. Clicking a 
 |---------|--------|
 | ↓ SVG | Download the diagram as a scalable SVG file |
 | ↓ PNG | Download at 2× (retina) resolution |
+| ↓ GIF | Download an animated GIF when Edge motion is on, or a static GIF when it is off |
 | Copy ▾ | Copy code · copy with ` ```mermaid ` fences · copy as Markdown · copy embed `<iframe>` |
 | 🔗 Share | Encode full diagram state into a shareable URL (`Ctrl+Shift+S`) |
 | Import | Load a `.meridian.json` project, Meridian `.mmd` bundle, or plain `.mmd` input file |
