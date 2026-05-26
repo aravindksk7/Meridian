@@ -12,7 +12,7 @@ A smart, single-file diagram generator that turns plain-text descriptions of sys
 
 ## Overview
 
-Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, network zone boundaries, 12 entity types, and a rich **Design Board** mode for open-design, Figma-style storytelling — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
+Meridian lets you describe your architecture, data flows, or system relationships in a simple, readable shorthand and instantly renders a professional diagram. It supports enterprise-grade grouping with business domain ownership, nested subdomains, network zone boundaries, 13 entity types, and a rich **Design Board** mode for open-design, Figma-style storytelling — all in a zero-dependency single HTML file. A dedicated **AI icon tab** covers the full modern AI stack, and an **AI / RAG App** template gets you started in seconds.
 
 ---
 
@@ -111,7 +111,7 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 ## Features
 
 ### Editing
-- **12 entity types** — app, db, server, instance, interface, config, batch, watcher, ftp, net, domain, env
+- **13 entity types** — app, db, server, instance, interface, config, batch, watcher, ftp, net, domain, subdomain, env
 - **Auto-detection** — smart type inference from names (e.g. `api_gateway` → interface, `postgres` → db, `ec2_instance` → server)
 - **Compound name support** — underscore and hyphen separators handled correctly in auto-detection
 - **CodeMirror 6 editor** — line numbers, in-place syntax highlighting, undo/redo history, `Ctrl+/` comment toggle
@@ -122,9 +122,11 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 
 ### Grouping & Topology
 - **Business domain groupings** — colour-coded dashed subgraphs for team/org ownership (`domain:`)
+- **Nested subdomain groupings** — `subdomain:` blocks inside a `domain:` for capability/team grouping with their own collapse controls
 - **Network zones** — security boundary subgraphs with distinct colours (`net:`)
 - **Environment blocks** — deployment topology groupings (`env:`)
 - **Hybrid mode** — entities can appear in both `env:` and `domain:` simultaneously; domain ownership shown through fill-colour overrides
+- **Colorful collapsible groups** — `env:`, `net:`, `domain:`, and `subdomain:` groups expose live preview controls that collapse the group to a styled proxy node and persist the state
 
 ### Diagrams
 - **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class
@@ -132,10 +134,12 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **5 themes** — Default, Dark, Forest, Neutral, Base
 - **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
 - **Arrow aliases** — `--requires-->` = dashed; `--triggers-->` = thick
+- **Animated edges option** — add slow or fast moving-arrow overlays from Appearance > Diagram without changing generated Mermaid code; works across all diagram types including edges between nodes inside `domain:` and `subdomain:` grouping blocks; reduced-motion users get the static diagram
 - **12 natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, `sends to`, `talks to`, `uses`, `forwards to`, `publishes to`, `subscribes to`
 
 ### Cloud Service Icon Picker (☁️ Icons ▾)
-- **210+ named services** across five provider tabs — AWS, GCP, Azure, General, and **AI**
+- **1,274 named services** across five provider tabs — AWS, GCP, Azure, General, and **AI**; the General tab (217 services) renders icons with Iconify vector icons sourced from `logos` and `simple-icons` packs where available
+- **Integration layer icons** — Confluent Kafka, Kafka Connect, Schema Registry, Debezium, Apache Camel, MuleSoft, Boomi, IBM MQ, TIBCO, CrushFTP, SFTPGo, FileZilla Server, GoAnywhere MFT, and related integration/MFT services in the General tab
 - **AI tab** — 70+ icons spanning LLM providers (OpenAI, Anthropic Claude, Google Gemini, Meta LLaMA, Mistral), orchestration frameworks (LangChain, LlamaIndex, AutoGen, CrewAI, LangGraph), ML libraries (PyTorch, TensorFlow, scikit-learn, Hugging Face), vector databases (Pinecone, Qdrant, Weaviate, Milvus, Chroma), MLOps (MLflow, W&B, DVC), AI observability (Langfuse, Arize, Evidently), and LLM serving (vLLM, TGI, Triton, LiteLLM)
 - **Emoji-embedded labels** — clicking an icon inserts the entity with the service's icon embedded in the diagram node
 - **Search** — filter across all icons in the active tab by service name
@@ -154,6 +158,7 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **Dark / light theme** — full CSS design token system, switchable via toolbar
 - **Checkerboard canvas** — distinct preview background pattern, theme-aware
 - **Pan & zoom** — drag to pan, Ctrl+scroll or Ctrl+±/−, fit-to-window button; click the zoom percentage to open a quick-pick dropdown (25% – 500%)
+- **Minimap navigator** — small live overview window with a viewport rectangle; click or drag inside it to navigate large diagrams, or collapse it when you need more canvas space
 - **Resizable panels** — drag the divider to adjust input/preview split
 - **Fullscreen preview** — expand diagram to full viewport
 
@@ -161,12 +166,13 @@ batch:Ingest >> batch:Transform >> batch:Load >> db:Warehouse
 - **Click a node** — scrolls Smart Input to that entity's definition and briefly highlights the editor border; opens the node context panel
 - **Double-click a node** — opens node context panel and activates the rename input directly
 - **Hover a node** — a floating tooltip shows the entity's type, name, and up to 4 incoming/outgoing connections; dismisses on mouse leave
-- **Click a subgraph title** — collapses the entire `env:` or `domain:` group to a single proxy node ("▶ Production (3 nodes)"); all outgoing/incoming edges are redirected to the proxy; click again to expand; collapsed state persists across page reloads
+- **Click a subgraph control or title** — colorful `env:`, `net:`, `domain:`, and `subdomain:` groups can collapse to a styled proxy node ("▶ Production (3 nodes)"); all outgoing/incoming edges are redirected to the proxy; click Expand to restore; collapsed state persists across page reloads
 - **Drag a node** — repositions the node and redraws edges in real time; positions survive re-renders, page reloads, and export/import
 - **↗ drag handle** — hover a node and drag the handle to a target node to create a new arrow relationship inserted into Smart Input
 - **Node context panel** — Add node (create + connect), Connect to… (connect to any existing entity), Delete (removes entity and all its relationships), jump to arrow lines
 - **Click an arrow / edge label** — selects and highlights the corresponding arrow line in Smart Input
 - **Drag on empty canvas** — pans the preview
+- **Click or drag the minimap** — jumps the live preview to that part of the rendered diagram
 
 ### Productivity
 - **10 templates** — quick-start presets covering microservices, 3-tier app, CI/CD pipeline, cloud infra, ETL, file processing, network architecture, enterprise domains, an AI/RAG application, and a Design Board
@@ -250,6 +256,7 @@ domain:Data {
 | `env:` | — | Environment | Subgraph | prod, production, staging, dev, qa, uat, sandbox… |
 | `net:` | `network:, zone:` | Network Zone | Subgraph | Colour by zone name — External, DMZ, Internal |
 | `domain:` | `dom:, team:, biz:, bu:` | Business Domain | Subgraph | Auto-colour per domain from palette |
+| `subdomain:` | `subdom:, subteam:, sd:` | Nested Domain Group | Subgraph | Groups capabilities or teams inside a parent domain |
 
 ### Arrow Styles
 
@@ -277,10 +284,17 @@ net:DMZ {
 }
 
 domain:Finance {
-  app:Billing
-  db:Transactions
+  subdomain:Payments {
+    app:Billing
+    db:Transactions
+  }
+  subdomain:Risk {
+    app:FraudScoring
+  }
 }
 ```
+
+`subdomain:` blocks can be nested inside `domain:` blocks. Their children also count as members of the parent domain, so domain palette styling, inspector membership, and collapse behavior stay consistent.
 
 #### Hybrid mode — env + domain on the same entities
 
@@ -319,8 +333,8 @@ Meridian warns while you type without blocking preview rendering:
 | `DUPLICATE_LABEL` | Same label appears under different entity types |
 | `UNKNOWN_PREFIX` | Prefix is not one of Meridian's supported entity types |
 | `INVALID_ARROW` | Arrow-like text does not match supported arrow syntax |
-| `EMPTY_GROUP` | `env:`, `net:`, or `domain:` block contains no valid entities |
-| `RELATIONSHIP_TO_CONTAINER` | Relationship targets an `env:`, `net:`, or `domain:` container instead of a concrete entity |
+| `EMPTY_GROUP` | `env:`, `net:`, `domain:`, or `subdomain:` block contains no valid entities |
+| `RELATIONSHIP_TO_CONTAINER` | Relationship targets an `env:`, `net:`, `domain:`, or `subdomain:` container instead of a concrete entity |
 | `CIRCULAR_DEPENDENCY` | Directed cycle detected in the relationship graph (e.g. A → B → C → A) |
 | `NAMING_CONVENTION` | Entity label does not match the configured case style or exceeds the max label length (⚙️ → Linting) |
 
@@ -411,6 +425,7 @@ Switching themes resets any individual token colour overrides back to the new th
 | Node fill | Primary node background colour |
 | Node border | Primary node border colour |
 | Edge color | Arrow and edge line colour |
+| Edge motion | Off / Slow / Fast moving-arrow overlay |
 | Background | Canvas background colour |
 
 > Custom diagram colours only take full effect when the **diagram theme** (top toolbar) is set to **🎨 Base**.
@@ -441,6 +456,19 @@ Violations appear in the lint panel as `NAMING_CONVENTION` warnings. Clicking a 
 
 ---
 
+## Testing
+
+The app runtime still uses CDN libraries and has no build step. The committed Playwright suite covers parser behavior, icon data generation, live preview interactions, animated edges, collapsible subdomain groups, integration icons, and the minimap navigator.
+
+```bash
+npm install
+npm test
+```
+
+Use `npm run build:icons:dry` to validate icon source JSON without rewriting `meridian.html`, or `npm run build:icons` to regenerate the embedded icon catalog from `icons-data/*.json`.
+
+---
+
 ## Dependencies (CDN)
 
 | Library | Version | Purpose |
@@ -449,7 +477,7 @@ Violations appear in the lint panel as `NAMING_CONVENTION` warnings. Clicking a 
 | [Tailwind CSS](https://tailwindcss.com/) | v3 | Utility styling |
 | [CodeMirror](https://codemirror.net/) | v6 | Code editor (syntax, autocomplete, history) |
 
-No npm install. No build step. Open and use.
+No npm install is required to use the app itself. Open `meridian.html` directly, or use npm only when running the test and icon-generation tooling.
 
 ---
 

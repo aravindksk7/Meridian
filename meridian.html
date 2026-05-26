@@ -84,6 +84,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .badge-net-ext   { background:#fee2e2;color:#7f1d1d;border-color:#fca5a5; }
 .badge-net-int   { background:#eff6ff;color:#1e3a8a;border-color:#93c5fd; }
 .badge-domain    { background:#fdf4ff;color:#701a75;border-color:#e879f9; }
+.badge-subdomain { background:#eef2ff;color:#312e81;border-color:#818cf8; }
 
 
 /* Zoom controls */
@@ -162,6 +163,7 @@ kbd { background:var(--kbd-bg);color:var(--kbd-text);border:1px solid var(--kbd-
       padding:1px 5px;font-size:10px;font-family:monospace; }
 
 /* SVG zoom wrapper */
+#rightPanel { position:relative; }
 #zoomWrapper { transform-origin: top left; transition: transform .15s ease; display:inline-block; cursor: grab; }
 #zoomWrapper.is-panning { cursor: grabbing !important; }
 #zoomWrapper.no-diagram { cursor: default; }
@@ -173,6 +175,55 @@ kbd { background:var(--kbd-bg);color:var(--kbd-text);border:1px solid var(--kbd-
 [data-theme="light"] #previewScroll {
   background: repeating-linear-gradient(45deg,#f9fafb 0,#f9fafb 10px,#f3f4f6 10px,#f3f4f6 20px);
 }
+
+#previewMinimap {
+  position:absolute;right:14px;bottom:14px;z-index:80;width:194px;
+  background:rgba(17,24,39,.92);border:1px solid rgba(148,163,184,.42);
+  border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.34);overflow:hidden;
+  backdrop-filter:blur(6px);
+}
+#previewMinimap.hidden { display:none; }
+#previewMinimap.collapsed { width:auto; }
+#previewMinimap.collapsed .minimap-body { display:none; }
+.minimap-hdr {
+  height:26px;display:flex;align-items:center;gap:6px;padding:0 6px 0 8px;
+  border-bottom:1px solid rgba(148,163,184,.22);color:#cbd5e1;font-size:10px;
+  font-weight:800;text-transform:uppercase;letter-spacing:.06em;user-select:none;
+}
+.minimap-title { flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.minimap-btn {
+  width:18px;height:18px;border:1px solid rgba(148,163,184,.45);border-radius:4px;
+  background:rgba(31,41,55,.85);color:#cbd5e1;font-size:12px;line-height:1;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;
+}
+.minimap-btn:hover { background:rgba(55,65,81,.92);color:#fff; }
+.minimap-body {
+  position:relative;width:192px;height:124px;background:rgba(15,23,42,.72);
+  cursor:crosshair;overflow:hidden;
+}
+#minimapSvgHost { position:absolute;inset:6px;overflow:hidden;pointer-events:none; }
+#minimapSvgHost svg { position:absolute;display:block;max-width:none!important;max-height:none!important;overflow:visible!important; }
+#minimapSvgHost svg * { filter:none!important;text-shadow:none!important; }
+#minimapSvgHost svg .edgeLabel,
+#minimapSvgHost svg g.edgeLabel { display:none!important; }
+#minimapSvgHost svg .edgePaths path,
+#minimapSvgHost svg .edgePath path,
+#minimapSvgHost svg path.flowchart-link {
+  stroke:#64748b!important;stroke-width:1.4px!important;opacity:.5!important;
+  marker-start:none!important;marker-end:none!important;marker-mid:none!important;filter:none!important;
+}
+#minimapViewport {
+  position:absolute;border:2px solid var(--accent);background:rgba(99,102,241,.18);
+  border-radius:3px;box-shadow:0 0 0 1px rgba(255,255,255,.55),0 0 12px rgba(99,102,241,.35);
+  min-width:8px;min-height:8px;pointer-events:none;
+}
+[data-theme="light"] #previewMinimap {
+  background:rgba(255,255,255,.94);border-color:rgba(100,116,139,.34);
+  box-shadow:0 12px 28px rgba(15,23,42,.16);
+}
+[data-theme="light"] .minimap-hdr { color:#334155;border-bottom-color:rgba(100,116,139,.22); }
+[data-theme="light"] .minimap-btn { background:#f8fafc;color:#475569;border-color:#cbd5e1; }
+[data-theme="light"] .minimap-body { background:rgba(241,245,249,.82); }
 
 ::-webkit-scrollbar { width:5px;height:5px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -283,6 +334,12 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
   color: #e2e8f0 !important;
   background: transparent !important;
 }
+#mermaidOutput svg .meridian-edge-animation { pointer-events:none; }
+@media (prefers-reduced-motion: reduce) {
+  #mermaidOutput svg .meridian-edge-animation { display:none; }
+}
+#mermaidOutput svg .meridian-group-toggle { cursor:pointer;pointer-events:all; }
+#mermaidOutput svg .meridian-group-toggle text { user-select:none;font-family:inherit; }
 
 /* ── Floating node "+" handle ── */
 #nodeHandle {
@@ -548,6 +605,8 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 .fsz-btn { background:var(--surface-2);border:1px solid var(--border);color:var(--text-muted);border-radius:4px;padding:3px 11px;font-size:11px;cursor:pointer;transition:background .1s; }
 .fsz-btn.active { background:var(--accent);border-color:var(--accent);color:#fff; }
 .fsz-btn:hover:not(.active) { background:var(--surface-3); }
+.edge-mode-group { display:flex;align-items:center;gap:4px; }
+.edge-mode-btn { min-width:44px; }
 /* Token color grid */
 .token-grid { display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;width:100%; }
 .token-row { display:flex;align-items:center;gap:6px;padding:2px 0; }
@@ -628,7 +687,7 @@ domain:Platform {
           <li>Switch views with the Diagram type dropdown — Flowchart, Design Board, Sequence, Class</li>
           <li>Use <span class="hcode">🏷️ Entities ▾</span> to pick an entity type — it inserts the prefix and you just type the name</li>
           <li>Use <span class="hcode">📋 Templates ▾</span> to load a working example instantly</li>
-          <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 210+ service icons across AWS, GCP, Azure, General, and AI tabs — click any icon to insert it with its emoji embedded in the label</li>
+          <li>Use <span class="hcode">☁️ Icons ▾</span> to browse 1,274 service icons across AWS, GCP, Azure, General, and AI tabs — click any icon to insert it with its emoji embedded in the label</li>
           <li>Use the <strong>🤖 AI</strong> icon tab for AI stack diagrams — LLMs, frameworks, vector DBs, MLOps, and more. Pair with the <span class="hcode">🤖 AI / RAG App</span> template to start quickly</li>
           <li>Click the zoom percentage (e.g. <span class="hcode">100%</span>) in the preview toolbar to open a zoom preset picker — from 25% to 500%</li>
         </ul>
@@ -653,6 +712,7 @@ domain:Platform {
             <tr><td><code>ftp:</code></td><td><code>sftp:, ftps:</code></td><td>📁</td><td>Stadium</td><td>sftp, ftps, vsftpd, filezilla, winscp, ftpd</td></tr>
             <tr><td><code>net:</code></td><td><code>network:, zone:</code></td><td>🌍/🔒/🛡️</td><td>Subgraph</td><td>Colour by zone name — External, DMZ, Internal</td></tr>
             <tr><td><code>domain:</code></td><td><code>dom:, team:, biz:, bu:</code></td><td>🏢</td><td>Subgraph</td><td>Auto-colour per domain from palette</td></tr>
+            <tr><td><code>subdomain:</code></td><td><code>subdom:, subteam:, sd:</code></td><td>🔹</td><td>Nested subgraph</td><td>Groups entities inside a parent <code>domain:</code></td></tr>
           </tbody>
         </table>
       </div>
@@ -694,7 +754,7 @@ app:Frontend &lt;--&gt; app:Backend</div>
       <!-- ── Grouping ── -->
       <div id="hs-grouping" class="help-section">
         <div class="help-h2">Grouping Blocks</div>
-        <div class="help-sub">Three independent block types create visual subgraphs. They can be mixed freely on the same diagram.</div>
+        <div class="help-sub">Four block types create colorful visual subgraphs. They can be mixed freely on the same diagram, and the live preview can collapse or expand them without editing Smart Input.</div>
         <table class="help-tbl">
           <thead><tr><th>Block</th><th>Purpose</th><th>Visual</th></tr></thead>
           <tbody>
@@ -723,8 +783,16 @@ app:Frontend &lt;--&gt; app:Backend</div>
               <td>Business domain / team ownership boundary</td>
               <td>Dashed 3px coloured border<br><span class="text-gray-500 text-xs">auto-colour per domain</span></td>
             </tr>
+            <tr>
+              <td><code>subdomain:Capability { … }</code></td>
+              <td>Nested capability group inside a domain</td>
+              <td>Indented dashed border<br><span class="text-gray-500 text-xs">inherits the parent domain palette</span></td>
+            </tr>
           </tbody>
         </table>
+
+        <div class="help-h3">Live collapse controls</div>
+        <p class="text-xs text-gray-400 mb-3">Rendered <span class="hcode">env:</span>, <span class="hcode">net:</span>, <span class="hcode">domain:</span>, and <span class="hcode">subdomain:</span> groups include a small Collapse control. Collapsing replaces the group with a styled proxy node, redirects incoming and outgoing edges to that proxy, and persists the state in <code>localStorage</code>. Click Expand on the proxy to restore the full group.</p>
 
         <div class="help-h3">Multi-line block syntax</div>
         <div class="help-ex">env:Production {
@@ -739,8 +807,12 @@ net:DMZ {
 }
 
 domain:Platform {
-  server:API_Gateway
-  app:Auth_Service
+  subdomain:Identity {
+    app:Auth_Service
+  }
+  subdomain:API {
+    server:API_Gateway
+  }
 }</div>
 
         <div class="help-h3">Hybrid mode — env + domain on the same entities</div>
@@ -807,8 +879,8 @@ BatchJob writes to db:Warehouse</div>
             <tr><td><code>DUPLICATE_LABEL</code></td><td>The same label appears under different entity types, such as <code>app:User</code> and <code>db:User</code>.</td></tr>
             <tr><td><code>UNKNOWN_PREFIX</code></td><td>A prefix is not one of Meridian's supported entity types.</td></tr>
             <tr><td><code>INVALID_ARROW</code></td><td>Arrow-like text does not match supported syntax like <code>A --&gt; B</code> or <code>A --label--&gt; B</code>.</td></tr>
-            <tr><td><code>EMPTY_GROUP</code></td><td>An <code>env:</code>, <code>net:</code>, or <code>domain:</code> block has no valid child entities.</td></tr>
-            <tr><td><code>RELATIONSHIP_TO_CONTAINER</code></td><td>A relationship targets a container block instead of a concrete node inside it.</td></tr>
+            <tr><td><code>EMPTY_GROUP</code></td><td>An <code>env:</code>, <code>net:</code>, <code>domain:</code>, or <code>subdomain:</code> block has no valid child entities.</td></tr>
+            <tr><td><code>RELATIONSHIP_TO_CONTAINER</code></td><td>A relationship targets an <code>env:</code>, <code>net:</code>, <code>domain:</code>, or <code>subdomain:</code> container instead of a concrete node inside it.</td></tr>
           </tbody>
         </table>
       </div>
@@ -819,7 +891,7 @@ BatchJob writes to db:Warehouse</div>
         <div class="help-sub">The toolbar above the Smart Input gives quick access to entity insertion, templates, cloud service icons, and app settings.</div>
 
         <div class="help-h3">🏷️ Entities ▾</div>
-        <p class="text-xs text-gray-400 mb-3">Opens a grid of all 12 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
+        <p class="text-xs text-gray-400 mb-3">Opens a grid of all 13 entity types, each shown as a colour-coded badge pill with a short description. Click any card to insert that prefix at the cursor — the diagram updates live as you type the entity name after it.</p>
 
         <div class="help-h3">📋 Templates ▾</div>
         <p class="text-xs text-gray-400 mb-3">Ten pre-built diagrams you can load instantly. Selecting a template replaces the current Smart Input content and re-renders the diagram. The previous content is still reachable via <kbd class="hkbd">Ctrl+Z</kbd>.</p>
@@ -843,14 +915,14 @@ BatchJob writes to db:Warehouse</div>
         <p class="text-xs text-gray-400 mb-3">Loads focused architecture presets for system context, container, deployment, and domain ownership views. Each preset uses the same Smart Input syntax and can be edited like any other diagram.</p>
 
         <div class="help-h3">☁️ Icons ▾ — cloud service icon picker</div>
-        <p class="text-xs text-gray-400 mb-2">Browse 210+ named services across five provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
+        <p class="text-xs text-gray-400 mb-2">Browse 1,274 named services across five provider tabs. Clicking an icon inserts the entity into the Smart Input with the service's emoji embedded in the label so it appears directly in the diagram node.</p>
         <table class="help-tbl" style="margin-bottom:12px">
           <thead><tr><th>Tab</th><th>Services included</th></tr></thead>
           <tbody>
             <tr><td>AWS</td><td>Lambda, EC2, ECS, EKS, S3, RDS, DynamoDB, SQS, SNS, CloudFront, IAM, CloudWatch, CodePipeline…</td></tr>
             <tr><td>GCP</td><td>Cloud Functions, GKE, Cloud Run, BigQuery, Firestore, Pub/Sub, Cloud Armor, Vertex AI…</td></tr>
             <tr><td>Azure</td><td>Azure Functions, AKS, Cosmos DB, Service Bus, Event Hubs, Key Vault, Azure Monitor…</td></tr>
-            <tr><td>General</td><td>Docker, Kubernetes, PostgreSQL, Kafka, RabbitMQ, Nginx, Grafana, Prometheus, Terraform, ArgoCD…</td></tr>
+            <tr><td>General</td><td>Docker, Kubernetes, PostgreSQL, Kafka, RabbitMQ, Nginx, Grafana, Prometheus, Terraform, ArgoCD, Confluent Kafka, Kafka Connect, CrushFTP, SFTPGo… — 217 services; the majority render with Iconify vector icons sourced from <code>logos</code> and <code>simple-icons</code> packs</td></tr>
             <tr><td>🤖 AI</td><td><strong>LLM providers</strong> — OpenAI GPT, Anthropic Claude, Google Gemini, Meta LLaMA, Mistral, Cohere, xAI Grok… <strong>Frameworks</strong> — LangChain, LlamaIndex, AutoGen, CrewAI, LangGraph, Haystack, DSPy, Semantic Kernel… <strong>ML libs</strong> — PyTorch, TensorFlow, Hugging Face, scikit-learn, JAX, ONNX… <strong>Vector DBs</strong> — Pinecone, Qdrant, Weaviate, Milvus, Chroma, pgvector… <strong>MLOps</strong> — MLflow, W&amp;B, DVC, ZenML… <strong>Observability</strong> — Langfuse, Arize, Evidently, Helicone… <strong>Serving</strong> — vLLM, TGI, Triton, LiteLLM…</td></tr>
           </tbody>
         </table>
@@ -876,6 +948,7 @@ BatchJob writes to db:Warehouse</div>
                 <strong>Font size</strong> — slider 10–28 px (enable checkbox to activate).<br>
                 <strong>Node fill / border</strong> — primary fill and border colours.<br>
                 <strong>Edge color</strong> — arrow and connector line colour.<br>
+                <strong>Edge motion</strong> — off, slow, or fast moving-arrow overlay that leaves the generated Mermaid code unchanged. Works across all diagram types, including edges between nodes inside <code>domain:</code> and <code>subdomain:</code> grouping blocks.<br>
                 <strong>Background</strong> — canvas background colour.<br>
                 <em class="text-gray-500">Custom diagram colours work best with the <strong>🎨 Base</strong> diagram theme.</em>
               </td>
@@ -926,6 +999,7 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>Copy embed &lt;iframe&gt;</td><td>Generates an <code>&lt;iframe&gt;</code> snippet pointing to the current diagram in read-only embed mode — paste into any HTML page or Notion/Confluence block</td></tr>
             <tr><td>⊞ Fit</td><td>Auto-fit zoom to the preview window</td></tr>
             <tr><td>100% (zoom display)</td><td>Click to open the zoom preset picker — 25% / 50% / 75% / 100% / 125% / 150% / 200% / 300% / 400% / 500%</td></tr>
+            <tr><td>Map minimap</td><td>Shows the whole rendered diagram with a viewport rectangle; click or drag inside it to navigate, or use +/- to collapse and expand the navigator.</td></tr>
             <tr><td>⛶ Fullscreen</td><td>Expand preview panel to full width</td></tr>
             <tr><td>🌙 / ☀️ Theme</td><td>Toggle dark / light app theme (saved automatically)</td></tr>
           </tbody>
@@ -945,6 +1019,8 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>Node context panel → connection item</td><td>Jumps to and selects that arrow line in Smart Input.</td></tr>
             <tr><td>Click / type in Smart Input</td><td>Highlights the node(s) on the current line in the preview (faint indigo dashes).</td></tr>
             <tr><td>Click an arrow / edge label</td><td>Selects and highlights the corresponding arrow line in Smart Input.</td></tr>
+            <tr><td>Click a subgraph control or title</td><td>Collapses a colourful group to a styled proxy node, redirects external edges to it, and persists the collapsed state; click Expand to restore the full group.</td></tr>
+            <tr><td>Click / drag the minimap</td><td>Moves the live preview to that part of the rendered diagram; use the +/- button to collapse or expand the navigator.</td></tr>
             <tr><td>Drag on empty preview space</td><td>Pans (scrolls) the preview canvas. Works alongside scroll and Ctrl+scroll zoom.</td></tr>
           </tbody>
         </table>
@@ -1054,6 +1130,13 @@ BatchJob writes to db:Warehouse</div>
             <input type="checkbox" class="color-enable" id="diagLineColorEnable">
             <input type="color" class="color-sw" id="diagLineColor" value="#4b5563" disabled>
             <span style="font-size:11px;color:var(--text-dim)">Arrows &amp; edges</span>
+          </div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Edge motion</div>
+          <div class="stt-ctrl">
+            <div id="edgeAnimBtns" class="edge-mode-group"></div>
+            <span style="font-size:11px;color:var(--text-dim)">Moving arrows</span>
           </div>
         </div>
         <div class="stt-row">
@@ -1320,6 +1403,7 @@ BatchJob writes to db:Warehouse</div>
         <code class="text-indigo-400 mx-0.5">env:X{…}</code>·
         <code class="text-teal-400 mx-0.5">batch:A>>batch:B</code>·
         <code style="color:#c026d3" class="mx-0.5">domain:BU{…}</code>·
+        <code style="color:#4f46e5" class="mx-0.5">subdomain:Team{…}</code>·
         <kbd>Ctrl+Enter</kbd> re-render
       </p>
     </div>
@@ -1407,6 +1491,17 @@ BatchJob writes to db:Warehouse</div>
             <p style="color:#9ca3af;font-size:12px;margin-top:4px">or pick a template above</p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="previewMinimap" class="hidden" aria-label="Preview minimap">
+      <div class="minimap-hdr">
+        <span class="minimap-title">Map</span>
+        <button id="minimapToggle" class="minimap-btn" type="button" title="Collapse minimap" aria-label="Collapse minimap">-</button>
+      </div>
+      <div id="minimapBody" class="minimap-body" title="Click or drag to navigate preview">
+        <div id="minimapSvgHost"></div>
+        <div id="minimapViewport"></div>
       </div>
     </div>
 
@@ -1529,7 +1624,7 @@ const EDITOR_THEMES = {
     num: '#f78c6c', br: '#89ddff', id: '#d1d5db',
     types: { env:'#60a5fa',app:'#4ade80',db:'#fbbf24',server:'#c084fc',
              instance:'#f87171',interface:'#22d3ee',config:'#fde68a',
-             batch:'#5eead4',watcher:'#a78bfa',ftp:'#f9a8d4',net:'#fb923c',domain:'#e879f9' },
+             batch:'#5eead4',watcher:'#a78bfa',ftp:'#f9a8d4',net:'#fb923c',domain:'#e879f9',subdomain:'#818cf8' },
   },
   onedark: {
     name: 'One Dark', dark: true,
@@ -1539,7 +1634,7 @@ const EDITOR_THEMES = {
     num: '#d19a66', br: '#56b6c2', id: '#abb2bf',
     types: { env:'#61afef',app:'#98c379',db:'#e5c07b',server:'#c678dd',
              instance:'#e06c75',interface:'#56b6c2',config:'#e5c07b',
-             batch:'#56b6c2',watcher:'#c678dd',ftp:'#e06c75',net:'#d19a66',domain:'#c678dd' },
+             batch:'#56b6c2',watcher:'#c678dd',ftp:'#e06c75',net:'#d19a66',domain:'#c678dd',subdomain:'#61afef' },
   },
   dracula: {
     name: 'Dracula', dark: true,
@@ -1549,7 +1644,7 @@ const EDITOR_THEMES = {
     num: '#bd93f9', br: '#8be9fd', id: '#f8f8f2',
     types: { env:'#8be9fd',app:'#50fa7b',db:'#f1fa8c',server:'#bd93f9',
              instance:'#ff5555',interface:'#8be9fd',config:'#f1fa8c',
-             batch:'#50fa7b',watcher:'#bd93f9',ftp:'#ffb86c',net:'#ff79c6',domain:'#bd93f9' },
+             batch:'#50fa7b',watcher:'#bd93f9',ftp:'#ffb86c',net:'#ff79c6',domain:'#bd93f9',subdomain:'#8be9fd' },
   },
   nord: {
     name: 'Nord', dark: true,
@@ -1559,7 +1654,7 @@ const EDITOR_THEMES = {
     num: '#b48ead', br: '#88c0d0', id: '#d8dee9',
     types: { env:'#88c0d0',app:'#a3be8c',db:'#ebcb8b',server:'#81a1c1',
              instance:'#bf616a',interface:'#88c0d0',config:'#ebcb8b',
-             batch:'#8fbcbb',watcher:'#b48ead',ftp:'#d08770',net:'#5e81ac',domain:'#b48ead' },
+             batch:'#8fbcbb',watcher:'#b48ead',ftp:'#d08770',net:'#5e81ac',domain:'#b48ead',subdomain:'#81a1c1' },
   },
   monokai: {
     name: 'Monokai', dark: true,
@@ -1569,7 +1664,7 @@ const EDITOR_THEMES = {
     num: '#ae81ff', br: '#66d9e8', id: '#f8f8f2',
     types: { env:'#66d9e8',app:'#a6e22e',db:'#e6db74',server:'#ae81ff',
              instance:'#f92672',interface:'#66d9e8',config:'#e6db74',
-             batch:'#a6e22e',watcher:'#ae81ff',ftp:'#fd971f',net:'#f92672',domain:'#ae81ff' },
+             batch:'#a6e22e',watcher:'#ae81ff',ftp:'#fd971f',net:'#f92672',domain:'#ae81ff',subdomain:'#66d9e8' },
   },
   solarized: {
     name: 'Solarized', dark: false,
@@ -1579,7 +1674,7 @@ const EDITOR_THEMES = {
     num: '#d33682', br: '#2aa198', id: '#657b83',
     types: { env:'#268bd2',app:'#859900',db:'#b58900',server:'#6c71c4',
              instance:'#dc322f',interface:'#2aa198',config:'#b58900',
-             batch:'#2aa198',watcher:'#6c71c4',ftp:'#cb4b16',net:'#268bd2',domain:'#d33682' },
+             batch:'#2aa198',watcher:'#6c71c4',ftp:'#cb4b16',net:'#268bd2',domain:'#d33682',subdomain:'#6c71c4' },
   },
 };
 
@@ -1589,6 +1684,13 @@ const FONT_FAMILIES = {
   cascadia:  "'Cascadia Code', 'Cascadia Mono', monospace",
   jetbrains: "'JetBrains Mono', 'JBMono', monospace",
 };
+
+const EDGE_ANIMATION_OPTIONS = [
+  { value: 'off',  label: 'Off' },
+  { value: 'slow', label: 'Slow' },
+  { value: 'fast', label: 'Fast' },
+];
+const EDGE_ANIMATION_VALUES = new Set(EDGE_ANIMATION_OPTIONS.map(opt => opt.value));
 
 let _editorSettings = {
   theme: 'meridian',
@@ -1603,8 +1705,14 @@ let _diagramSettings = {
   primaryColor: '',
   primaryBorderColor: '',
   lineColor: '',
+  edgeAnimation: 'off',
   background: '',
 };
+
+function edgeAnimationMode() {
+  const mode = String(_diagramSettings.edgeAnimation || 'off').toLowerCase();
+  return EDGE_ANIMATION_VALUES.has(mode) ? mode : 'off';
+}
 
 function loadSettings() {
   try {
@@ -1616,7 +1724,10 @@ function loadSettings() {
       _editorSettings.tokenColors = { ...(s.editor.tokenColors || {}) };
       _editorSettings.linting = { ..._editorSettings.linting, ...(s.editor.linting || {}) };
     }
-    if (s.diagram) _diagramSettings = { ..._diagramSettings, ...s.diagram };
+    if (s.diagram) {
+      _diagramSettings = { ..._diagramSettings, ...s.diagram };
+      _diagramSettings.edgeAnimation = edgeAnimationMode();
+    }
   } catch {}
 }
 
@@ -1646,7 +1757,7 @@ const TOAST_DURATION_MS    = 2200;
 const CM_TYPE_TOKENS = {
   env:'env', app:'app', db:'db', server:'server', instance:'instance',
   interface:'interface', config:'config', batch:'batch', watcher:'watcher',
-  ftp:'ftp', net:'net', domain:'domain',
+  ftp:'ftp', net:'net', domain:'domain', subdomain:'subdomain',
 };
 
 // Custom lezer Tags for each type prefix — built once at module scope
@@ -2340,7 +2451,7 @@ app:BI_Dashboard --> db:Warehouse`,
 // ════════════════════════════════════════════════════════════════
 //  PARSER
 // ════════════════════════════════════════════════════════════════
-const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu';
+const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu|subdomain|subdom|subteam|sd';
 const _pfxTest  = new RegExp(`^(?:${_PFX_STR}):`, 'i');
 const _splitRe  = new RegExp(`\\s*,\\s*|\\s+(?=(?:${_PFX_STR}):)`, 'i');
 const _adjacentPrefixRe = new RegExp(`\\](?=(?:${_PFX_STR}):)`, 'ig');
@@ -2355,8 +2466,85 @@ const TYPE_ALIAS_MAP = {
   ftp:'ftp', sftp:'ftp', ftps:'ftp',
   net:'net', network:'net', zone:'net',
   domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
+  subdomain:'subdomain', subdom:'subdomain', subteam:'subdomain', sd:'subdomain',
 };
-const CONTAINER_TYPES = new Set(['env', 'net', 'domain']);
+const CONTAINER_TYPES = new Set(['env', 'net', 'domain', 'subdomain']);
+
+const DOMAIN_PALETTE = [
+  { fill: '#fdf4ff', stroke: '#c026d3', color: '#701a75' },
+  { fill: '#fff7ed', stroke: '#f97316', color: '#c2410c' },
+  { fill: '#ecfdf5', stroke: '#059669', color: '#064e3b' },
+  { fill: '#eff6ff', stroke: '#1d4ed8', color: '#1e3a8a' },
+  { fill: '#fef2f2', stroke: '#ef4444', color: '#b91c1c' },
+  { fill: '#fffbeb', stroke: '#ca8a04', color: '#713f12' },
+  { fill: '#eef2ff', stroke: '#4f46e5', color: '#312e81' },
+  { fill: '#e0f2fe', stroke: '#0284c7', color: '#0c4a6e' },
+];
+const ENV_GROUP_PALETTE = [
+  { fill: '#eff6ff', stroke: '#2563eb', color: '#1e3a8a' },
+  { fill: '#ecfeff', stroke: '#0891b2', color: '#164e63' },
+  { fill: '#f0fdf4', stroke: '#16a34a', color: '#14532d' },
+  { fill: '#fefce8', stroke: '#ca8a04', color: '#713f12' },
+  { fill: '#f5f3ff', stroke: '#7c3aed', color: '#4c1d95' },
+];
+const NET_ZONE_VISUALS = {
+  external: { icon: '🌍', fill: '#fee2e2', stroke: '#dc2626', color: '#7f1d1d' },
+  internal: { icon: '🔒', fill: '#eff6ff', stroke: '#1d4ed8', color: '#1e3a8a' },
+  dmz:      { icon: '🛡️', fill: '#fff7ed', stroke: '#ea580c', color: '#7c2d12' },
+};
+
+function mapKeyIndex(map, key, filter = () => true) {
+  return [...(map?.keys?.() || [])].filter(filter).indexOf(key);
+}
+
+function groupChildrenFor(p, gid) {
+  const envKids = p.environments?.get(gid) || [];
+  const domKids = p.domains?.get(gid) || [];
+  const subKids = p.subdomains?.get(gid) || [];
+  return [...new Set([...envKids, ...domKids, ...subKids])];
+}
+
+function groupVisualFor(p, gid) {
+  const ent = p.entities?.get(gid);
+  if (!ent) return null;
+  const children = groupChildrenFor(p, gid);
+  if (p.subdomains?.has(gid)) {
+    const parentId = p.subdomainParents?.get(gid);
+    const parentIdx = parentId ? Math.max(0, mapKeyIndex(p.domains, parentId)) : 0;
+    const idx = Math.max(0, mapKeyIndex(p.subdomains, gid));
+    const pal = DOMAIN_PALETTE[(parentIdx + idx + 1) % DOMAIN_PALETTE.length];
+    return { ...pal, id: gid, kind: 'subdomain', icon: '🔹', label: ent.label, children, strokeWidth: '2px', dash: '3 3' };
+  }
+  if (p.domains?.has(gid)) {
+    const idx = Math.max(0, mapKeyIndex(p.domains, gid));
+    const pal = DOMAIN_PALETTE[idx % DOMAIN_PALETTE.length];
+    return { ...pal, id: gid, kind: 'domain', icon: '🏢', label: ent.label, children, strokeWidth: '3px', dash: '6 3' };
+  }
+  if (p.environments?.has(gid)) {
+    const zoneType = p.netZones?.get(gid);
+    if (zoneType) {
+      const zone = NET_ZONE_VISUALS[zoneType] || NET_ZONE_VISUALS.internal;
+      return { ...zone, id: gid, kind: 'net', label: ent.label, children, strokeWidth: '3px' };
+    }
+    const idx = Math.max(0, mapKeyIndex(p.environments, gid, id => !p.netZones?.has(id)));
+    const pal = ENV_GROUP_PALETTE[idx % ENV_GROUP_PALETTE.length];
+    return { ...pal, id: gid, kind: 'env', icon: '🌐', label: ent.label, children, strokeWidth: '3px' };
+  }
+  return null;
+}
+
+function groupStyleText(visual, opts = {}) {
+  if (!visual) return '';
+  const strokeWidth = opts.collapsed ? '3px' : (visual.strokeWidth || '2px');
+  const parts = [
+    `fill:${visual.fill}`,
+    `stroke:${visual.stroke}`,
+    `stroke-width:${strokeWidth}`,
+    `color:${visual.color}`,
+  ];
+  if (visual.dash) parts.push(`stroke-dasharray:${visual.dash}`);
+  return parts.join(',');
+}
 
 function normalizeIconId(value) {
   return String(value || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
@@ -2396,44 +2584,96 @@ class SmartParser {
     this.environments  = new Map(); // envId → [childIds]
     this.netZones      = new Map(); // envId → 'external'|'internal'|'dmz'
     this.domains       = new Map(); // domainId → [childIds]  (business domain ownership)
+    this.subdomains    = new Map(); // subdomainId → [childIds]
+    this.subdomainParents = new Map(); // subdomainId → parent domainId
     this.entitySources = new Map(); // id -> [{ line, raw, token, prefix }]
     this.relationshipSources = [];  // index-aligned with relationships
     this.groupSources  = new Map(); // groupId -> { line, raw, childIds }
     this.parseIssues   = [];        // semantic parser issues before validation
   }
 
-  // ── Pre-process: join multi-line env/net blocks into single lines ──
+  // ── Pre-process: join multi-line group blocks into single lines ──
   preprocess(input) {
-    const out    = [];
-    let inBlock  = false;
-    let bPrefix  = 'env'; // 'env' or 'net'
-    let bName    = '';
-    let bKids    = [];
-    let bLine    = 1;
+    const out = [];
+    const stack = [];
+    const GROUP_RE = '(env|net|domain|subdomain)';
 
     // Detect arrow lines (must have whitespace around the operator to avoid false positives in labels)
     const _blockArrowRe = /\s(?:<-+>|--[^>]*-->?|-->|-+>|>>)\s/;
+    const openerRe = new RegExp(`^${GROUP_RE}:\\s*([^\\s{]+)\\s*\\{$`, 'i');
+    const inlineBlockRe = new RegExp(`^${GROUP_RE}:\\s*([^\\s{]+)\\s*\\{([^}]*)\\}$`, 'i');
+
+    const nearestOpenDomain = () =>
+      [...stack].reverse().find(b => b.prefix === 'domain') || null;
+
+    const openBlock = (prefix, name, lineNo, raw) => {
+      prefix = prefix.toLowerCase();
+      stack.push({
+        prefix,
+        name,
+        kids: [],
+        line: lineNo,
+        raw,
+        parentDomainName: prefix === 'subdomain' ? nearestOpenDomain()?.name || '' : '',
+      });
+    };
+
+    const addKids = (tokens) => {
+      if (!stack.length) return;
+      const clean = tokens.map(t => String(t || '').trim()).filter(Boolean);
+      if (!clean.length) return;
+      const top = stack[stack.length - 1];
+      top.kids.push(...clean);
+
+      // Subdomain membership also counts as membership of the containing domain.
+      if (top.prefix === 'subdomain') {
+        stack.slice(0, -1)
+          .filter(b => b.prefix === 'domain')
+          .forEach(b => b.kids.push(...clean));
+      }
+    };
 
     const closeBlock = (lineNo, raw) => {
-      out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw });
-      inBlock = false; bPrefix = 'env'; bName = ''; bKids = []; bLine = lineNo;
+      if (!stack.length) return;
+      const b = stack.pop();
+      out.push({
+        text: `${b.prefix}:${b.name} { ${b.kids.join(' ')} }`,
+        line: b.line,
+        raw,
+        blockType: b.prefix,
+        parentDomainName: b.parentDomainName,
+      });
     };
 
     const processBlockContent = (content, lineNo, raw) => {
       if (!content || content.startsWith('//') || content.startsWith('#')) return;
+      const inlineBlock = content.match(inlineBlockRe);
+      if (inlineBlock) {
+        openBlock(inlineBlock[1], inlineBlock[2], lineNo, raw);
+        processBlockContent(inlineBlock[3].trim(), lineNo, raw);
+        closeBlock(lineNo, raw);
+        return;
+      }
+      const opener = content.match(openerRe);
+      if (opener) {
+        openBlock(opener[1], opener[2], lineNo, raw);
+        return;
+      }
       if (_blockArrowRe.test(content)) {
         // Emit arrow as a standalone relationship line to be parsed normally
         out.push({ text: content, line: lineNo, raw });
         // Also register the endpoint entities as group children (for subgraph membership)
+        const kids = [];
         const sides = content.split(/\s+(?:<-+>|--[^>]*-->?|-->|-+>|>>)\s+/);
         sides.forEach(side => {
           side.trim().split(_splitRe).filter(Boolean).forEach(tok => {
             const t = tok.trim();
-            if (t && _pfxTest.test(t)) bKids.push(t);
+            if (t && _pfxTest.test(t)) kids.push(t);
           });
         });
+        addKids(kids);
       } else {
-        bKids.push(...content.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
+        addKids(content.split(_splitRe).filter(Boolean).map(s => s.trim()).filter(Boolean));
       }
     };
 
@@ -2441,9 +2681,11 @@ class SmartParser {
       const lineNo = idx + 1;
       const line = raw.trim();
 
-      if (inBlock) {
+      if (stack.length) {
         if (line === '}') {
           closeBlock(lineNo, raw);
+        } else if (inlineBlockRe.test(line)) {
+          processBlockContent(line, lineNo, raw);
         } else if (line.endsWith('}') && line !== '}' && !line.startsWith('//') && !line.startsWith('#')) {
           // Inline closing brace: e.g. "instance:A --> instance:B}"
           processBlockContent(line.slice(0, -1).trim(), lineNo, raw);
@@ -2452,19 +2694,21 @@ class SmartParser {
           processBlockContent(line, lineNo, raw);
         }
       } else {
-        // Multi-line opener: env:X {  or  net:X {  or  domain:X {
-        const opener = line.match(/^(env|net|domain):\s*([^\s{]+)\s*\{$/i);
+        const inlineBlock = line.match(inlineBlockRe);
+        if (inlineBlock) {
+          out.push({ text: raw, line: lineNo, raw });
+          return;
+        }
+        // Multi-line opener: env:X {  or  net:X {  or  domain:X {  or subdomain:X {
+        const opener = line.match(openerRe);
         if (opener) {
-          inBlock = true;
-          bPrefix = opener[1].toLowerCase();
-          bName   = opener[2];
-          bLine   = lineNo;
+          openBlock(opener[1], opener[2], lineNo, raw);
         } else {
           out.push({ text: raw, line: lineNo, raw });
         }
       }
     });
-    if (inBlock) out.push({ text: `${bPrefix}:${bName} { ${bKids.join(' ')} }`, line: bLine, raw: `${bPrefix}:${bName} {` });
+    while (stack.length) closeBlock(stack[stack.length - 1].line, `${stack[stack.length - 1].prefix}:${stack[stack.length - 1].name} {`);
 
     return out;
   }
@@ -2549,7 +2793,7 @@ class SmartParser {
     return { type, label, icon: meta.icon, id: this.addEntity(type, label, { line, raw, token, prefix: '' }, meta.icon) };
   }
 
-  parseLine(line, lineNo = 1, rawLine = line) {
+  parseLine(line, lineNo = 1, rawLine = line, meta = {}) {
     const raw = rawLine || line;
     line = line.trim();
     line = line.replace(_adjacentPrefixRe, '] ');
@@ -2559,8 +2803,8 @@ class SmartParser {
       return;
     }
 
-    // Single-line env/net/domain block: env:X { … } | net:X { … } | domain:X { … }
-    const envBlock = line.match(/^(env|net|domain):\s*([^\s{]+)\s*\{([^}]*)\}/i);
+    // Single-line group block: env:X { … } | net:X { … } | domain:X { … } | subdomain:X { … }
+    const envBlock = line.match(/^(env|net|domain|subdomain):\s*([^\s{]+)\s*\{([^}]*)\}/i);
     if (envBlock) {
       const blockType = envBlock[1].toLowerCase();
       const blockName = envBlock[2];
@@ -2580,6 +2824,14 @@ class SmartParser {
         const domId = this.addEntity('domain', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
         this.domains.set(domId, childIds);
         this.groupSources.set(domId, { line: lineNo, raw, childIds });
+      } else if (blockType === 'subdomain') {
+        const subId = this.addEntity('subdomain', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
+        this.subdomains.set(subId, childIds);
+        this.groupSources.set(subId, { line: lineNo, raw, childIds });
+        if (meta.parentDomainName) {
+          const parentId = this.addEntity('domain', meta.parentDomainName, { line: meta.line || lineNo, raw, token: `domain:${meta.parentDomainName}`, prefix: 'domain' });
+          this.subdomainParents.set(subId, parentId);
+        }
       } else {
         const envId = this.addEntity('env', blockName, { line: lineNo, raw, token: `${blockType}:${blockName}`, prefix: blockType });
         this.environments.set(envId, childIds);
@@ -2706,7 +2958,7 @@ class SmartParser {
     const l = iconUrl ? this.htmlLabel(label, iconUrl) : this.safeLabel(label);
     // If label already starts with a non-ASCII char (e.g. emoji from icon picker), skip the type icon
     const _icons = {env:'🌐',app:'📦',db:'🗄️',server:'🖥️',instance:'⚙️',
-      interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢'};
+      interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢',subdomain:'🔹'};
     const lbl = !addTypeIcon || l.codePointAt(0) > 127 ? l : (_icons[type] ? `${_icons[type]} ${l}` : l);
     switch (type) {
       case 'db':        return `[("${lbl}")]`;
@@ -2738,19 +2990,8 @@ class SmartParser {
     L.push('    classDef ftp       fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843');
     L.push('    classDef net       fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e');
     L.push('    classDef domain    fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75');
+    L.push('    classDef subdomain fill:#eef2ff,stroke:#4f46e5,stroke-width:2px,color:#312e81');
     L.push('');
-
-    // ── Domain colour palette (auto-assigned per domain, cycles every 8) ──────
-    const DOMAIN_PALETTE = [
-      { fill: '#fdf4ff', stroke: '#c026d3', color: '#701a75' },  // fuchsia
-      { fill: '#fff7ed', stroke: '#f97316', color: '#c2410c' },  // orange
-      { fill: '#ecfdf5', stroke: '#059669', color: '#064e3b' },  // emerald
-      { fill: '#eff6ff', stroke: '#1d4ed8', color: '#1e3a8a' },  // royal blue
-      { fill: '#fef2f2', stroke: '#ef4444', color: '#b91c1c' },  // red
-      { fill: '#fffbeb', stroke: '#ca8a04', color: '#713f12' },  // golden
-      { fill: '#eef2ff', stroke: '#4f46e5', color: '#312e81' },  // indigo
-      { fill: '#e0f2fe', stroke: '#0284c7', color: '#0c4a6e' },  // sky blue
-    ];
 
     // Build per-entity domain lookup: entityId → palette index
     const domainPalOf  = new Map(); // entityId → palette index
@@ -2761,30 +3002,29 @@ class SmartParser {
     }
 
     const inEnv        = new Set([...this.environments.values()].flat());
-    const inDomainAny  = new Set([...this.domains.values()].flat());
+    const inSubdomain  = new Set([...this.subdomains.values()].flat());
+    const inDomainAny  = new Set([...this.domains.values(), ...this.subdomains.values()].flat());
     // Entities that live ONLY in a domain (not also in an env/net subgraph)
     const inDomainOnly = new Set([...inDomainAny].filter(id => !inEnv.has(id)));
+    const domainSubgroups = new Map();
+    for (const [subId, parentId] of this.subdomainParents) {
+      if (!domainSubgroups.has(parentId)) domainSubgroups.set(parentId, []);
+      domainSubgroups.get(parentId).push(subId);
+    }
 
     // ── Subgraphs: env + net zone blocks ─────────────────────────────────────
-    const NET_ICONS   = { external: '🌍', internal: '🔒', dmz: '🛡️' };
-    const NET_STYLES  = {
-      external: 'fill:#fee2e2,stroke:#dc2626,color:#7f1d1d',
-      internal: 'fill:#eff6ff,stroke:#1d4ed8,color:#1e3a8a',
-      dmz:      'fill:#fff7ed,stroke:#ea580c,color:#7c2d12',
-    };
-
     for (const [envId, kids] of this.environments) {
       const env = this.entities.get(envId);
       if (!env) continue;
-      const zt   = this.netZones.get(envId);
-      const icon = zt ? (NET_ICONS[zt] || '🌐') : '🌐';
+      const visual = groupVisualFor(this, envId);
+      const icon = visual?.icon || '🌐';
       L.push(`    subgraph ${envId}["${icon} ${this.safeLabel(env.label)}"]`);
       for (const kid of kids) {
         const e = this.entities.get(kid);
         if (e) L.push(`        ${this.nodeSyntax(kid, e)}`);
       }
       L.push('    end');
-      if (zt && NET_STYLES[zt]) L.push(`    style ${envId} ${NET_STYLES[zt]}`);
+      if (visual) L.push(`    style ${envId} ${groupStyleText(visual)}`);
       L.push('');
     }
 
@@ -2793,25 +3033,61 @@ class SmartParser {
     for (const [domId, kids] of this.domains) {
       const dom = this.entities.get(domId);
       if (!dom) { domIdx++; continue; }
-      const pal      = DOMAIN_PALETTE[domIdx % DOMAIN_PALETTE.length];
-      // Only include children NOT already inside an env/net subgraph
-      const ownKids  = kids.filter(k => !inEnv.has(k));
-      if (ownKids.length > 0) {
+      const visual   = groupVisualFor(this, domId);
+      // Only include children NOT already inside an env/net or nested subdomain subgraph
+      const ownKids  = kids.filter(k => !inEnv.has(k) && !inSubdomain.has(k));
+      const subgroups = (domainSubgroups.get(domId) || []).filter(subId =>
+        (this.subdomains.get(subId) || []).some(k => !inEnv.has(k))
+      );
+      if (ownKids.length > 0 || subgroups.length > 0) {
+        const nestedStyles = [];
         L.push(`    subgraph ${domId}["🏢 ${this.safeLabel(dom.label)}"]`);
         for (const kid of ownKids) {
           const e = this.entities.get(kid);
           if (e) L.push(`        ${this.nodeSyntax(kid, e)}`);
         }
+        for (const subId of subgroups) {
+          const sub = this.entities.get(subId);
+          const subVisual = groupVisualFor(this, subId);
+          const subKids = (this.subdomains.get(subId) || []).filter(k => !inEnv.has(k));
+          if (!sub || !subKids.length) continue;
+          L.push(`        subgraph ${subId}["${subVisual?.icon || '🔹'} ${this.safeLabel(sub.label)}"]`);
+          for (const kid of subKids) {
+            const e = this.entities.get(kid);
+            if (e) L.push(`            ${this.nodeSyntax(kid, e)}`);
+          }
+          L.push('        end');
+          if (subVisual) nestedStyles.push(`    style ${subId} ${groupStyleText(subVisual)}`);
+        }
         L.push('    end');
-        L.push(`    style ${domId} fill:${pal.fill},stroke:${pal.stroke},stroke-width:3px,stroke-dasharray:6 3,color:${pal.color}`);
+        if (visual) L.push(`    style ${domId} ${groupStyleText(visual)}`);
+        nestedStyles.forEach(line => L.push(line));
         L.push('');
       }
       domIdx++;
     }
 
     // ── Standalone nodes (not in any subgraph) ────────────────────────────────
+    // Standalone subdomains are supported, but nesting inside domain: is preferred.
+    for (const [subId, kids] of this.subdomains) {
+      if (this.subdomainParents.has(subId)) continue;
+      const sub = this.entities.get(subId);
+      if (!sub) continue;
+      const ownKids = kids.filter(k => !inEnv.has(k));
+      if (!ownKids.length) continue;
+      const visual = groupVisualFor(this, subId);
+      L.push(`    subgraph ${subId}["${visual?.icon || '🔹'} ${this.safeLabel(sub.label)}"]`);
+      for (const kid of ownKids) {
+        const e = this.entities.get(kid);
+        if (e) L.push(`        ${this.nodeSyntax(kid, e)}`);
+      }
+      L.push('    end');
+      if (visual) L.push(`    style ${subId} ${groupStyleText(visual)}`);
+      L.push('');
+    }
+
     for (const [id, e] of this.entities) {
-      const isContainer = this.environments.has(id) || this.domains.has(id);
+      const isContainer = this.environments.has(id) || this.domains.has(id) || this.subdomains.has(id);
       if (!isContainer && !inEnv.has(id) && !inDomainOnly.has(id)) {
         L.push(`    ${this.nodeSyntax(id, e)}`);
       }
@@ -2841,7 +3117,7 @@ class SmartParser {
     // ── Class assignments (skip subgraph containers) ──────────────────────────
     L.push('');
     for (const [id, e] of this.entities) {
-      if (!this.environments.has(id) && !this.domains.has(id)) {
+      if (!this.environments.has(id) && !this.domains.has(id) && !this.subdomains.has(id)) {
         L.push(`    class ${id} ${e.type}`);
       }
     }
@@ -2858,6 +3134,15 @@ class SmartParser {
         }
       }
       domIdx++;
+    }
+    for (const [subId, kids] of this.subdomains) {
+      const visual = groupVisualFor(this, subId);
+      if (!visual) continue;
+      for (const kid of kids) {
+        if (inEnv.has(kid)) {
+          L.push(`    style ${kid} fill:${visual.fill},stroke:${visual.stroke},stroke-width:3px,color:${visual.color}`);
+        }
+      }
     }
 
     return L.join('\n');
@@ -2893,7 +3178,7 @@ class SmartParser {
       env:'Environment', app:'Application', db:'Database',
       server:'Server', instance:'Instance', interface:'Interface', config:'Config',
       batch:'BatchJob', watcher:'FileWatcher', ftp:'FTPServer', net:'NetworkZone',
-      domain:'BusinessDomain'
+      domain:'BusinessDomain', subdomain:'Subdomain'
     };
 
     for (const [id, e] of this.entities) {
@@ -3064,7 +3349,7 @@ class SmartParser {
   parse(input, type) {
     this.reset();
     const processed = this.preprocess(input);
-    processed.forEach(entry => this.parseLine(entry.text, entry.line, entry.raw || entry.text));
+    processed.forEach(entry => this.parseLine(entry.text, entry.line, entry.raw || entry.text, entry));
 
     switch (type) {
       case 'design':   return this.toDesignBoard();
@@ -3091,6 +3376,7 @@ const DESIGN_TYPE_STYLES = {
   net:       { label: 'Network',   fill: '#eff6ff', stroke: '#3b82f6', accent: '#2563eb', text: '#1e3a8a' },
   env:       { label: 'Env',       fill: '#f0f9ff', stroke: '#0ea5e9', accent: '#0284c7', text: '#0c4a6e' },
   domain:    { label: 'Domain',    fill: '#fdf4ff', stroke: '#d946ef', accent: '#c026d3', text: '#701a75' },
+  subdomain: { label: 'Subdomain', fill: '#eef2ff', stroke: '#6366f1', accent: '#4f46e5', text: '#312e81' },
 };
 
 const DESIGN_LANE_STYLES = [
@@ -3149,7 +3435,7 @@ function designBuildGroups(p) {
   const isRenderable = id => {
     const ent = p.entities.get(id);
     if (!ent) return false;
-    const isContainer = p.environments.has(id) || p.domains.has(id);
+    const isContainer = p.environments.has(id) || p.domains.has(id) || p.subdomains.has(id);
     return !isContainer || used.has(id);
   };
   const groups = [];
@@ -3170,6 +3456,7 @@ function designBuildGroups(p) {
 
   let idx = 0;
   for (const [domId, kids] of p.domains) addGroup('Domain', domId, kids, idx++);
+  for (const [subId, kids] of p.subdomains) addGroup('Subdomain', subId, kids, idx++);
   for (const [envId, kids] of p.environments) {
     const kind = p.netZones.has(envId) ? 'Network' : 'Environment';
     addGroup(kind, envId, kids, idx++);
@@ -3182,7 +3469,7 @@ function designBuildGroups(p) {
       { kind: 'Interfaces', title: 'Interfaces', types: ['interface', 'server'] },
       { kind: 'Runtime', title: 'Runtime', types: ['instance', 'batch'] },
       { kind: 'Data', title: 'Data', types: ['db', 'config'] },
-      { kind: 'Ops', title: 'Ops', types: ['watcher', 'ftp', 'net', 'env', 'domain'] },
+      { kind: 'Ops', title: 'Ops', types: ['watcher', 'ftp', 'net', 'env', 'domain', 'subdomain'] },
     ];
     buckets.forEach((bucket, bucketIndex) => {
       const ids = remaining.filter(id => bucket.types.includes(p.entities.get(id)?.type));
@@ -3208,8 +3495,18 @@ function designBuildGroups(p) {
   return groups;
 }
 
-function designEdgePath(from, to, cardW) {
-  const leftToRight = to.cx >= from.cx;
+function designEdgePath(from, to, cardW, cardH) {
+  const halfH = (cardH || 96) / 2;
+  // Same-lane (same center x): route vertically between card tops/bottoms to avoid
+  // off-screen S-curves caused by the horizontal side-exit logic below.
+  if (from.cx === to.cx) {
+    const goDown = to.cy > from.cy;
+    const sy = from.cy + (goDown ? halfH : -halfH);
+    const ty = to.cy - (goDown ? halfH : +halfH);
+    const mid = (sy + ty) / 2;
+    return `M${from.cx},${sy} C${from.cx},${mid} ${to.cx},${mid} ${to.cx},${ty}`;
+  }
+  const leftToRight = to.cx > from.cx;
   const sx = from.cx + (leftToRight ? cardW / 2 : -cardW / 2);
   const tx = to.cx - (leftToRight ? cardW / 2 : -cardW / 2);
   const sy = from.cy;
@@ -3308,7 +3605,7 @@ function buildDesignBoardSvg(p) {
       : rel.style === 'post'
         ? { stroke: '#8b5cf6', width: 3.2, dash: '' }
         : { stroke: '#475569', width: 2.4, dash: '' };
-    L.push(`<path id="design-edge-${i}" class="design-edge" data-from="${svgEsc(rel.from)}" data-to="${svgEsc(rel.to)}" d="${designEdgePath(from, to, cardW)}" fill="none" stroke="${style.stroke}" stroke-width="${style.width}" ${style.dash ? `stroke-dasharray="${style.dash}"` : ''} marker-end="url(#design-arrow)" ${rel.bidir ? 'marker-start="url(#design-arrow)"' : ''} opacity=".74"/>`);
+    L.push(`<path id="design-edge-${i}" class="design-edge" data-from="${svgEsc(rel.from)}" data-to="${svgEsc(rel.to)}" d="${designEdgePath(from, to, cardW, cardH)}" fill="none" stroke="${style.stroke}" stroke-width="${style.width}" ${style.dash ? `stroke-dasharray="${style.dash}"` : ''} marker-end="url(#design-arrow)" ${rel.bidir ? 'marker-start="url(#design-arrow)"' : ''} opacity=".74"/>`);
   });
   L.push('</g>');
 
@@ -3369,10 +3666,10 @@ let isFullscreen     = false;
 let _prevRenderEmpty  = true;
 let _lastRenderedIds  = new Set();
 let semanticIssues    = [];
+const LS_COLLAPSED_KEY = 'meridian_collapsed_v1';
 const _collapsedGroups = new Set();
 // Load collapsed groups here — after _collapsedGroups is initialized
 loadCollapsedGroups();
-const LS_COLLAPSED_KEY = 'meridian_collapsed_v1';
 
 function loadCollapsedGroups() {
   try {
@@ -3392,28 +3689,39 @@ function applyGroupCollapse(code) {
   for (const gid of _collapsedGroups) {
     const e = parser.entities.get(gid);
     if (!e) continue;
-    const envKids = parser.environments.get(gid) || [];
-    const domKids = parser.domains.get(gid) || [];
-    const allKids = [...new Set([...envKids, ...domKids])];
+    const allKids = groupChildrenFor(parser, gid);
     if (!allKids.length) continue;
+    const visual = groupVisualFor(parser, gid);
     const count = allKids.length;
     const safeLabel = e.label.replace(/["\[\]]/g, '');
     const proxyLine = `    ${gid}["▶ ${safeLabel} (${count} node${count !== 1 ? 's' : ''})"]`;
+    const proxyStyle = visual ? `    style ${gid} ${groupStyleText(visual, { collapsed: true })}` : '';
     const lines = result.split('\n');
     const out = [];
     let inSub = false;
+    let subDepth = 0;
     let proxyEmitted = false;
     for (const line of lines) {
       const t = line.trim();
       if (!inSub && (t.startsWith(`subgraph ${gid}[`) || t === `subgraph ${gid}`)) {
         inSub = true;
-        if (!proxyEmitted) { out.push(proxyLine); proxyEmitted = true; }
+        subDepth = 1;
+        if (!proxyEmitted) {
+          out.push(proxyLine);
+          if (proxyStyle) out.push(proxyStyle);
+          proxyEmitted = true;
+        }
         continue;
       }
       if (inSub) {
-        if (t === 'end') inSub = false;
+        if (t.startsWith('subgraph ')) subDepth++;
+        if (t === 'end') {
+          subDepth--;
+          if (subDepth <= 0) inSub = false;
+        }
         continue;
       }
+      if (t.startsWith(`style ${gid} `)) continue;
       // Redirect child IDs to proxy in relationship lines
       let outLine = line;
       if (/-->|--[^>]*-->|>>|==/.test(line)) {
@@ -3454,6 +3762,7 @@ function setDiagramType(type) {
 let $input = null;
 const $preview  = document.getElementById('mermaidOutput');
 const $wrapper  = document.getElementById('zoomWrapper');
+const $previewScroll = document.getElementById('previewScroll');
 const $indic    = document.getElementById('parseIndicator');
 const $count    = document.getElementById('entityCount');
 const $status   = document.getElementById('statusLeft');
@@ -3461,6 +3770,11 @@ const $pstatus  = document.getElementById('previewStatus');
 const $zoomDisp = document.getElementById('zoomDisplay');
 const $lintBtn  = document.getElementById('lintBtn');
 const $lintPanel = document.getElementById('lintPanel');
+const $minimap = document.getElementById('previewMinimap');
+const $minimapBody = document.getElementById('minimapBody');
+const $minimapHost = document.getElementById('minimapSvgHost');
+const $minimapViewport = document.getElementById('minimapViewport');
+const $minimapToggle = document.getElementById('minimapToggle');
 
 // ════════════════════════════════════════════════════════════════
 //  UNDO / REDO  — delegated to CodeMirror 6 history extension
@@ -3534,6 +3848,7 @@ const ETYPES = [
   { type:'net',       icon:'🌍', label:'Net Ext',     prefix:'net:External\n  ',   color:'#dc2626', bg:'#fee2e2', fg:'#7f1d1d', desc:'External / internet zone' },
   { type:'net',       icon:'🔒', label:'Net Int',     prefix:'net:Internal\n  ',   color:'#2563eb', bg:'#eff6ff', fg:'#1e3a8a', desc:'Internal / private zone' },
   { type:'domain',    icon:'🏢', label:'Domain',      prefix:'domain:',            color:'#c026d3', bg:'#fdf4ff', fg:'#701a75', desc:'Business domain / team' },
+  { type:'subdomain', icon:'🔹', label:'Subdomain',   prefix:'subdomain:',         color:'#4f46e5', bg:'#eef2ff', fg:'#312e81', desc:'Nested domain group' },
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -4674,6 +4989,22 @@ const CLOUD_ICONS = {
     ['🌟','Pulsar'                    ,'interface:Pulsar'        ,'Messaging'],
     ['🥬','Celery'                    ,'batch:Celery'            ,'Messaging'],
     ['⏱️','Temporal'                  ,'batch:Temporal'          ,'Messaging'],
+    // Integration
+    ['🔴','Confluent Kafka'           ,'interface:ConfluentKafka','Integration'],
+    ['🔗','Kafka Connect'             ,'interface:KafkaConnect'  ,'Integration'],
+    ['📋','Schema Registry'           ,'config:SchemaRegistry'   ,'Integration'],
+    ['🔁','Debezium CDC'              ,'interface:Debezium'      ,'Integration'],
+    ['🐫','Apache Camel'              ,'batch:ApacheCamel'       ,'Integration'],
+    ['🔌','MuleSoft'                  ,'interface:MuleSoft'      ,'Integration'],
+    ['🧩','Boomi'                     ,'interface:Boomi'         ,'Integration'],
+    ['📨','IBM MQ'                    ,'interface:IBMMQ'         ,'Integration'],
+    ['🔀','TIBCO'                     ,'interface:TIBCO'         ,'Integration'],
+    ['🔄','Cleo Integration'          ,'interface:Cleo'          ,'Integration'],
+    ['🏦','Sterling B2B'              ,'interface:SterlingB2B'   ,'Integration'],
+    ['📁','CrushFTP'                  ,'ftp:CrushFTP'            ,'Integration'],
+    ['📡','SFTPGo'                    ,'ftp:SFTPGo'              ,'Integration'],
+    ['🦊','FileZilla Server'          ,'ftp:FileZillaServer'     ,'Integration'],
+    ['📦','GoAnywhere MFT'            ,'ftp:GoAnywhereMFT'       ,'Integration'],
     // Servers
     ['🕸️','Nginx'                     ,'server:Nginx'            ,'Servers'],
     ['🪶','Apache'                    ,'server:Apache'           ,'Servers'],
@@ -5079,7 +5410,11 @@ const ICONIFY_OVERRIDES = {
   'general-docker'                        : 'logos:docker-icon',
   'general-kubernetes'                    : 'logos:kubernetes',
   'general-helm'                          : 'logos:helm',
+  'general-podman'                        : 'simple-icons:podman',
   'general-docker-compose'                : 'logos:docker-icon',
+  'general-docker-registry'               : 'logos:docker-icon',
+  'general-rancher'                       : 'logos:rancher',
+  'general-openshift'                     : 'logos:openshift',
   'general-postgresql'                    : 'logos:postgresql',
   'general-mysql'                         : 'logos:mysql',
   'general-mongodb'                       : 'logos:mongodb-icon',
@@ -5087,34 +5422,84 @@ const ICONIFY_OVERRIDES = {
   'general-elasticsearch'                 : 'logos:elasticsearch',
   'general-sqlite'                        : 'logos:sqlite',
   'general-oracle-db'                     : 'logos:oracle',
+  'general-mssql'                         : 'simple-icons:microsoftsqlserver',
+  'general-mariadb'                       : 'logos:mariadb',
+  'general-cockroachdb'                   : 'simple-icons:cockroachlabs',
   'general-cassandra'                     : 'logos:cassandra',
+  'general-influxdb'                      : 'logos:influxdb',
   'general-neo4j'                         : 'logos:neo4j',
+  'general-couchbase'                     : 'logos:couchbase',
+  'general-duckdb'                        : 'simple-icons:duckdb',
   'general-supabase'                      : 'logos:supabase-icon',
   'general-kafka'                         : 'logos:kafka-icon',
   'general-rabbitmq'                      : 'logos:rabbitmq-icon',
+  'general-nats'                          : 'logos:nats-icon',
+  'general-pulsar'                        : 'simple-icons:apachepulsar',
+  'general-temporal'                      : 'simple-icons:temporal',
+  'general-kafka-connect'                 : 'logos:kafka-icon',
+  'general-apache-camel'                  : 'logos:apache-camel',
+  'general-mulesoft'                      : 'simple-icons:mulesoft',
+  'general-ibm-mq'                        : 'simple-icons:ibm',
+  'general-sterling-b2b'                  : 'simple-icons:ibm',
+  'general-filezilla-server'              : 'simple-icons:filezilla',
   'general-nginx'                         : 'logos:nginx',
   'general-apache'                        : 'logos:apache',
-  'general-traefik'                       : 'logos:traefik-icon',
+  'general-traefik'                       : 'simple-icons:traefikproxy',
+  'general-caddy'                         : 'simple-icons:caddy',
+  'general-envoy'                         : 'logos:envoy',
+  'general-kong'                          : 'logos:kong-icon',
+  'general-istio'                         : 'simple-icons:istio',
+  'general-linkerd'                       : 'logos:linkerd',
   'general-grafana'                       : 'logos:grafana',
   'general-prometheus'                    : 'logos:prometheus',
   'general-datadog'                       : 'logos:datadog',
-  'general-jaeger'                        : 'logos:jaeger',
+  'general-jaeger'                        : 'simple-icons:jaeger',
   'general-sentry'                        : 'logos:sentry-icon',
+  'general-opentelemetry'                 : 'logos:opentelemetry',
+  'general-elastic-apm'                   : 'simple-icons:elastic',
   'general-new-relic'                     : 'logos:new-relic',
+  'general-dynatrace'                     : 'logos:dynatrace',
+  'general-fluentd'                       : 'simple-icons:fluentd',
+  'general-logstash'                      : 'logos:logstash',
+  'general-splunk'                        : 'logos:splunk',
+  'general-kibana'                        : 'logos:kibana',
+  'general-pagerduty'                     : 'simple-icons:pagerduty',
   'general-jenkins'                       : 'logos:jenkins',
   'general-gitlab-ci'                     : 'logos:gitlab',
   'general-github-actions'                : 'logos:github-actions',
   'general-terraform'                     : 'logos:terraform-icon',
   'general-ansible'                       : 'logos:ansible',
+  'general-argocd'                        : 'logos:argo-icon',
   'general-circleci'                      : 'logos:circleci',
+  'general-travisci'                      : 'logos:travis-ci',
+  'general-buildkite'                     : 'logos:buildkite',
+  'general-pulumi'                        : 'logos:pulumi',
+  'general-chef'                          : 'logos:chef',
+  'general-puppet'                        : 'logos:puppet',
+  'general-packer'                        : 'logos:packer',
+  'general-vault'                         : 'logos:vault',
+  'general-consul'                        : 'logos:consul',
   'general-graphql'                       : 'logos:graphql',
+  'general-grpc'                          : 'logos:grpc',
+  'general-auth0'                         : 'logos:auth0',
+  'general-keycloak'                      : 'simple-icons:keycloak',
+  'general-okta'                          : 'logos:okta',
   'general-linux'                         : 'logos:linux-tux',
   'general-ubuntu'                        : 'logos:ubuntu',
+  'general-windows-server'                : 'logos:microsoft-windows',
+  'general-macos'                         : 'logos:apple',
+  'general-vmware'                        : 'logos:vmware',
+  'general-proxmox'                       : 'simple-icons:proxmox',
+  'general-virtualbox'                    : 'simple-icons:virtualbox',
   'general-git'                           : 'logos:git-icon',
   'general-github'                        : 'logos:github-icon',
   'general-gitlab'                        : 'logos:gitlab',
   'general-bitbucket'                     : 'logos:bitbucket',
   'general-jira'                          : 'logos:jira',
+  'general-confluence'                    : 'logos:confluence',
+  'general-sonarqube'                     : 'logos:sonarqube',
+  'general-nexus'                         : 'simple-icons:sonatype',
+  'general-artifactory'                   : 'logos:jfrog',
   'general-node-js'                       : 'logos:nodejs-icon',
   'general-python'                        : 'logos:python',
   'general-java'                          : 'logos:java',
@@ -5124,27 +5509,60 @@ const ICONIFY_OVERRIDES = {
   'general-ruby'                          : 'logos:ruby',
   'general-php'                           : 'logos:php',
   'general-deno'                          : 'logos:deno',
+  'general-bun'                           : 'logos:bun',
   'general-react'                         : 'logos:react',
   'general-next-js'                       : 'logos:nextjs-icon',
   'general-vue'                           : 'logos:vue',
   'general-angular'                       : 'logos:angular-icon',
   'general-svelte'                        : 'logos:svelte-icon',
+  'general-remix'                         : 'logos:remix-icon',
   'general-astro'                         : 'logos:astro',
   'general-vite'                          : 'logos:vitejs',
   'general-cloudflare'                    : 'logos:cloudflare-icon',
+  'general-fastly'                        : 'logos:fastly',
+  'general-akamai'                        : 'logos:akamai',
   'general-stripe'                        : 'logos:stripe',
   'general-twilio'                        : 'logos:twilio-icon',
+  'general-sendgrid'                      : 'logos:sendgrid',
   'general-mailchimp'                     : 'logos:mailchimp',
   'general-slack'                         : 'logos:slack-icon',
   'general-salesforce'                    : 'logos:salesforce',
+  'general-hubspot'                       : 'logos:hubspot',
+  'general-segment'                       : 'logos:segment',
+  'general-mixpanel'                      : 'logos:mixpanel',
+  'general-amplitude'                     : 'logos:amplitude',
   'general-snowflake'                     : 'logos:snowflake-icon',
+  'general-dbt'                           : 'logos:dbt',
   'general-apache-spark'                  : 'logos:apache-spark',
-  'general-apache-airflow'                : 'logos:apache-airflow',
+  'general-apache-flink'                  : 'logos:apache-flink',
+  'general-apache-airflow'                : 'logos:airflow-icon',
+  'general-databricks'                    : 'simple-icons:databricks',
+  'general-tableau'                       : 'logos:tableau',
+  'general-metabase'                      : 'logos:metabase',
+  'general-superset'                      : 'logos:apache-superset',
+  'general-airbyte'                       : 'simple-icons:airbyte',
+  'general-elasticsearch-stack'           : 'logos:elasticsearch',
+  'general-clickhouse'                    : 'simple-icons:clickhouse',
+  'general-tidb'                          : 'simple-icons:tidb',
+  'general-scylladb'                      : 'simple-icons:scylladb',
+  'general-yugabytedb'                    : 'logos:yugabyte',
+  'general-crossplane'                    : 'logos:crossplane',
+  'general-backstage'                     : 'simple-icons:backstage',
+  'general-renovate'                      : 'logos:renovatebot',
+  'general-cilium'                        : 'simple-icons:cilium',
+  'general-opentelemetry-collector'       : 'logos:opentelemetry',
+  'general-thanos'                        : 'simple-icons:thanos',
+  'general-socket-io'                     : 'logos:socket-io',
   'general-nuxt-js'                       : 'logos:nuxt-icon',
+  'general-sveltekit'                     : 'logos:svelte-icon',
   'general-gatsby'                        : 'logos:gatsby',
   'general-storybook'                     : 'logos:storybook-icon',
   'general-vercel'                        : 'logos:vercel-icon',
   'general-netlify'                       : 'logos:netlify-icon',
+  'general-pagerduty-aiops'               : 'simple-icons:pagerduty',
+  'general-launchdarkly'                  : 'logos:launchdarkly',
+  'general-cloudinary'                    : 'logos:cloudinary',
+  'general-algolia'                       : 'logos:algolia',
   // ai
   'ai-openai-gpt'                         : 'logos:openai-icon',
   'ai-anthropic-claude'                   : 'simple-icons:anthropic',
@@ -5215,7 +5633,9 @@ function staticIconId(provider, label) {
 }
 
 function nativeIconRefFor(provider, id) {
-  return ICONIFY_OVERRIDES[id] || PROVIDER_DEFAULT_ICON[provider] || '';
+  // ICONIFY_OVERRIDES keys always use the full "provider-slug" form (generated by build-icons.js),
+  // but staticIconId() strips the "general-" prefix for the general provider. Try both forms.
+  return ICONIFY_OVERRIDES[id] || ICONIFY_OVERRIDES[`${provider}-${id}`] || PROVIDER_DEFAULT_ICON[provider] || '';
 }
 
 function staticIconItems(provider) {
@@ -5769,6 +6189,7 @@ const _TYPE_PFXS = {
   ftp:       ['ftp','sftp','ftps'],
   net:       ['net','network','zone'],
   domain:    ['domain','dom','team','biz','bu'],
+  subdomain: ['subdomain','subdom','subteam','sd'],
 };
 
 function highlightEntityInInput(entityId) {
@@ -5871,6 +6292,7 @@ function attachNodeInteractions() {
   if (!svg) return;
 
   const openNodeContextFromEvent = (e, node = meridianNodeFromEvent(e)) => {
+    if (e.target?.closest?.('.meridian-group-toggle')) return false;
     node = node || nearestMeridianNodeAtPoint(e.clientX, e.clientY);
     if (!node) return false;
     e.preventDefault?.();
@@ -5883,6 +6305,7 @@ function attachNodeInteractions() {
   };
 
   const renameNodeFromEvent = (e, node = meridianNodeFromEvent(e)) => {
+    if (e.target?.closest?.('.meridian-group-toggle')) return false;
     node = node || nearestMeridianNodeAtPoint(e.clientX, e.clientY);
     if (!node) return false;
     e.preventDefault?.();
@@ -5936,26 +6359,121 @@ function attachNodeInteractions() {
 // ════════════════════════════════════════════════════════════════
 //  SUBGRAPH CLUSTER COLLAPSE
 // ════════════════════════════════════════════════════════════════
+function toggleGroupCollapse(gid, collapsed) {
+  if (!groupVisualFor(parser, gid)) return;
+  const isCollapsed = _collapsedGroups.has(gid);
+  if (collapsed === isCollapsed) return;
+  if (collapsed) {
+    _collapsedGroups.add(gid);
+    toast(`Collapsed: ${parser.entities.get(gid)?.label}`);
+  } else {
+    _collapsedGroups.delete(gid);
+    toast(`Expanded: ${parser.entities.get(gid)?.label}`);
+  }
+  saveCollapsedGroups();
+  onInput();
+}
+
+function resolveClusterGroupId(cluster) {
+  const cached = cluster.getAttribute('data-meridian-group-id');
+  if (cached && groupVisualFor(parser, cached)) return cached;
+
+  const labelEl = cluster.querySelector('.cluster-label') || cluster.querySelector('text');
+  if (!labelEl) return null;
+  const rawText = (labelEl.textContent || '').replace(/\s+/g, ' ').trim();
+  const groupIds = [...parser.entities.keys()].filter(id =>
+    parser.environments.has(id) || parser.domains.has(id) || parser.subdomains.has(id)
+  ).sort((a, b) => (parser.entities.get(b)?.label.length || 0) - (parser.entities.get(a)?.label.length || 0));
+
+  for (const gid of groupIds) {
+    const label = parser.entities.get(gid)?.label || '';
+    if (label && rawText.includes(label)) {
+      cluster.setAttribute('data-meridian-group-id', gid);
+      return gid;
+    }
+  }
+  return null;
+}
+
+function addGroupToggleControl(parent, gid, action, x, y) {
+  const visual = groupVisualFor(parser, gid);
+  if (!visual) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const label = action === 'collapse' ? '▾ Collapse' : '▸ Expand';
+  const w = action === 'collapse' ? 82 : 72;
+  const h = 22;
+  const btn = document.createElementNS(NS, 'g');
+  btn.setAttribute('class', 'meridian-group-toggle');
+  btn.setAttribute('data-group-id', gid);
+  btn.setAttribute('data-action', action);
+  btn.setAttribute('transform', `translate(${x},${y})`);
+  btn.setAttribute('role', 'button');
+  btn.setAttribute('aria-label', `${action === 'collapse' ? 'Collapse' : 'Expand'} ${visual.label}`);
+  btn.setAttribute('tabindex', '0');
+
+  const rect = document.createElementNS(NS, 'rect');
+  rect.setAttribute('width', String(w));
+  rect.setAttribute('height', String(h));
+  rect.setAttribute('rx', '6');
+  rect.setAttribute('fill', visual.stroke);
+  rect.setAttribute('stroke', '#ffffff');
+  rect.setAttribute('stroke-width', '1');
+  rect.setAttribute('opacity', '.94');
+  btn.appendChild(rect);
+
+  const text = document.createElementNS(NS, 'text');
+  text.setAttribute('x', String(w / 2));
+  text.setAttribute('y', '14.5');
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('font-size', '11');
+  text.setAttribute('font-weight', '800');
+  text.setAttribute('fill', '#ffffff');
+  text.textContent = label;
+  btn.appendChild(text);
+
+  const fire = (ev) => {
+    ev.stopPropagation();
+    ev.preventDefault();
+    toggleGroupCollapse(gid, action === 'collapse');
+  };
+  btn.addEventListener('mousedown', ev => { ev.stopPropagation(); ev.preventDefault(); });
+  btn.addEventListener('click', fire);
+  btn.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') fire(ev);
+  });
+  parent.appendChild(btn);
+}
+
+function decorateGroupControls(svg) {
+  if (!svg) return;
+  svg.querySelectorAll('.meridian-group-toggle').forEach(el => el.remove());
+
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const gid = resolveClusterGroupId(cluster);
+    if (!gid || _collapsedGroups.has(gid)) return;
+    let box;
+    try { box = cluster.getBBox(); } catch { return; }
+    if (!Number.isFinite(box.width) || !Number.isFinite(box.height)) return;
+    addGroupToggleControl(cluster, gid, 'collapse', box.x + box.width - 92, box.y + 8);
+  });
+
+  _collapsedGroups.forEach(gid => {
+    const node = meridianNodeGroup(svg, gid);
+    if (!node) return;
+    node.setAttribute('data-meridian-group-id', gid);
+    let box;
+    try { box = node.getBBox(); } catch { return; }
+    if (!Number.isFinite(box.width) || !Number.isFinite(box.height)) return;
+    addGroupToggleControl(node, gid, 'expand', box.x + box.width - 80, box.y + 6);
+  });
+}
+
 function attachClusterInteractions() {
   const svg = $preview.querySelector('svg');
   if (!svg) return;
 
   svg.querySelectorAll('g.cluster').forEach(cluster => {
-    // Resolve group entity ID by matching label text against known group labels
-    const labelEl = cluster.querySelector('.cluster-label') || cluster.querySelector('text');
-    if (!labelEl) return;
-    const rawText = (labelEl.textContent || '').replace(/\s+/g, ' ').trim();
-
-    let matchedId = null;
-    // Sort by label length desc to prefer longer/more specific matches
-    const groupIds = [...parser.entities.keys()].filter(id =>
-      parser.environments.has(id) || parser.domains.has(id)
-    ).sort((a, b) => (parser.entities.get(b)?.label.length || 0) - (parser.entities.get(a)?.label.length || 0));
-
-    for (const gid of groupIds) {
-      const label = parser.entities.get(gid)?.label || '';
-      if (label && rawText.includes(label)) { matchedId = gid; break; }
-    }
+    const matchedId = resolveClusterGroupId(cluster);
     if (!matchedId) return;
 
     const clickTarget = cluster.querySelector('.cluster-label') || cluster;
@@ -5970,15 +6488,7 @@ function attachClusterInteractions() {
     clickTarget.addEventListener('click', (ev) => {
       ev.stopPropagation();
       ev.preventDefault();
-      if (_collapsedGroups.has(matchedId)) {
-        _collapsedGroups.delete(matchedId);
-        toast(`Expanded: ${parser.entities.get(matchedId)?.label}`);
-      } else {
-        _collapsedGroups.add(matchedId);
-        toast(`Collapsed: ${parser.entities.get(matchedId)?.label}`);
-      }
-      saveCollapsedGroups();
-      onInput();
+      toggleGroupCollapse(matchedId, !_collapsedGroups.has(matchedId));
     });
   });
 }
@@ -6356,12 +6866,13 @@ function setZoom(val) {
   $wrapper.style.transformOrigin = 'top left';
   $zoomDisp.textContent = Math.round(zoom * 100) + '%';
   saveToStorage();
+  scheduleMinimapViewportUpdate();
 }
 
 function fitZoom() {
   const svg = $preview.querySelector('svg');
   if (!svg) return;
-  const scroll   = document.getElementById('previewScroll');
+  const scroll   = $previewScroll;
   const availW   = scroll.clientWidth  - 32;
   const availH   = scroll.clientHeight - 32;
   const svgW     = svg.getBoundingClientRect().width  / zoom;
@@ -6385,7 +6896,7 @@ document.addEventListener('click', (e) => {
   if (!$zoomPicker.hidden && !e.target.closest('.zoom-pick-wrap')) closeZoomPicker();
 });
 
-document.getElementById('previewScroll').addEventListener('wheel', (e) => {
+$previewScroll.addEventListener('wheel', (e) => {
   if (e.ctrlKey) {
     e.preventDefault();
     setZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1));
@@ -6412,6 +6923,7 @@ function showPlaceholder() {
       <p style="color:#6b7280;font-size:14px">Start typing to generate a diagram</p>
       <p style="color:#9ca3af;font-size:12px;margin-top:4px">or pick a template above</p>
     </div>`;
+  clearMinimap();
 }
 
 function scrollToNewNodes() {
@@ -6424,6 +6936,171 @@ function scrollToNewNodes() {
   const node  = meridianNodeGroup(svgEl, newId);
   if (node) node.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
 }
+
+let _minimapViewportFrame = 0;
+
+function clampNumber(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function clearMinimap() {
+  if (!$minimap || !$minimapHost || !$minimapViewport) return;
+  $minimap.classList.add('hidden');
+  $minimapHost.replaceChildren();
+  $minimapViewport.removeAttribute('style');
+}
+
+function scheduleMinimapViewportUpdate() {
+  if (_minimapViewportFrame) return;
+  _minimapViewportFrame = requestAnimationFrame(() => {
+    _minimapViewportFrame = 0;
+    updateMinimapViewport();
+  });
+}
+
+function minimapMetrics() {
+  if (!$previewScroll || !$minimap || !$minimapBody || !$minimapHost) return null;
+  if ($minimap.classList.contains('hidden') || $minimap.classList.contains('collapsed')) return null;
+  const bodyRect = $minimapBody.getBoundingClientRect();
+  const hostRect = $minimapHost.getBoundingClientRect();
+  const totalW = Math.max($previewScroll.scrollWidth, $previewScroll.clientWidth, 1);
+  const totalH = Math.max($previewScroll.scrollHeight, $previewScroll.clientHeight, 1);
+  const hostW = Math.max(hostRect.width, 1);
+  const hostH = Math.max(hostRect.height, 1);
+  const scale = Math.min(hostW / totalW, hostH / totalH);
+  const mapW = Math.max(1, totalW * scale);
+  const mapH = Math.max(1, totalH * scale);
+  const cloneX = (hostW - mapW) / 2;
+  const cloneY = (hostH - mapH) / 2;
+  return {
+    bodyRect,
+    x: (hostRect.left - bodyRect.left) + cloneX,
+    y: (hostRect.top - bodyRect.top) + cloneY,
+    cloneX,
+    cloneY,
+    mapW,
+    mapH,
+    totalW,
+    totalH,
+    clientW: Math.max($previewScroll.clientWidth, 1),
+    clientH: Math.max($previewScroll.clientHeight, 1),
+  };
+}
+
+function updateMinimapViewport() {
+  if (!$minimapHost || !$minimapViewport) return;
+  const clone = $minimapHost.querySelector('svg');
+  if (!clone) return;
+  const m = minimapMetrics();
+  if (!m) return;
+
+  clone.style.left = `${m.cloneX}px`;
+  clone.style.top = `${m.cloneY}px`;
+  clone.style.width = `${m.mapW}px`;
+  clone.style.height = `${m.mapH}px`;
+
+  const viewW = Math.min(m.mapW, Math.max(8, (m.clientW / m.totalW) * m.mapW));
+  const viewH = Math.min(m.mapH, Math.max(8, (m.clientH / m.totalH) * m.mapH));
+  const left = clampNumber(m.x + ($previewScroll.scrollLeft / m.totalW) * m.mapW, m.x, m.x + m.mapW - viewW);
+  const top = clampNumber(m.y + ($previewScroll.scrollTop / m.totalH) * m.mapH, m.y, m.y + m.mapH - viewH);
+
+  Object.assign($minimapViewport.style, {
+    display: 'block',
+    left: `${left}px`,
+    top: `${top}px`,
+    width: `${viewW}px`,
+    height: `${viewH}px`,
+  });
+}
+
+function refreshMinimap() {
+  if (!$minimap || !$minimapHost) return;
+  const svg = $preview.querySelector('svg');
+  if (!svg) { clearMinimap(); return; }
+
+  const clone = svg.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.setAttribute('aria-hidden', 'true');
+  clone.setAttribute('focusable', 'false');
+  clone.classList.add('meridian-minimap-svg');
+  clone.querySelectorAll('.meridian-group-toggle,.meridian-edge-animation,.edgeLabel,g.edgeLabel,defs,filter,marker').forEach(el => el.remove());
+  clone.querySelectorAll('[filter]').forEach(el => el.removeAttribute('filter'));
+  clone.querySelectorAll('[marker-start],[marker-mid],[marker-end]').forEach(el => {
+    el.removeAttribute('marker-start');
+    el.removeAttribute('marker-mid');
+    el.removeAttribute('marker-end');
+  });
+  clone.querySelectorAll('.edgePaths path,.edgePath path,path.flowchart-link').forEach(path => {
+    path.style.stroke = '#64748b';
+    path.style.strokeWidth = '1.4px';
+    path.style.opacity = '.5';
+    path.style.filter = 'none';
+    path.style.markerStart = 'none';
+    path.style.markerMid = 'none';
+    path.style.markerEnd = 'none';
+  });
+  Object.assign(clone.style, {
+    display: 'block',
+    maxWidth: 'none',
+    maxHeight: 'none',
+    overflow: 'visible',
+    pointerEvents: 'none',
+    transform: 'none',
+  });
+
+  $minimapHost.replaceChildren(clone);
+  $minimap.classList.remove('hidden');
+  scheduleMinimapViewportUpdate();
+}
+
+function navigateMinimap(clientX, clientY) {
+  const m = minimapMetrics();
+  if (!m) return;
+  const localX = clampNumber(clientX - m.bodyRect.left - m.x, 0, m.mapW);
+  const localY = clampNumber(clientY - m.bodyRect.top - m.y, 0, m.mapH);
+  const maxScrollLeft = Math.max(0, m.totalW - m.clientW);
+  const maxScrollTop = Math.max(0, m.totalH - m.clientH);
+  $previewScroll.scrollLeft = clampNumber((localX / m.mapW) * m.totalW - m.clientW / 2, 0, maxScrollLeft);
+  $previewScroll.scrollTop = clampNumber((localY / m.mapH) * m.totalH - m.clientH / 2, 0, maxScrollTop);
+  updateMinimapViewport();
+}
+
+(function initMinimapInteractions() {
+  if (!$previewScroll || !$minimapBody) return;
+
+  $previewScroll.addEventListener('scroll', scheduleMinimapViewportUpdate);
+  window.addEventListener('resize', scheduleMinimapViewportUpdate);
+
+  if ($minimapToggle) {
+    $minimapToggle.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const collapsed = $minimap.classList.toggle('collapsed');
+      $minimapToggle.textContent = collapsed ? '+' : '-';
+      $minimapToggle.title = collapsed ? 'Expand minimap' : 'Collapse minimap';
+      $minimapToggle.setAttribute('aria-label', collapsed ? 'Expand minimap' : 'Collapse minimap');
+      if (!collapsed) scheduleMinimapViewportUpdate();
+    });
+  }
+
+  $minimapBody.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    navigateMinimap(e.clientX, e.clientY);
+
+    const onMove = (me) => {
+      me.preventDefault();
+      navigateMinimap(me.clientX, me.clientY);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+})();
 
 function getMermaidErrorLine(err) {
   const msg = err?.str || err?.message || String(err || '');
@@ -6509,6 +7186,111 @@ function decorateRichIcons(svg) {
   });
 }
 
+function applyEdgeAnimation(svg) {
+  if (!svg) return;
+  svg.querySelectorAll('.meridian-edge-animation').forEach(el => el.remove());
+
+  const mode = edgeAnimationMode();
+  if (mode === 'off') return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const paths = [...svg.querySelectorAll('.edgePaths path')]
+    .filter(path => !path.closest('.meridian-edge-animation'));
+  if (!paths.length) return;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const XLINK_NS = 'http://www.w3.org/1999/xlink';
+  const duration = mode === 'fast' ? 1.15 : 2.8;
+  const group = document.createElementNS(NS, 'g');
+  group.setAttribute('class', 'meridian-edge-animation');
+  group.setAttribute('aria-hidden', 'true');
+
+  const edgePathsGroup = svg.querySelector('.edgePaths');
+  const usedIds = new Set([...svg.querySelectorAll('[id]')].map(el => el.id).filter(Boolean));
+
+  function edgeStroke(path) {
+    let stroke = path.getAttribute('stroke') || path.style.stroke || '';
+    try {
+      const computed = window.getComputedStyle(path).stroke;
+      if (!stroke || stroke === 'none') stroke = computed;
+    } catch {}
+    if (!stroke || stroke === 'none' || stroke === 'transparent' || stroke === 'rgba(0, 0, 0, 0)') {
+      stroke = _diagramSettings.lineColor || '#64748b';
+    }
+    return stroke;
+  }
+
+  function markerStart(path) {
+    const attr = path.getAttribute('marker-start') || path.style.markerStart || '';
+    if (attr && attr !== 'none') return attr;
+    try { return window.getComputedStyle(path).markerStart || ''; } catch { return ''; }
+  }
+
+  function ensurePathId(path, i) {
+    if (path.id && !usedIds.has(path.id)) {
+      usedIds.add(path.id);
+      return path.id;
+    }
+    if (path.id && usedIds.has(path.id)) return path.id;
+    let n = 0;
+    let id = `meridian-edge-path-${i}`;
+    while (usedIds.has(id)) id = `meridian-edge-path-${i}-${++n}`;
+    path.id = id;
+    usedIds.add(id);
+    return id;
+  }
+
+  function addArrow(pathId, color, i, reverse = false) {
+    const arrow = document.createElementNS(NS, 'g');
+    arrow.setAttribute('class', 'meridian-edge-flow');
+    arrow.setAttribute('data-edge-index', String(i));
+    arrow.setAttribute('opacity', reverse ? '.72' : '.9');
+
+    const shape = document.createElementNS(NS, 'path');
+    shape.setAttribute('d', 'M -6 -4 L 7 0 L -6 4 L -2 0 Z');
+    shape.setAttribute('fill', color);
+    shape.setAttribute('stroke', 'none');
+    arrow.appendChild(shape);
+
+    const anim = document.createElementNS(NS, 'animateMotion');
+    anim.setAttribute('dur', `${duration}s`);
+    anim.setAttribute('repeatCount', 'indefinite');
+    anim.setAttribute('rotate', 'auto');
+    anim.setAttribute('begin', `${((i % 8) * duration) / 8}s`);
+    anim.setAttribute('calcMode', 'linear');
+    anim.setAttribute('keyTimes', '0;1');
+    anim.setAttribute('keyPoints', reverse ? '1;0' : '0;1');
+
+    const mpath = document.createElementNS(NS, 'mpath');
+    mpath.setAttribute('href', `#${pathId}`);
+    mpath.setAttributeNS(XLINK_NS, 'xlink:href', `#${pathId}`);
+    anim.appendChild(mpath);
+    arrow.appendChild(anim);
+    group.appendChild(arrow);
+  }
+
+  paths.forEach((path, i) => {
+    let len = 0;
+    try { len = path.getTotalLength ? path.getTotalLength() : 0; } catch {}
+    if (!Number.isFinite(len) || len < 18) return;
+    const id = ensurePathId(path, i);
+    const color = edgeStroke(path);
+    addArrow(id, color, i, false);
+    if (markerStart(path) && markerStart(path) !== 'none') addArrow(id, color, i, true);
+  });
+
+  if (!group.childElementCount) return;
+  // Insert after g.nodes so arrows render above all diagram elements including node shapes.
+  // This is critical for short intra-domain/subdomain paths where arrows would otherwise
+  // be permanently hidden beneath node shapes due to SVG paint order.
+  const rootG = edgePathsGroup ? edgePathsGroup.parentNode : null;
+  if (rootG) {
+    rootG.appendChild(group);
+  } else {
+    svg.appendChild(group);
+  }
+}
+
 function renderDesignBoard(code) {
   try {
     if (!code.trim()) { showPlaceholder(); return; }
@@ -6522,6 +7304,7 @@ function renderDesignBoard(code) {
     $wrapper.classList.remove('no-diagram');
     posLoad();
     applyNodePositions();
+    applyEdgeAnimation(svgEl);
     attachNodeInteractions();
     attachDragToNodes();
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
@@ -6532,11 +7315,13 @@ function renderDesignBoard(code) {
     const warnCount = semanticIssues.length;
     const lanes = svgEl.querySelectorAll('.design-lane').length;
     $status.textContent = `Rendered design board · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${lanes} lanes${warnCount ? ` · ${warnCount} warning${warnCount === 1 ? '' : 's'}` : ''}`;
+    refreshMinimap();
     scrollToNewNodes();
   } catch (err) {
     _prevRenderEmpty = true;
     setCmLintError(err.message || String(err), 1);
     $preview.innerHTML = `<div class="render-err"><h4>Design Board Error</h4><pre>${esc(err.message || String(err))}</pre></div>`;
+    clearMinimap();
     $pstatus.textContent = 'Error';
     $pstatus.style.color = 'var(--err-title)';
     $status.textContent = 'Design board render error';
@@ -6583,20 +7368,25 @@ async function renderDiagram(code) {
     $wrapper.classList.remove('no-diagram');
     posLoad();
     applyNodePositions();
+    applyEdgeAnimation(svgEl);
     attachNodeInteractions();
     attachDragToNodes();
     attachClusterInteractions();
+    decorateGroupControls(svgEl);
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
     $pstatus.textContent = '✓ OK';
     $pstatus.style.color = 'var(--ok)';
     const warnCount = semanticIssues.length;
-    $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${[...parser.environments.keys()].length} groups${warnCount ? ` · ${warnCount} warning${warnCount === 1 ? '' : 's'}` : ''}`;
+    const groupCount = parser.environments.size + parser.domains.size + parser.subdomains.size;
+    $status.textContent  = `Rendered · ${parser.entities.size} nodes · ${parser.relationships.length} edges · ${groupCount} groups${warnCount ? ` · ${warnCount} warning${warnCount === 1 ? '' : 's'}` : ''}`;
+    refreshMinimap();
     scrollToNewNodes();
   } catch (err) {
     _prevRenderEmpty = true;
     setCmLintError(err.message || String(err), getMermaidErrorLine(err));
+    clearMinimap();
     $preview.innerHTML = `<div class="render-err"><h4>⚠️ Render Error</h4><pre>${esc(err.message || String(err))}</pre></div>`;
     $pstatus.textContent = '⚠️ Error';
     $pstatus.style.color = 'var(--err-title)';
@@ -6631,7 +7421,7 @@ function onInput() {
   refreshInspector();
   const ec = parser.entities.size;
   const rc = parser.relationships.length;
-  const gc = [...parser.environments.keys()].length;
+  const gc = parser.environments.size + parser.domains.size + parser.subdomains.size;
   $indic.textContent = ec ? `${ec} entities` : '';
   $count.textContent = ec ? `${ec} nodes · ${rc} edges${gc ? ` · ${gc} groups` : ''}` : '';
 
@@ -6901,6 +7691,7 @@ function applyProjectBundle(bundle) {
   }
   if (bundle.settings?.diagram && typeof bundle.settings.diagram === 'object') {
     _diagramSettings = { ..._diagramSettings, ...bundle.settings.diagram };
+    _diagramSettings.edgeAnimation = edgeAnimationMode();
   }
   saveSettings();
   applyEditorTheme();
@@ -7446,8 +8237,12 @@ function refreshInspector() {
   const outgoing = parser.relationships.filter(r => r.from === eid);
   const incoming = parser.relationships.filter(r => r.to   === eid);
 
-  const envGroup = [...(parser.environments || new Map()).entries()].find(([, env]) => env.children?.includes?.(eid) || env.childIds?.includes?.(eid));
-  const domGroup = [...(parser.domains      || new Map()).entries()].find(([, d]) => d.children?.includes?.(eid) || d.childIds?.includes?.(eid));
+  const hasGroupChild = (kids) => Array.isArray(kids)
+    ? kids.includes(eid)
+    : kids?.children?.includes?.(eid) || kids?.childIds?.includes?.(eid);
+  const envGroup = [...(parser.environments || new Map()).entries()].find(([, kids]) => hasGroupChild(kids));
+  const domGroup = [...(parser.domains      || new Map()).entries()].find(([, kids]) => hasGroupChild(kids));
+  const subGroup = [...(parser.subdomains   || new Map()).entries()].find(([, kids]) => hasGroupChild(kids));
 
   const edgeChips = (rels, dir) => rels.map(r => {
     const otherId = dir === 'out' ? r.to : r.from;
@@ -7459,6 +8254,7 @@ function refreshInspector() {
   const groupHtml = [
     envGroup ? `<div class="insp-row"><span class="insp-lbl">Env:</span><div class="insp-edges"><span class="insp-edge">${esc(parser.entities.get(envGroup[0])?.label || envGroup[0])}</span></div></div>` : '',
     domGroup ? `<div class="insp-row"><span class="insp-lbl">Domain:</span><div class="insp-edges"><span class="insp-edge">${esc(parser.entities.get(domGroup[0])?.label || domGroup[0])}</span></div></div>` : '',
+    subGroup ? `<div class="insp-row"><span class="insp-lbl">Sub:</span><div class="insp-edges"><span class="insp-edge">${esc(parser.entities.get(subGroup[0])?.label || subGroup[0])}</span></div></div>` : '',
   ].join('');
 
   $body.innerHTML = `
@@ -7486,7 +8282,7 @@ function rebuildTokenColorGrid() {
   grid.innerHTML = '';
   const preset    = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
   const tOverride = _editorSettings.tokenColors || {};
-  const TYPES = ['env','app','db','server','instance','interface','config','batch','watcher','ftp','net','domain'];
+  const TYPES = ['env','app','db','server','instance','interface','config','batch','watcher','ftp','net','domain','subdomain'];
   TYPES.forEach(type => {
     const color = tOverride[type] || preset.types[type] || '#888888';
     const row   = document.createElement('div');
@@ -7530,6 +8326,9 @@ function syncDiagramSettingsUI() {
     fsEl.disabled   = !fs;
     fsLbl.textContent = (fs || 16) + 'px';
   }
+  const edgeMode = edgeAnimationMode();
+  document.querySelectorAll('#edgeAnimBtns .edge-mode-btn')
+    .forEach(btn => btn.classList.toggle('active', btn.dataset.edgeAnimation === edgeMode));
 }
 
 function initSettingsPanel() {
@@ -7622,6 +8421,26 @@ function initSettingsPanel() {
     }
   });
 
+  const edgeAnimWrap = document.getElementById('edgeAnimBtns');
+  if (edgeAnimWrap) {
+    edgeAnimWrap.innerHTML = '';
+    EDGE_ANIMATION_OPTIONS.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fsz-btn edge-mode-btn' + (opt.value === edgeAnimationMode() ? ' active' : '');
+      btn.dataset.edgeAnimation = opt.value;
+      btn.textContent = opt.label;
+      btn.addEventListener('click', () => {
+        _diagramSettings.edgeAnimation = opt.value;
+        saveSettings();
+        syncDiagramSettingsUI();
+        const svgEl = $preview.querySelector('svg');
+        if (svgEl) applyEdgeAnimation(svgEl);
+      });
+      edgeAnimWrap.appendChild(btn);
+    });
+  }
+
   // ── Diagram: color pickers ─────────────────────────────────────
   [
     ['diagPrimaryColor',  'primaryColor',       '#6366f1'],
@@ -7670,7 +8489,7 @@ function initSettingsPanel() {
   // ── Reset all ──────────────────────────────────────────────────
   document.getElementById('settingsResetAll').addEventListener('click', () => {
     _editorSettings  = { theme: 'meridian', fontSize: 13, fontFamily: 'system', tokenColors: {}, linting: { caseRule: 'any', maxLength: 0 } };
-    _diagramSettings = { fontSize: '', primaryColor: '', primaryBorderColor: '', lineColor: '', background: '' };
+    _diagramSettings = { fontSize: '', primaryColor: '', primaryBorderColor: '', lineColor: '', edgeAnimation: 'off', background: '' };
     saveSettings();
     applyEditorTheme();
     applyDiagramSettings();
