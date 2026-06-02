@@ -291,6 +291,30 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
          opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:100; }
 #toast.show { opacity:1;transform:translateX(-50%) translateY(0); }
 
+/* Cluster (domain/subdomain) resize handle */
+.meridian-cluster-resize-handle { cursor: se-resize; pointer-events: all; }
+
+/* Canvas annotation labels */
+.meridian-canvas-label { cursor: grab; user-select: none; }
+.meridian-canvas-label.dragging { cursor: grabbing; }
+.meridian-label-delete { cursor: pointer; opacity: 0; transition: opacity .15s; }
+.meridian-canvas-label:hover .meridian-label-delete { opacity: 1; }
+#addLabelBtn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* Label color popover */
+#labelColorPop {
+  position:fixed;z-index:10001;background:var(--surface-1);border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.5);
+  display:none;flex-direction:column;gap:7px;min-width:190px;
+}
+#labelColorPop.vis { display:flex; }
+.lcp-row { display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-muted); }
+.lcp-row span { flex:1; }
+.lcp-row input[type=color] { width:26px;height:22px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;padding:1px; }
+.lcp-match { font-size:10px;background:var(--surface-2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;cursor:pointer;color:var(--text-muted);white-space:nowrap; }
+.lcp-match:hover { background:var(--surface-3);color:var(--text); }
+/* In add-label mode, the preview canvas shows a crosshair */
+#zoomWrapper.label-add-mode { cursor: crosshair !important; }
+
 /* ── Undo / Redo ── */
 .ur-btn:disabled { opacity:.35;cursor:default;pointer-events:none; }
 
@@ -409,6 +433,19 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 .ncp-conn:hover { background:var(--surface-2);color:var(--text); }
 .ncp-dir  { color:var(--text-faint);flex-shrink:0;font-size:10px;width:12px;text-align:center; }
 .ncp-elbl { font-size:9px;color:var(--text-dim);font-style:italic;margin-left:2px; }
+/* Group context panel — same base styles as node context panel */
+#groupCtxPanel {
+  position:fixed;display:none;z-index:200;min-width:210px;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  padding:10px;box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+#groupCtxPanel.vis { display:block; }
+/* Node color picker row */
+.ncp-color-row { display:flex;align-items:center;gap:7px;padding:4px 8px;background:var(--surface-0);border-radius:6px;margin-bottom:4px; }
+.ncp-color-row span { font-size:11px;color:var(--text-muted);flex:1; }
+#ncpColorPicker { width:26px;height:22px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;padding:1px;flex-shrink:0; }
+.ncp-color-clear { font-size:10px;color:var(--text-dim);background:none;border:none;cursor:pointer;padding:1px 5px;border-radius:3px;white-space:nowrap; }
+.ncp-color-clear:hover { background:var(--surface-2);color:var(--text); }
 
 /* ── Add node form ── */
 #nodeAddForm {
@@ -713,6 +750,14 @@ domain:Platform {
             <tr><td><code>net:</code></td><td><code>network:, zone:</code></td><td>🌍/🔒/🛡️</td><td>Subgraph</td><td>Colour by zone name — External, DMZ, Internal</td></tr>
             <tr><td><code>domain:</code></td><td><code>dom:, team:, biz:, bu:</code></td><td>🏢</td><td>Subgraph</td><td>Auto-colour per domain from palette</td></tr>
             <tr><td><code>subdomain:</code></td><td><code>subdom:, subteam:, sd:</code></td><td>🔹</td><td>Nested subgraph</td><td>Groups entities inside a parent <code>domain:</code></td></tr>
+            <tr><td colspan="5" style="background:var(--surface-0);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);padding:8px 10px 4px">Flowchart shapes</td></tr>
+            <tr><td><code>process:</code></td><td><code>proc:</code></td><td>▭</td><td>Rectangle</td><td>Standard process / task step</td></tr>
+            <tr><td><code>decision:</code></td><td><code>dec:, diamond:</code></td><td>◇</td><td>Diamond</td><td>Decision / branch condition</td></tr>
+            <tr><td><code>terminal:</code></td><td><code>term:, start:, end:</code></td><td>⬭</td><td>Stadium</td><td>Start / End terminal</td></tr>
+            <tr><td><code>io:</code></td><td><code>input:, output:</code></td><td>▱</td><td>Parallelogram</td><td>Input / Output / data flow</td></tr>
+            <tr><td><code>document:</code></td><td><code>doc:</code></td><td>📄</td><td>Asymmetric</td><td>Document / report output</td></tr>
+            <tr><td><code>predefined:</code></td><td><code>subproc:, subprocess:</code></td><td>⊞</td><td>Subroutine rect</td><td>Predefined process / subroutine</td></tr>
+            <tr><td><code>connector:</code></td><td><code>join:</code></td><td>⊙</td><td>Circle</td><td>Flow connector / join point</td></tr>
           </tbody>
         </table>
       </div>
@@ -1020,6 +1065,13 @@ BatchJob writes to db:Warehouse</div>
             <tr><td>Node context panel → connection item</td><td>Jumps to and selects that arrow line in Smart Input.</td></tr>
             <tr><td>Click / type in Smart Input</td><td>Highlights the node(s) on the current line in the preview (faint indigo dashes).</td></tr>
             <tr><td>Click an arrow / edge label</td><td>Selects and highlights the corresponding arrow line in Smart Input.</td></tr>
+            <tr><td>Drag a domain / subdomain group border</td><td>Moves the entire group — all entities inside shift together, edges redraw in real time. The cluster box, toggle, and resize handle all follow. Position persists across reloads.</td></tr>
+            <tr><td>SE corner handle on a domain / subdomain</td><td>Resizes the cluster box. Entities inside reposition proportionally as you drag. Resize survives re-renders and is saved per group.</td></tr>
+            <tr><td>Click a domain / subdomain title</td><td>Opens the <em>Group context panel</em> with: Border colour picker, Rename, Find in source, Collapse/Expand.</td></tr>
+            <tr><td>Node context panel → <em>Color</em> swatch</td><td>Picks a custom fill colour for that entity. Overrides Mermaid's auto colour; persists in localStorage and project export.</td></tr>
+            <tr><td>✚ Label → click on diagram</td><td>Places a free-floating annotation label on the canvas. Single-click opens the colour popover (background, text, Match BG). Double-click edits text. Drag to reposition. × deletes. Labels persist in localStorage.</td></tr>
+            <tr><td>↺ Reset layout (plain click)</td><td>Refreshes Mermaid auto-layout <em>without</em> discarding manually-dragged node positions, group positions, sizes, or custom colours.</td></tr>
+            <tr><td>↺ Reset layout (Shift+click)</td><td>Clears <em>all</em> dragged positions, group sizes / positions, entity colours, and canvas labels, then re-renders.</td></tr>
             <tr><td>Click a subgraph control or title</td><td>Collapses a colourful group to a styled proxy node, redirects external edges to it, and persists the collapsed state; click Expand to restore the full group.</td></tr>
             <tr><td>Click / drag the minimap</td><td>Moves the live preview to that part of the rendered diagram; use the +/- button to collapse or expand the navigator.</td></tr>
             <tr><td>Drag on empty preview space</td><td>Pans (scrolls) the preview canvas. Works alongside scroll and Ctrl+scroll zoom.</td></tr>
@@ -1362,6 +1414,7 @@ BatchJob writes to db:Warehouse</div>
       <button class="tpl-item" onclick="loadTemplate('fileProcessing');toggleTplPicker(true)"><span class="tpl-item-icon">📁</span>File Processing</button>
       <button class="tpl-item" onclick="loadTemplate('networkArch');toggleTplPicker(true)"><span class="tpl-item-icon">🌐</span>Network Arch</button>
       <button class="tpl-item" onclick="loadTemplate('enterpriseDomains');toggleTplPicker(true)"><span class="tpl-item-icon">🏢</span>Enterprise Domains</button>
+      <button class="tpl-item" onclick="loadTemplate('flowDiagram');toggleTplPicker(true)"><span class="tpl-item-icon">◇</span>Flow Diagram</button>
     </div>
   </div>
   <div id="viewPickerWrap" class="flex-shrink-0">
@@ -1464,7 +1517,8 @@ BatchJob writes to db:Warehouse</div>
       <button id="downloadSvg" class="btn-sm" title="Download SVG">↓ SVG</button>
       <button id="downloadPng" class="btn-sm" title="Download PNG (2×)">↓ PNG</button>
       <button id="downloadGif" class="btn-sm" title="Download GIF (animated edges when edge motion is on)">&#8595; GIF</button>
-      <button id="resetPosBtn" class="btn-sm" title="Reset all manually-dragged node positions">↺ Reset layout</button>
+      <button id="resetPosBtn" class="btn-sm" title="Refresh auto-layout (keeps dragged positions &amp; group sizes) · Shift+click to clear all">↺ Reset layout</button>
+      <button id="addLabelBtn" class="btn-sm" title="Add annotation label to canvas (click button then click on diagram)">✚ Label</button>
 
       <!-- Fullscreen -->
       <button id="fullscreenBtn" class="zoom-btn" title="Toggle fullscreen preview (Ctrl+Shift+F)">⛶</button>
@@ -1537,10 +1591,42 @@ BatchJob writes to db:Warehouse</div>
   <line id="dragLine" stroke="#6366f1" stroke-width="2" stroke-dasharray="7,4" marker-end="url(#drag-arrow)" x1="0" y1="0" x2="0" y2="0"/>
 </svg>
 
+<!-- ── Label color popover ── -->
+<div id="labelColorPop">
+  <div class="lcp-row">
+    <span>Background</span>
+    <input type="color" id="lcpBgColor" title="Label background color">
+    <button class="lcp-match" id="lcpMatchBg" title="Match diagram background">Match BG</button>
+  </div>
+  <div class="lcp-row">
+    <span>Text</span>
+    <input type="color" id="lcpTextColor" title="Label text color">
+  </div>
+  <div class="lcp-row" style="justify-content:flex-end;gap:6px;padding-top:2px">
+    <button class="lcp-match" id="lcpReset">Reset colors</button>
+    <button class="lcp-match" id="lcpClose" style="background:var(--accent);color:#fff;border-color:var(--accent)">✓ Done</button>
+  </div>
+</div>
+
 <!-- ── Floating node "+" hover handle ── -->
 <div id="nodeHandle">
   <div class="nh-btn" id="nhBtn">+</div>
   <div class="nh-tip">Click to add · Drag to connect</div>
+</div>
+
+<!-- ── Group (domain/subdomain) context panel ── -->
+<div id="groupCtxPanel">
+  <div class="ncp-x" onclick="closeGroupCtx()">✕</div>
+  <div class="ncp-hdr">Group</div>
+  <div id="gcpName" class="ncp-name"></div>
+  <div class="ncp-color-row">
+    <span>Border</span>
+    <input type="color" id="gcpColorPicker" title="Set custom group border color">
+    <button class="ncp-color-clear" id="gcpColorClearBtn" style="display:none" title="Remove custom color">✕ Reset</button>
+  </div>
+  <button class="ncp-btn" id="gcpRename">✏️ Rename</button>
+  <button class="ncp-btn" id="gcpFind">📍 Find in source</button>
+  <button class="ncp-btn" id="gcpCollapse">▾ Collapse group</button>
 </div>
 
 <!-- ── Node context panel ── -->
@@ -1548,6 +1634,11 @@ BatchJob writes to db:Warehouse</div>
   <div class="ncp-x" onclick="closeNodeCtx()">✕</div>
   <div class="ncp-hdr">Node</div>
   <div id="ncpName" class="ncp-name"></div>
+  <div class="ncp-color-row">
+    <span>Color</span>
+    <input type="color" id="ncpColorPicker" title="Set custom node color">
+    <button class="ncp-color-clear" id="ncpColorClearBtn" style="display:none" title="Remove custom color">✕ Reset</button>
+  </div>
   <button class="ncp-btn" onclick="startRename()">✏️ Rename</button>
   <button class="ncp-btn" onclick="highlightEntityInInput(activeNodeId);closeNodeCtx()">📍 Find in source</button>
   <button class="ncp-btn" onclick="openAddNodeForm()">＋ Add connected node</button>
@@ -2124,6 +2215,28 @@ ftp:Public_FTP --SFTP--> instance:Internal_Worker
 config:Firewall_Rules --> server:WAF
 config:SSL_Cert --> server:Reverse_Proxy`,
 
+  flowDiagram: `// Flow Diagram — standard flowchart shapes
+// terminal: start/end  process: step  decision: branch
+// io: input/output     document: report  predefined: subroutine  connector: join
+
+terminal:Start
+process:Collect_Input
+io:Read_User_Data
+decision:Is_Valid
+process:Process_Record
+document:Generate_Report
+predefined:Send_Notification
+terminal:End
+
+terminal:Start --> process:Collect_Input
+process:Collect_Input --> io:Read_User_Data
+io:Read_User_Data --> decision:Is_Valid
+decision:Is_Valid --yes--> process:Process_Record
+decision:Is_Valid --no--> io:Read_User_Data
+process:Process_Record --> document:Generate_Report
+document:Generate_Report --> predefined:Send_Notification
+predefined:Send_Notification --> terminal:End`,
+
   enterpriseDomains: `// Enterprise Domain Architecture
 // Each domain:BU group colours entities by business ownership
 
@@ -2456,7 +2569,7 @@ app:BI_Dashboard --> db:Warehouse`,
 // ════════════════════════════════════════════════════════════════
 //  PARSER
 // ════════════════════════════════════════════════════════════════
-const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu|subdomain|subdom|subteam|sd';
+const _PFX_STR  = 'env|app|db|database|server|srv|instance|inst|interface|iface|config|cfg|conf|batch|btch|watcher|watch|ftp|sftp|ftps|net|network|zone|domain|dom|team|biz|bu|subdomain|subdom|subteam|sd|process|proc|decision|dec|diamond|terminal|term|start|end|io|input|output|document|doc|predefined|subproc|subprocess|connector|join';
 const _pfxTest  = new RegExp(`^(?:${_PFX_STR}):`, 'i');
 const _splitRe  = new RegExp(`\\s*,\\s*|\\s+(?=(?:${_PFX_STR}):)`, 'i');
 const _adjacentPrefixRe = new RegExp(`\\](?=(?:${_PFX_STR}):)`, 'ig');
@@ -2472,6 +2585,14 @@ const TYPE_ALIAS_MAP = {
   net:'net', network:'net', zone:'net',
   domain:'domain', dom:'domain', team:'domain', biz:'domain', bu:'domain',
   subdomain:'subdomain', subdom:'subdomain', subteam:'subdomain', sd:'subdomain',
+  // ── Flowchart shapes ──────────────────────────────────────────
+  process:'process', proc:'process',
+  decision:'decision', dec:'decision', diamond:'decision',
+  terminal:'terminal', term:'terminal', start:'terminal', end:'terminal',
+  io:'io', input:'io', output:'io',
+  document:'document', doc:'document',
+  predefined:'predefined', subproc:'predefined', subprocess:'predefined',
+  connector:'connector', join:'connector',
 };
 const CONTAINER_TYPES = new Set(['env', 'net', 'domain', 'subdomain']);
 
@@ -2507,6 +2628,21 @@ function groupChildrenFor(p, gid) {
   const domKids = p.domains?.get(gid) || [];
   const subKids = p.subdomains?.get(gid) || [];
   return [...new Set([...envKids, ...domKids, ...subKids])];
+}
+
+// Recursively collect all leaf (non-group) entity IDs within a group.
+function allGroupLeafChildren(p, gid, _seen = new Set()) {
+  if (_seen.has(gid)) return [];
+  _seen.add(gid);
+  const result = [];
+  for (const kid of groupChildrenFor(p, gid)) {
+    if (p.environments?.has(kid) || p.domains?.has(kid) || p.subdomains?.has(kid)) {
+      result.push(...allGroupLeafChildren(p, kid, _seen));
+    } else if (p.entities?.has(kid)) {
+      result.push(kid);
+    }
+  }
+  return [...new Set(result)];
 }
 
 function groupVisualFor(p, gid) {
@@ -2963,17 +3099,26 @@ class SmartParser {
     const l = iconUrl ? this.htmlLabel(label, iconUrl) : this.safeLabel(label);
     // If label already starts with a non-ASCII char (e.g. emoji from icon picker), skip the type icon
     const _icons = {env:'🌐',app:'📦',db:'🗄️',server:'🖥️',instance:'⚙️',
-      interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢',subdomain:'🔹'};
+      interface:'🔌',config:'📋',batch:'🔄',watcher:'👁️',ftp:'📁',net:'🌐',domain:'🏢',subdomain:'🔹',
+      process:'▭',decision:'◇',terminal:'⬭',io:'▱',document:'📄',predefined:'⊞',connector:'⊙'};
     const lbl = !addTypeIcon || l.codePointAt(0) > 127 ? l : (_icons[type] ? `${_icons[type]} ${l}` : l);
     switch (type) {
-      case 'db':        return `[("${lbl}")]`;
-      case 'server':    return `[["${lbl}"]]`;
-      case 'instance':  return `("${lbl}")`;
-      case 'interface': return `{{"${lbl}"}}`;
-      case 'batch':     return `[/"${lbl}"/]`;
-      case 'watcher':   return `{"${lbl}"}`;
-      case 'ftp':       return `(["${lbl}"])`;
-      default:          return `["${lbl}"]`;
+      case 'db':         return `[("${lbl}")]`;      // Cylinder
+      case 'server':     return `[["${lbl}"]]`;      // Subroutine rectangle
+      case 'instance':   return `("${lbl}")`;        // Rounded rectangle
+      case 'interface':  return `{{"${lbl}"}}`;      // Hexagon
+      case 'batch':      return `[/"${lbl}"/]`;      // Parallelogram
+      case 'watcher':    return `{"${lbl}"}`;        // Diamond
+      case 'ftp':        return `(["${lbl}"])`;      // Stadium
+      // ── Flowchart shapes ─────────────────────────────────────
+      case 'process':    return `["${lbl}"]`;        // Rectangle
+      case 'decision':   return `{"${lbl}"}`;        // Diamond
+      case 'terminal':   return `(["${lbl}"])`;      // Stadium
+      case 'io':         return `[/"${lbl}"/]`;      // Parallelogram
+      case 'document':   return `>"${lbl}"]`;        // Asymmetric / document
+      case 'predefined': return `[["${lbl}"]]`;      // Subroutine (predefined process)
+      case 'connector':  return `(("${lbl}"))`;      // Circle
+      default:           return `["${lbl}"]`;
     }
   }
 
@@ -2996,6 +3141,13 @@ class SmartParser {
     L.push('    classDef net       fill:#f0f9ff,stroke:#0284c7,stroke-width:2px,color:#0c4a6e');
     L.push('    classDef domain    fill:#fdf4ff,stroke:#c026d3,stroke-width:2px,color:#701a75');
     L.push('    classDef subdomain fill:#eef2ff,stroke:#4f46e5,stroke-width:2px,color:#312e81');
+    L.push('    classDef process    fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#1e40af');
+    L.push('    classDef decision   fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#92400e');
+    L.push('    classDef terminal   fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#166534');
+    L.push('    classDef io         fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8');
+    L.push('    classDef document   fill:#cffafe,stroke:#0891b2,stroke-width:2px,color:#155e75');
+    L.push('    classDef predefined fill:#ede9fe,stroke:#7c3aed,stroke-width:2px,color:#4c1d95');
+    L.push('    classDef connector  fill:#fce7f3,stroke:#be185d,stroke-width:2px,color:#831843');
     L.push('');
 
     // Build per-entity domain lookup: entityId → palette index
@@ -3854,6 +4006,14 @@ const ETYPES = [
   { type:'net',       icon:'🔒', label:'Net Int',     prefix:'net:Internal\n  ',   color:'#2563eb', bg:'#eff6ff', fg:'#1e3a8a', desc:'Internal / private zone' },
   { type:'domain',    icon:'🏢', label:'Domain',      prefix:'domain:',            color:'#c026d3', bg:'#fdf4ff', fg:'#701a75', desc:'Business domain / team' },
   { type:'subdomain', icon:'🔹', label:'Subdomain',   prefix:'subdomain:',         color:'#4f46e5', bg:'#eef2ff', fg:'#312e81', desc:'Nested domain group' },
+  // ── Flowchart shapes ──────────────────────────────────────────────────────
+  { type:'process',    icon:'▭', label:'Process',    prefix:'process:',    color:'#2563eb', bg:'#dbeafe', fg:'#1e40af', desc:'Standard process / task step'      },
+  { type:'decision',   icon:'◇', label:'Decision',   prefix:'decision:',   color:'#d97706', bg:'#fef3c7', fg:'#92400e', desc:'Decision / branch condition'       },
+  { type:'terminal',   icon:'⬭', label:'Terminal',   prefix:'terminal:',   color:'#16a34a', bg:'#dcfce7', fg:'#166534', desc:'Start / End terminal'              },
+  { type:'io',         icon:'▱', label:'I/O',        prefix:'io:',         color:'#9333ea', bg:'#f3e8ff', fg:'#6b21a8', desc:'Input / Output / data flow'        },
+  { type:'document',   icon:'📄', label:'Document',  prefix:'document:',   color:'#0891b2', bg:'#cffafe', fg:'#155e75', desc:'Document / report output'          },
+  { type:'predefined', icon:'⊞', label:'Sub-proc',   prefix:'predefined:', color:'#7c3aed', bg:'#ede9fe', fg:'#4c1d95', desc:'Predefined process / subroutine'   },
+  { type:'connector',  icon:'⊙', label:'Connector',  prefix:'connector:',  color:'#be185d', bg:'#fce7f3', fg:'#831843', desc:'Circle connector / join point'     },
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -5196,6 +5356,48 @@ const CLOUD_ICONS = {
     ['🚀','LaunchDarkly'              ,'config:LaunchDarkly'     ,'SaaS & APIs'],
     ['🌥️','Cloudinary'                ,'instance:Cloudinary'     ,'SaaS & APIs'],
     ['🔍','Algolia'                   ,'instance:Algolia'        ,'SaaS & APIs'],
+    // Flowchart
+    ['▭','Process'                   ,'process:Process'         ,'Flowchart'],
+    ['◇','Decision'                  ,'decision:Decision'       ,'Flowchart'],
+    ['⬭','Start'                     ,'terminal:Start'          ,'Flowchart'],
+    ['⬭','End'                       ,'terminal:End'            ,'Flowchart'],
+    ['▱','Input / Output'            ,'io:Input'                ,'Flowchart'],
+    ['📄','Document'                  ,'document:Document'       ,'Flowchart'],
+    ['⊞','Sub-process'               ,'predefined:SubProcess'   ,'Flowchart'],
+    ['⊙','Connector'                 ,'connector:A'             ,'Flowchart'],
+    // Batch & ETL
+    ['🌊','Apache NiFi'               ,'batch:ApacheNiFi'        ,'Batch & ETL'],
+    ['⚡','Prefect'                   ,'batch:Prefect'           ,'Batch & ETL'],
+    ['💎','Dagster'                   ,'batch:Dagster'           ,'Batch & ETL'],
+    ['🍄','Luigi'                     ,'batch:Luigi'             ,'Batch & ETL'],
+    ['☀️','Apache Beam'               ,'batch:ApacheBeam'        ,'Batch & ETL'],
+    ['🐼','Pandas'                    ,'batch:Pandas'            ,'Batch & ETL'],
+    ['⚡','Dask'                      ,'batch:Dask'              ,'Batch & ETL'],
+    ['🔧','Talend'                    ,'batch:Talend'            ,'Batch & ETL'],
+    ['📊','Informatica'               ,'batch:Informatica'       ,'Batch & ETL'],
+    ['📦','SSIS'                      ,'batch:SSIS'              ,'Batch & ETL'],
+    ['🔧','Pentaho'                   ,'batch:Pentaho'           ,'Batch & ETL'],
+    ['🌊','StreamSets'                ,'batch:StreamSets'        ,'Batch & ETL'],
+    ['✅','Great Expectations'        ,'batch:GreatExpectations' ,'Batch & ETL'],
+    ['🐇','Apache Hop'                ,'batch:ApacheHop'         ,'Batch & ETL'],
+    ['🔧','dbt Cloud'                 ,'batch:dbtCloud'          ,'Batch & ETL'],
+    ['🔌','Glue ETL'                  ,'batch:GlueETL'           ,'Batch & ETL'],
+    // File Storage
+    ['🦄','MinIO'                     ,'instance:MinIO'          ,'File Storage'],
+    ['🐘','HDFS'                      ,'db:HDFS'                 ,'File Storage'],
+    ['🐙','Ceph'                      ,'instance:Ceph'           ,'File Storage'],
+    ['🔗','GlusterFS'                 ,'instance:GlusterFS'      ,'File Storage'],
+    ['📁','NFS Server'                ,'server:NFS'              ,'File Storage'],
+    ['🗂️','Samba / SMB'               ,'server:Samba'            ,'File Storage'],
+    ['🌊','SeaweedFS'                 ,'instance:SeaweedFS'      ,'File Storage'],
+    ['♟️','Rook'                      ,'instance:Rook'           ,'File Storage'],
+    ['🗄️','File Server'               ,'db:FileServer'           ,'File Storage'],
+    ['📦','Object Store'              ,'db:ObjectStore'          ,'File Storage'],
+    ['🧱','Block Storage'             ,'db:BlockStorage'         ,'File Storage'],
+    ['📁','FTP Server'                ,'ftp:FTPServer'           ,'File Storage'],
+    ['🔐','SFTP Server'               ,'ftp:SFTPServer'          ,'File Storage'],
+    ['🔄','rsync'                     ,'batch:rsync'             ,'File Storage'],
+    ['🌐','WebDAV'                    ,'server:WebDAV'           ,'File Storage'],
   ],
   ai: [
     // LLM Providers
@@ -5568,6 +5770,15 @@ const ICONIFY_OVERRIDES = {
   'general-launchdarkly'                  : 'logos:launchdarkly',
   'general-cloudinary'                    : 'logos:cloudinary',
   'general-algolia'                       : 'logos:algolia',
+  'general-apache-nifi'                   : 'logos:apache',
+  'general-prefect'                       : 'simple-icons:prefect',
+  'general-pandas'                        : 'logos:pandas',
+  'general-talend'                        : 'simple-icons:talend',
+  'general-ssis'                          : 'simple-icons:microsoftsqlserver',
+  'general-dbt-cloud'                     : 'logos:dbt',
+  'general-minio'                         : 'simple-icons:minio',
+  'general-hdfs'                          : 'logos:apache',
+  'general-ceph'                          : 'simple-icons:ceph',
   // ai
   'ai-openai-gpt'                         : 'logos:openai-icon',
   'ai-anthropic-claude'                   : 'simple-icons:anthropic',
@@ -6483,9 +6694,8 @@ function attachClusterInteractions() {
 
     const clickTarget = cluster.querySelector('.cluster-label') || cluster;
     clickTarget.style.cursor = 'pointer';
-    clickTarget.title = _collapsedGroups.has(matchedId) ? 'Click to expand group' : 'Click to collapse group';
+    clickTarget.title = 'Click to open group options';
 
-    // Visual indicator for collapsed state
     if (_collapsedGroups.has(matchedId)) {
       cluster.setAttribute('data-collapsed', '1');
     }
@@ -6493,7 +6703,312 @@ function attachClusterInteractions() {
     clickTarget.addEventListener('click', (ev) => {
       ev.stopPropagation();
       ev.preventDefault();
-      toggleGroupCollapse(matchedId, !_collapsedGroups.has(matchedId));
+      if (_collapsedGroups.has(matchedId)) {
+        // Collapsed proxy nodes — expand directly on click
+        toggleGroupCollapse(matchedId, false);
+      } else {
+        // Show group context panel
+        showGroupCtx(matchedId, ev.clientX, ev.clientY);
+      }
+    });
+  });
+
+  // Collapsed proxy nodes also get a click handler (they're regular nodes post-collapse)
+  _collapsedGroups.forEach(gid => {
+    const node = meridianNodeGroup(svg, gid);
+    if (!node) return;
+    node.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      showGroupCtx(gid, ev.clientX, ev.clientY);
+    }, { once: true });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CLUSTER (DOMAIN / SUBDOMAIN) RESIZE HANDLES
+// ════════════════════════════════════════════════════════════════
+function attachClusterResizeHandles(svg) {
+  if (!svg) return;
+  svg.querySelectorAll('.meridian-cluster-resize-handle').forEach(el => el.remove());
+
+  const NS  = 'http://www.w3.org/2000/svg';
+  const HSZ = 12; // handle size in SVG units
+
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const gid = resolveClusterGroupId(cluster);
+    if (!gid || _collapsedGroups.has(gid)) return;
+
+    // Use the cluster's background rect for resizing
+    const clusterRect = cluster.querySelector('rect');
+    if (!clusterRect) return;
+
+    // Use getBBox (same pattern as addGroupToggleControl) for reliable positioning
+    let box;
+    try { box = cluster.getBBox(); } catch { return; }
+    if (!Number.isFinite(box.width) || !Number.isFinite(box.height)) return;
+
+    // Build a handle group appended to the cluster — same pattern as toggle buttons
+    const handleG = document.createElementNS(NS, 'g');
+    handleG.setAttribute('class', 'meridian-cluster-resize-handle');
+    handleG.setAttribute('data-group-id', gid);
+    handleG.setAttribute('transform', `translate(${box.x + box.width - HSZ},${box.y + box.height - HSZ})`);
+    handleG.style.cursor = 'se-resize';
+
+    const handleVis = document.createElementNS(NS, 'rect');
+    handleVis.setAttribute('width',  String(HSZ));
+    handleVis.setAttribute('height', String(HSZ));
+    handleVis.setAttribute('rx', '2');
+    handleVis.setAttribute('fill', '#6366f1');
+    handleVis.setAttribute('opacity', '0.25');
+    handleG.appendChild(handleVis);
+
+    cluster.appendChild(handleG);
+
+    // JS-based hover so visibility works even when Mermaid overrides pointer-events
+    cluster.addEventListener('mouseenter', () => handleVis.setAttribute('opacity', '0.75'));
+    cluster.addEventListener('mouseleave', () => handleVis.setAttribute('opacity', '0.25'));
+    handleG.addEventListener('mouseenter', e => { e.stopPropagation(); handleVis.setAttribute('opacity', '1'); });
+    handleG.addEventListener('mouseleave', () => handleVis.setAttribute('opacity', '0.75'));
+
+    handleG.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.clientX, startY = e.clientY;
+      const startW = parseFloat(clusterRect.getAttribute('width')  || '100');
+      const startH = parseFloat(clusterRect.getAttribute('height') || '60');
+      const bbrX = box.x + box.width;
+      const bbrY = box.y + box.height;
+
+      // Snapshot child entity positions for proportional repositioning
+      const childIds = allGroupLeafChildren(parser, gid);
+      const childSnaps = new Map(); // eid → {el, cx, cy, relX, relY}
+      const topLeft = { x: box.x, y: box.y };
+      childIds.forEach(eid => {
+        const g = meridianNodeGroup(svg, eid);
+        if (!g) return;
+        const t = g.getAttribute('transform') || '';
+        const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+        if (!tm) return;
+        const cx = parseFloat(tm[1]), cy = parseFloat(tm[2]);
+        childSnaps.set(eid, { el: g, cx, cy,
+          relX: cx - topLeft.x,  // position relative to cluster top-left
+          relY: cy - topLeft.y,
+        });
+      });
+
+      // Edge connections for live edge redraw during resize
+      const edgeConns = buildEdgeConnections(svg);
+      const allNodeMap = new Map();
+      meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+        const t = g.getAttribute('transform') || '';
+        const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+        if (tm) allNodeMap.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+      });
+
+      function screenDeltaToLocal(sdx, sdy) {
+        const ctm = cluster.getScreenCTM();
+        if (!ctm) return { dx: sdx, dy: sdy };
+        const inv = ctm.inverse();
+        return { dx: inv.a * sdx + inv.c * sdy, dy: inv.b * sdx + inv.d * sdy };
+      }
+
+      function onMove(ev) {
+        const { dx, dy } = screenDeltaToLocal(ev.clientX - startX, ev.clientY - startY);
+        const newW = Math.max(40, startW + dx);
+        const newH = Math.max(30, startH + dy);
+        clusterRect.setAttribute('width',  String(newW));
+        clusterRect.setAttribute('height', String(newH));
+        handleG.setAttribute('transform',
+          `translate(${bbrX + newW - startW - HSZ},${bbrY + newH - startH - HSZ})`);
+
+        // Proportionally reposition child entities
+        if (childSnaps.size && startW > 0 && startH > 0) {
+          const scaleX = newW / startW;
+          const scaleY = newH / startH;
+          childSnaps.forEach(({ el, relX, relY }, eid) => {
+            const newCx = topLeft.x + relX * scaleX;
+            const newCy = topLeft.y + relY * scaleY;
+            el.setAttribute('transform', `translate(${newCx},${newCy})`);
+            allNodeMap.set(eid, { cx: newCx, cy: newCy });
+          });
+          // Redraw edges
+          edgeConns.forEach(({ path, fromId, toId, labelEl }) => {
+            const f = allNodeMap.get(fromId), t2 = allNodeMap.get(toId);
+            if (!f || !t2) return;
+            const mx = (f.cx + t2.cx) / 2, my = (f.cy + t2.cy) / 2;
+            path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t2.cy} ${t2.cx},${t2.cy}`);
+            if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
+          });
+        }
+      }
+
+      function onUp() {
+        const finalW = parseFloat(clusterRect.getAttribute('width'));
+        const finalH = parseFloat(clusterRect.getAttribute('height'));
+        // Persist resize delta
+        groupSizeLoad();
+        const prev = _groupSizes[gid] || { dw: 0, dh: 0 };
+        _groupSizes[gid] = {
+          dw: prev.dw + (finalW - startW),
+          dh: prev.dh + (finalH - startH),
+          gDx: prev.gDx || 0, gDy: prev.gDy || 0,
+        };
+        groupSizeSave();
+        // Persist repositioned child node offsets
+        if (childSnaps.size && startW > 0 && startH > 0) {
+          const scaleX = finalW / startW, scaleY = finalH / startH;
+          posLoad();
+          childSnaps.forEach(({ cx, cy, relX, relY }, eid) => {
+            const newCx = topLeft.x + relX * scaleX;
+            const newCy = topLeft.y + relY * scaleY;
+            const prev2 = _nodePositions[eid] || { dx: 0, dy: 0 };
+            _nodePositions[eid] = { dx: prev2.dx + (newCx - cx), dy: prev2.dy + (newCy - cy) };
+          });
+          posSave();
+        }
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
+    });
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  GROUP (DOMAIN / SUBDOMAIN) DRAG
+// ════════════════════════════════════════════════════════════════
+function attachGroupDrag(svg) {
+  if (!svg || !svg.createSVGPoint) return;
+
+  function toSVGPoint(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const gid = resolveClusterGroupId(cluster);
+    if (!gid || _collapsedGroups.has(gid)) return;
+
+    const clusterRect = cluster.querySelector('rect');
+    if (!clusterRect) return;
+
+    const childIds = allGroupLeafChildren(parser, gid);
+    if (!childIds.length) return;
+
+    clusterRect.style.cursor = 'move';
+
+    clusterRect.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.meridian-cluster-resize-handle, .meridian-group-toggle')) return;
+      if (closestMeridianNode(e.target)) return; // node drag takes priority
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startPt = toSVGPoint(e.clientX, e.clientY);
+
+      // Snapshot child node positions
+      const nodeSnaps = new Map(); // eid → {el, cx, cy}
+      childIds.forEach(eid => {
+        const g = meridianNodeGroup(svg, eid);
+        if (!g) return;
+        const t = g.getAttribute('transform') || '';
+        const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+        if (!tm) return;
+        nodeSnaps.set(eid, { el: g, cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+      });
+
+      // Snapshot cluster rect, label, and resize-handle positions
+      const rx0 = parseFloat(clusterRect.getAttribute('x') || '0');
+      const ry0 = parseFloat(clusterRect.getAttribute('y') || '0');
+      const labelG = cluster.querySelector('.cluster-label');
+      const lt0 = labelG && (labelG.getAttribute('transform') || '')
+        .match(/translate\(\s*([+-]?[\d.eE+-]+)[, \t]+([+-]?[\d.eE+-]+)\s*\)/);
+      const lx0 = lt0 ? parseFloat(lt0[1]) : 0;
+      const ly0 = lt0 ? parseFloat(lt0[2]) : 0;
+
+      // Snapshot the resize handle so it moves in sync (keeps getBBox correct for all directions)
+      const resizeHandle = cluster.querySelector('.meridian-cluster-resize-handle');
+      const rht = resizeHandle && (resizeHandle.getAttribute('transform') || '')
+        .match(/translate\(\s*([+-]?[\d.eE+-]+)[, \t]+([+-]?[\d.eE+-]+)\s*\)/);
+      const rhx0 = rht ? parseFloat(rht[1]) : 0;
+      const rhy0 = rht ? parseFloat(rht[2]) : 0;
+
+      // Edge connections snapshot for live redraw
+      const edgeConns = buildEdgeConnections(svg);
+      const allNodeMap = new Map();
+      meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+        const t = g.getAttribute('transform') || '';
+        const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+        if (tm) allNodeMap.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+      });
+
+      let dragging = false, lastDx = 0, lastDy = 0;
+
+      function onMove(ev) {
+        const pt = toSVGPoint(ev.clientX, ev.clientY);
+        const dx = pt.x - startPt.x, dy = pt.y - startPt.y;
+        if (!dragging && Math.hypot(dx, dy) < 4) return;
+        if (!dragging) { dragging = true; closeNodeCtx(); closeGroupCtx(); }
+        lastDx = dx; lastDy = dy;
+
+        // Move child nodes
+        nodeSnaps.forEach(({ el, cx, cy }, eid) => {
+          el.setAttribute('transform', `translate(${cx + dx},${cy + dy})`);
+          allNodeMap.set(eid, { cx: cx + dx, cy: cy + dy });
+        });
+
+        // Move cluster visual: rect + label + resize handle (keeps getBBox accurate in all directions)
+        clusterRect.setAttribute('x', String(rx0 + dx));
+        clusterRect.setAttribute('y', String(ry0 + dy));
+        if (labelG) labelG.setAttribute('transform', `translate(${lx0 + dx},${ly0 + dy})`);
+        if (resizeHandle) resizeHandle.setAttribute('transform', `translate(${rhx0 + dx},${rhy0 + dy})`);
+
+        // Redraw all connected edges + labels
+        edgeConns.forEach(({ path, fromId, toId, labelEl }) => {
+          const f = allNodeMap.get(fromId), t2 = allNodeMap.get(toId);
+          if (!f || !t2) return;
+          const mx = (f.cx + t2.cx) / 2, my = (f.cy + t2.cy) / 2;
+          path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t2.cy} ${t2.cx},${t2.cy}`);
+          if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
+        });
+      }
+
+      function onUp() {
+        if (dragging) {
+          // Persist per-node position offsets
+          posLoad();
+          nodeSnaps.forEach(({ cx: cx0, cy: cy0 }, eid) => {
+            const prev = _nodePositions[eid] || { dx: 0, dy: 0 };
+            _nodePositions[eid] = { dx: prev.dx + lastDx, dy: prev.dy + lastDy };
+          });
+          posSave();
+
+          // Persist cluster visual offset
+          groupSizeLoad();
+          const prev = _groupSizes[gid] || { dw: 0, dh: 0 };
+          _groupSizes[gid] = {
+            dw: prev.dw || 0, dh: prev.dh || 0,
+            gDx: (prev.gDx || 0) + lastDx,
+            gDy: (prev.gDy || 0) + lastDy,
+          };
+          groupSizeSave();
+
+          // Refresh decorations — resize handle is already at correct position so getBBox is clean
+          decorateGroupControls(svg);
+          attachClusterResizeHandles(svg);
+        }
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
     });
   });
 }
@@ -6527,8 +7042,10 @@ function attachDragToNodes() {
   // ── Edge map ──────────────────────────────────────────────────
   // Edge paths live directly in <g class="edgePaths"> with no parent
   // transform, so getPointAtLength() coordinates = SVG-root coordinates.
+  // We record pathIdx (position in the full NodeList) so we can correlate each
+  // edge to the correct g.edgeLabel even when some paths are skipped.
   const edges = [];
-  svg.querySelectorAll('.edgePaths path').forEach(path => {
+  svg.querySelectorAll('.edgePaths path').forEach((path, pathIdx) => {
     if (!path.getTotalLength || !path.getPointAtLength) return;
     const len = path.getTotalLength();
     if (len < 2) return;
@@ -6541,19 +7058,24 @@ function attachDragToNodes() {
       if (d0 < dF) { dF = d0; fromId = id; }
       if (d1 < dT) { dT = d1; toId   = id; }
     });
-    if (fromId && toId && fromId !== toId) edges.push({ path, fromId, toId });
+    if (fromId && toId && fromId !== toId) edges.push({ path, fromId, toId, pathIdx });
   });
 
   // ── Edge click → highlight relationship in source ─────────────
+  // Use edge.pathIdx (not the filtered-array index i) to look up the matching
+  // g.edgeLabel — their order matches the full .edgePaths path NodeList.
   const edgeLabelGroups = Array.from(svg.querySelectorAll('g.edgeLabel'));
-  edges.forEach(({ path, fromId, toId }, i) => {
+  edges.forEach((edge) => {
+    const { path, fromId, toId } = edge;
+    // Attach the label element so _redrawEdge can move it during drag
+    edge.labelEl = edgeLabelGroups[edge.pathIdx] || null;
     path.style.cursor = 'pointer';
     path.addEventListener('click', (e) => {
       e.stopPropagation();
       highlightRelInInput(fromId, toId);
     });
     // Edge label groups have no IDs in Mermaid v10 — correlate by index
-    const lg = edgeLabelGroups[i];
+    const lg = edge.labelEl;
     if (lg) {
       lg.style.cursor = 'pointer';
       lg.addEventListener('click', (e) => {
@@ -6615,12 +7137,77 @@ function attachDragToNodes() {
   });
 }
 
-function _redrawEdge({ path, fromId, toId }, nodes) {
+function _redrawEdge({ path, fromId, toId, labelEl }, nodes) {
   const f = nodes.get(fromId), t = nodes.get(toId);
   if (!f || !t) return;
   // f.cx/cy and t.cx/cy are in SVG-root coords = path's coordinate space
   const mx = (f.cx + t.cx) / 2;
+  const my = (f.cy + t.cy) / 2;
   path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t.cy} ${t.cx},${t.cy}`);
+  // Move the edge label to the geometric midpoint of the redrawn curve
+  if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
+}
+
+// ── Edge connection helpers ────────────────────────────────────
+// buildEdgeConnections MUST be called BEFORE applyNodePositions() so that path
+// endpoints and node centres are both at Mermaid's auto-layout coordinates —
+// making the from/to matching reliable regardless of how large the stored offsets are.
+function buildEdgeConnections(svg) {
+  if (!svg) return [];
+  const nodes = new Map();
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+    const t  = g.getAttribute('transform') || '';
+    const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+    if (!tm) return;
+    nodes.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+  });
+  if (!nodes.size) return [];
+
+  const labelGroups = Array.from(svg.querySelectorAll('g.edgeLabel'));
+  const conns = [];
+
+  Array.from(svg.querySelectorAll('.edgePaths path')).forEach((path, pathIdx) => {
+    if (!path.getTotalLength || !path.getPointAtLength) return;
+    const len = path.getTotalLength();
+    if (len < 2) return;
+    const p0 = path.getPointAtLength(0);
+    const p1 = path.getPointAtLength(len);
+    let fromId = null, toId = null, dF = Infinity, dT = Infinity;
+    nodes.forEach((n, id) => {
+      const d0 = Math.hypot(p0.x - n.cx, p0.y - n.cy);
+      const d1 = Math.hypot(p1.x - n.cx, p1.y - n.cy);
+      if (d0 < dF) { dF = d0; fromId = id; }
+      if (d1 < dT) { dT = d1; toId   = id; }
+    });
+    if (fromId && toId && fromId !== toId) {
+      conns.push({ path, fromId, toId, pathIdx, labelEl: labelGroups[pathIdx] || null });
+    }
+  });
+
+  return conns;
+}
+
+// Call AFTER applyNodePositions() — re-routes each path and its label to the
+// now-offset node centres using the pre-built from/to mapping.
+function applyEdgeConnections(svg, conns) {
+  if (!svg || !conns.length || !Object.keys(_nodePositions).length) return;
+
+  const nodes = new Map();
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+    const t  = g.getAttribute('transform') || '';
+    const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+    if (!tm) return;
+    nodes.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+  });
+
+  conns.forEach(({ path, fromId, toId, labelEl }) => {
+    const f = nodes.get(fromId), t = nodes.get(toId);
+    if (!f || !t) return;
+    const mx = (f.cx + t.cx) / 2;
+    const my = (f.cy + t.cy) / 2;
+    path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t.cy} ${t.cx},${t.cy}`);
+    if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
+  });
 }
 
 // ── Node context panel ──────────────────────────────────────────
@@ -6630,6 +7217,14 @@ function showNodeCtx(entityId, x, y) {
   if (!ent) return;
   const ico = ETYPES.find(t => t.type === ent.type)?.icon || '▪';
   document.getElementById('ncpName').textContent = `${ico} ${ent.label}`;
+
+  // Populate color picker
+  entityColorLoad();
+  const picker   = document.getElementById('ncpColorPicker');
+  const clearBtn = document.getElementById('ncpColorClearBtn');
+  const saved    = _entityColors[entityId];
+  picker.value   = saved || '#6366f1';
+  clearBtn.style.display = saved ? 'inline-block' : 'none';
 
   // Populate connections list
   const conns = document.getElementById('ncpConns');
@@ -6666,6 +7261,37 @@ function showNodeCtx(entityId, x, y) {
 }
 
 function closeNodeCtx() { $nodeCtx.classList.remove('vis'); }
+
+// ── Group (domain/subdomain) context panel ──────────────────────
+let activeGroupId = null;
+const $groupCtx = document.getElementById('groupCtxPanel');
+
+function showGroupCtx(gid, x, y) {
+  closeNodeCtx();
+  activeGroupId = gid;
+  const ent = parser.entities.get(gid);
+  if (!ent) return;
+  const visual = groupVisualFor(parser, gid);
+  const typeLabel = parser.domains.has(gid) ? 'Domain' : parser.subdomains.has(gid) ? 'Subdomain' : 'Group';
+  document.getElementById('gcpName').textContent = `${typeLabel}: ${ent.label}`;
+
+  groupColorLoad();
+  const picker  = document.getElementById('gcpColorPicker');
+  const clearBtn = document.getElementById('gcpColorClearBtn');
+  const saved = _groupColors[gid];
+  picker.value = saved || (visual?.stroke || '#6366f1');
+  clearBtn.style.display = saved ? 'inline-block' : 'none';
+
+  const pw = 218;
+  let px = x + 10, py = y - 10;
+  if (px + pw > window.innerWidth  - 12) px = x - pw - 10;
+  if (py + 180  > window.innerHeight - 12) py = y - 160;
+  $groupCtx.style.left = px + 'px';
+  $groupCtx.style.top  = py + 'px';
+  $groupCtx.classList.add('vis');
+}
+
+function closeGroupCtx() { $groupCtx?.classList.remove('vis'); }
 
 function openAddNodeForm() {
   const rect = $nodeCtx.getBoundingClientRect();
@@ -7306,12 +7932,18 @@ function renderDesignBoard(code) {
     svgEl.style.maxWidth = 'none';
     svgEl.setAttribute('overflow', 'visible');
     svgEl.style.overflow = 'visible';
+    const edgeConns = buildEdgeConnections(svgEl);
     $wrapper.classList.remove('no-diagram');
     posLoad();
     applyNodePositions();
+    applyEdgeConnections(svgEl, edgeConns);
+    applyGroupColors(svgEl);
+    applyEntityColors(svgEl);
+    applyCanvasLabels(svgEl);
     applyEdgeAnimation(svgEl);
     attachNodeInteractions();
     attachDragToNodes();
+    attachGroupDrag(svgEl);
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
@@ -7370,14 +8002,24 @@ async function renderDiagram(code) {
       svgEl.setAttribute('overflow', 'visible');
       svgEl.style.overflow = 'visible';
     }
+    // Snapshot edge→node connections while SVG is still at Mermaid auto-layout
+    // (BEFORE applyNodePositions moves anything — matching is only reliable here)
+    const edgeConns = buildEdgeConnections(svgEl);
     $wrapper.classList.remove('no-diagram');
     posLoad();
     applyNodePositions();
+    applyEdgeConnections(svgEl, edgeConns);
+    applyGroupSizes(svgEl);
+    applyGroupColors(svgEl);
+    applyEntityColors(svgEl);
+    applyCanvasLabels(svgEl);
     applyEdgeAnimation(svgEl);
     attachNodeInteractions();
     attachDragToNodes();
+    attachGroupDrag(svgEl);
     attachClusterInteractions();
     decorateGroupControls(svgEl);
+    attachClusterResizeHandles(svgEl);
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
@@ -7625,6 +8267,10 @@ function currentProjectBundle() {
       zoom,
     },
     nodePositions: cleanNodePositions(_nodePositions),
+    groupSizes: Object.assign({}, _groupSizes),
+    entityColors: Object.assign({}, _entityColors),
+    groupColors: Object.assign({}, _groupColors),
+    canvasLabels: _canvasLabels.slice(),
     customIcons: loadCustomIcons(),
   };
 }
@@ -7710,6 +8356,43 @@ function applyProjectBundle(bundle) {
   posLoad();
   _nodePositions = cleanNodePositions(bundle.nodePositions || bundle.positions);
   posSave();
+  if (bundle.groupSizes && typeof bundle.groupSizes === 'object') {
+    _groupSizes = {};
+    _groupSizesLoaded = true;
+    Object.entries(bundle.groupSizes).forEach(([id, sz]) => {
+      const dw = Number(sz?.dw ?? 0), dh = Number(sz?.dh ?? 0);
+      const gDx = Number(sz?.gDx ?? 0), gDy = Number(sz?.gDy ?? 0);
+      if (id && [dw, dh, gDx, gDy].every(Number.isFinite))
+        _groupSizes[id] = { dw, dh, gDx, gDy };
+    });
+    groupSizeSave();
+  }
+  if (bundle.entityColors && typeof bundle.entityColors === 'object') {
+    _entityColors = {};
+    _entityColorsLoaded = true;
+    Object.entries(bundle.entityColors).forEach(([id, color]) => {
+      if (id && typeof color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(color)) _entityColors[id] = color;
+    });
+    entityColorSave();
+  }
+
+  if (bundle.groupColors && typeof bundle.groupColors === 'object') {
+    _groupColors = {};
+    _groupColorsLoaded = true;
+    Object.entries(bundle.groupColors).forEach(([id, color]) => {
+      if (id && typeof color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(color)) _groupColors[id] = color;
+    });
+    groupColorSave();
+  }
+
+  if (Array.isArray(bundle.canvasLabels)) {
+    _canvasLabels = bundle.canvasLabels.filter(l =>
+      l && typeof l.id !== 'undefined' && typeof l.text === 'string' &&
+      Number.isFinite(Number(l.x)) && Number.isFinite(Number(l.y))
+    ).map(l => ({ id: l.id, text: l.text, x: Number(l.x), y: Number(l.y) }));
+    _canvasLabelsLoaded = true;
+    canvasLabelSave();
+  }
 
   if (Array.isArray(bundle.customIcons)) {
     const existing = loadCustomIcons();
@@ -8209,7 +8892,161 @@ document.getElementById('downloadPng').addEventListener('click', () => {
 //  FULLSCREEN
 // ════════════════════════════════════════════════════════════════
 document.getElementById('fullscreenBtn').addEventListener('click', toggleFullscreen);
-document.getElementById('resetPosBtn').addEventListener('click', posReset);
+document.getElementById('resetPosBtn').addEventListener('click', e => {
+  if (e.shiftKey) { posClearAll(); } else { posReset(); }
+});
+
+// ── Label color popover handlers ────────────────────────────────
+document.getElementById('lcpBgColor').addEventListener('input', e => {
+  if (!_lcpActiveLid) return;
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === _lcpActiveLid);
+  if (lbl) { lbl.bgColor = e.target.value; canvasLabelSave(); _rebuildLabelEl(_lcpActiveLid, _lcpActiveSvg); }
+});
+
+document.getElementById('lcpTextColor').addEventListener('input', e => {
+  if (!_lcpActiveLid) return;
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === _lcpActiveLid);
+  if (lbl) { lbl.textColor = e.target.value; canvasLabelSave(); _rebuildLabelEl(_lcpActiveLid, _lcpActiveSvg); }
+});
+
+document.getElementById('lcpMatchBg').addEventListener('click', () => {
+  if (!_lcpActiveLid) return;
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === _lcpActiveLid);
+  if (lbl) {
+    lbl.bgColor = 'transparent';
+    lbl.textColor = document.documentElement.getAttribute('data-theme') !== 'light' ? '#d1d5db' : '#374151';
+    canvasLabelSave();
+    document.getElementById('lcpBgColor').value = '#111827';
+    document.getElementById('lcpTextColor').value = lbl.textColor;
+    _rebuildLabelEl(_lcpActiveLid, _lcpActiveSvg);
+  }
+});
+
+document.getElementById('lcpReset').addEventListener('click', () => {
+  if (!_lcpActiveLid) return;
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === _lcpActiveLid);
+  if (lbl) {
+    delete lbl.bgColor; delete lbl.textColor;
+    canvasLabelSave();
+    _rebuildLabelEl(_lcpActiveLid, _lcpActiveSvg);
+    _closeLabelColorPop();
+  }
+});
+
+document.getElementById('lcpClose').addEventListener('click', _closeLabelColorPop);
+
+// Close popover when clicking outside
+document.addEventListener('mousedown', e => {
+  if (_lcpActiveLid && !e.target.closest('#labelColorPop, .meridian-canvas-label')) {
+    _closeLabelColorPop();
+  }
+}, true);
+
+// ── Add Label button + canvas placement ─────────────────────────
+document.getElementById('addLabelBtn').addEventListener('click', () => {
+  if (_labelAddMode) { _exitLabelAddMode(); return; }
+  _enterLabelAddMode();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _labelAddMode) _exitLabelAddMode();
+});
+
+// Canvas click in label-add mode: place new label
+document.getElementById('zoomWrapper').addEventListener('click', e => {
+  if (!_labelAddMode) return;
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+  const pt = svg.createSVGPoint();
+  pt.x = e.clientX; pt.y = e.clientY;
+  const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
+  _placeLabelAt(svgPt.x, svgPt.y);
+});
+
+// ── Group context panel handlers ─────────────────────────────────
+document.getElementById('gcpColorPicker').addEventListener('input', e => {
+  if (!activeGroupId) return;
+  groupColorLoad();
+  _groupColors[activeGroupId] = e.target.value;
+  groupColorSave();
+  const svgEl = $preview.querySelector('svg');
+  if (svgEl) applyGroupColors(svgEl);
+  document.getElementById('gcpColorClearBtn').style.display = 'inline-block';
+});
+
+document.getElementById('gcpColorClearBtn').addEventListener('click', () => {
+  if (!activeGroupId) return;
+  groupColorLoad();
+  delete _groupColors[activeGroupId];
+  groupColorSave();
+  document.getElementById('gcpColorClearBtn').style.display = 'none';
+  if (lastCode) renderDiagram(lastCode);
+});
+
+document.getElementById('gcpFind').addEventListener('click', () => {
+  if (!activeGroupId) return;
+  closeGroupCtx();
+  highlightEntityInInput(activeGroupId);
+});
+
+document.getElementById('gcpCollapse').addEventListener('click', () => {
+  if (!activeGroupId) return;
+  closeGroupCtx();
+  toggleGroupCollapse(activeGroupId, !_collapsedGroups.has(activeGroupId));
+});
+
+document.getElementById('gcpRename').addEventListener('click', () => {
+  if (!activeGroupId) return;
+  const ent = parser.entities.get(activeGroupId);
+  if (!ent) return;
+  const nameEl = document.getElementById('gcpName');
+  const old = ent.label;
+  nameEl.innerHTML = '';
+  const inp = document.createElement('input');
+  inp.value = old;
+  inp.style.cssText = 'width:100%;background:var(--surface-2);border:1px solid var(--accent);border-radius:4px;padding:3px 6px;font-size:13px;color:var(--text-em);outline:none;font-weight:600;';
+  nameEl.appendChild(inp);
+  inp.focus();
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      const newLabel = inp.value.trim();
+      if (newLabel && newLabel !== old && $input.value) {
+        const re = new RegExp(`\\b${old.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}\\b`, 'g');
+        applyInputChange($input.value.replace(re, newLabel));
+      }
+      closeGroupCtx();
+    }
+    if (ev.key === 'Escape') {
+      nameEl.textContent = `${ent.label}`;
+      closeGroupCtx();
+    }
+  });
+  inp.addEventListener('blur', () => closeGroupCtx());
+});
+
+// ── Entity color picker ──────────────────────────────────────────
+document.getElementById('ncpColorPicker').addEventListener('input', e => {
+  if (!activeNodeId) return;
+  entityColorLoad();
+  _entityColors[activeNodeId] = e.target.value;
+  entityColorSave();
+  const svgEl = $preview.querySelector('svg');
+  if (svgEl) applyEntityColors(svgEl);
+  document.getElementById('ncpColorClearBtn').style.display = 'inline-block';
+});
+
+document.getElementById('ncpColorClearBtn').addEventListener('click', () => {
+  if (!activeNodeId) return;
+  entityColorLoad();
+  delete _entityColors[activeNodeId];
+  entityColorSave();
+  document.getElementById('ncpColorClearBtn').style.display = 'none';
+  if (lastCode) renderDiagram(lastCode);
+});
 
 let _preFsLeft = '';
 
@@ -9127,11 +9964,21 @@ function posSave() {
 }
 
 function posReset() {
+  // Re-render to refresh auto-layout base while preserving dragged positions.
+  // Shift+click the button to fully clear all positions and sizes.
+  if (lastCode) renderDiagram(lastCode);
+  toast('Layout refreshed · Shift+click ↺ to clear all positions');
+}
+
+function posClearAll() {
   _nodePositions = {};
   localStorage.removeItem(POS_KEY);
-  // Re-render to snap nodes back to auto-layout
+  groupSizeReset();
+  entityColorReset();
+  groupColorReset();
+  canvasLabelReset();
   if (lastCode) renderDiagram(lastCode);
-  toast('Node positions reset');
+  toast('All positions, sizes, colors and labels cleared');
 }
 
 function applyNodePositions() {
@@ -9149,6 +9996,447 @@ function applyNodePositions() {
   });
 }
 
+
+// ════════════════════════════════════════════════════════════════
+//  PERSISTENT GROUP (DOMAIN/SUBDOMAIN) SIZES
+// ════════════════════════════════════════════════════════════════
+const GROUP_SIZE_KEY = 'meridian_groupsizes_v1';
+let _groupSizes = {};       // { [groupId]: { dw, dh } }
+let _groupSizesLoaded = false;
+
+function groupSizeLoad() {
+  if (_groupSizesLoaded) return;
+  try { _groupSizes = JSON.parse(localStorage.getItem(GROUP_SIZE_KEY) || '{}'); } catch { _groupSizes = {}; }
+  _groupSizesLoaded = true;
+}
+
+function groupSizeSave() {
+  localStorage.setItem(GROUP_SIZE_KEY, JSON.stringify(_groupSizes));
+}
+
+function groupSizeReset() {
+  _groupSizes = {};
+  _groupSizesLoaded = false;
+  localStorage.removeItem(GROUP_SIZE_KEY);
+}
+
+function applyGroupSizes(svg) {
+  groupSizeLoad();
+  if (!Object.keys(_groupSizes).length) return;
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const gid = resolveClusterGroupId(cluster);
+    if (!gid) return;
+    const sz = _groupSizes[gid];
+    if (!sz) return;
+    const rect = cluster.querySelector('rect');
+
+    // Apply resize delta (width / height)
+    if (rect && (sz.dw || sz.dh)) {
+      const w = parseFloat(rect.getAttribute('width') || '0');
+      const h = parseFloat(rect.getAttribute('height') || '0');
+      rect.setAttribute('width', String(Math.max(20, w + (sz.dw || 0))));
+      rect.setAttribute('height', String(Math.max(20, h + (sz.dh || 0))));
+    }
+
+    // Apply group position offset (from group drag) to rect and label
+    if (sz.gDx || sz.gDy) {
+      const gdx = sz.gDx || 0, gdy = sz.gDy || 0;
+      if (rect) {
+        rect.setAttribute('x', String(parseFloat(rect.getAttribute('x') || '0') + gdx));
+        rect.setAttribute('y', String(parseFloat(rect.getAttribute('y') || '0') + gdy));
+      }
+      const labelG = cluster.querySelector('.cluster-label');
+      if (labelG) {
+        const lt = (labelG.getAttribute('transform') || '').match(/translate\(\s*([+-]?[\d.eE+-]+)[, \t]+([+-]?[\d.eE+-]+)\s*\)/);
+        const lx = lt ? parseFloat(lt[1]) : 0, ly = lt ? parseFloat(lt[2]) : 0;
+        labelG.setAttribute('transform', `translate(${lx + gdx},${ly + gdy})`);
+      }
+    }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PERSISTENT ENTITY COLORS
+// ════════════════════════════════════════════════════════════════
+const ENTITY_COLOR_KEY = 'meridian_entitycolors_v1';
+let _entityColors       = {};   // { [entityId]: hexColor }
+let _entityColorsLoaded = false;
+
+function entityColorLoad() {
+  if (_entityColorsLoaded) return;
+  try { _entityColors = JSON.parse(localStorage.getItem(ENTITY_COLOR_KEY) || '{}'); } catch { _entityColors = {}; }
+  _entityColorsLoaded = true;
+}
+
+function entityColorSave() {
+  localStorage.setItem(ENTITY_COLOR_KEY, JSON.stringify(_entityColors));
+}
+
+function entityColorReset() {
+  _entityColors = {};
+  _entityColorsLoaded = false;
+  localStorage.removeItem(ENTITY_COLOR_KEY);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PERSISTENT GROUP (DOMAIN/SUBDOMAIN) COLORS
+// ════════════════════════════════════════════════════════════════
+const GROUP_COLOR_KEY = 'meridian_groupcolors_v1';
+let _groupColors       = {};   // { [groupId]: hexColor }
+let _groupColorsLoaded = false;
+
+function groupColorLoad() {
+  if (_groupColorsLoaded) return;
+  try { _groupColors = JSON.parse(localStorage.getItem(GROUP_COLOR_KEY) || '{}'); } catch { _groupColors = {}; }
+  _groupColorsLoaded = true;
+}
+
+function groupColorSave() {
+  localStorage.setItem(GROUP_COLOR_KEY, JSON.stringify(_groupColors));
+}
+
+function groupColorReset() {
+  _groupColors = {};
+  _groupColorsLoaded = false;
+  localStorage.removeItem(GROUP_COLOR_KEY);
+}
+
+function applyGroupColors(svg) {
+  groupColorLoad();
+  if (!svg || !Object.keys(_groupColors).length) return;
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const gid = resolveClusterGroupId(cluster);
+    if (!gid) return;
+    const color = _groupColors[gid];
+    if (!color) return;
+    const rect = cluster.querySelector('rect');
+    if (rect) {
+      rect.style.setProperty('stroke', color, 'important');
+      rect.style.setProperty('fill', color + '22', 'important'); // 13% opacity tint
+    }
+  });
+}
+
+function applyEntityColors(svg) {
+  entityColorLoad();
+  if (!svg || !Object.keys(_entityColors).length) return;
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+    const color = _entityColors[eid];
+    if (!color) return;
+    // Target the primary fill shape (rect for most types, path for cylinders/db, etc.)
+    const shape = g.querySelector(
+      'rect.label-container, rect.basic, .label-container, rect, polygon, circle, ellipse, path'
+    );
+    if (!shape) return;
+    // Mermaid injects fill with !important in the inline style — must match that priority
+    shape.style.setProperty('fill', color, 'important');
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CANVAS ANNOTATION LABELS
+// ════════════════════════════════════════════════════════════════
+const LABEL_KEY = 'meridian_canvas_labels_v1';
+let _canvasLabels       = [];    // [{id, text, x, y}]
+let _canvasLabelsLoaded = false;
+let _labelAddMode       = false;
+
+function canvasLabelLoad() {
+  if (_canvasLabelsLoaded) return;
+  try { _canvasLabels = JSON.parse(localStorage.getItem(LABEL_KEY) || '[]'); } catch { _canvasLabels = []; }
+  _canvasLabelsLoaded = true;
+}
+
+function canvasLabelSave() {
+  localStorage.setItem(LABEL_KEY, JSON.stringify(_canvasLabels));
+}
+
+function canvasLabelReset() {
+  _canvasLabels = [];
+  _canvasLabelsLoaded = false;
+  localStorage.removeItem(LABEL_KEY);
+}
+
+function _labelColors(label = {}) {
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const def = dark
+    ? { fill: '#2a2616', stroke: '#d97706', text: '#fde68a', del: '#7f1d1d', delText: '#fca5a5' }
+    : { fill: '#fef9c3', stroke: '#d97706', text: '#1e293b', del: '#ef4444', delText: '#ffffff' };
+  return {
+    fill:    label.bgColor   || def.fill,
+    stroke:  label.bgColor   ? label.bgColor : def.stroke,
+    text:    label.textColor || def.text,
+    del:     def.del,
+    delText: def.delText,
+    transparent: label.bgColor === 'transparent',
+  };
+}
+
+function _bgMatchColor() {
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  return dark ? '#111827' : '#f9fafb';
+}
+
+function _makeLabelSvgGroup(NS, label) {
+  const { text, id } = label;
+  const lines = String(text || 'Label').split('\n');
+  const maxLen = Math.max(...lines.map(l => l.length), 6);
+  const padX = 10, padY = 8, lineH = 17;
+  const w = Math.max(80, maxLen * 7.2 + padX * 2 + 16);
+  const h = lines.length * lineH + padY * 2;
+  const c = _labelColors(label);
+
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('class', 'meridian-canvas-label');
+  g.setAttribute('data-label-id', String(id));
+  g.setAttribute('transform', `translate(${label.x},${label.y})`);
+
+  const bg = document.createElementNS(NS, 'rect');
+  bg.setAttribute('width', String(w));
+  bg.setAttribute('height', String(h));
+  bg.setAttribute('rx', '5');
+  bg.setAttribute('fill', c.transparent ? 'transparent' : c.fill);
+  bg.setAttribute('stroke', c.transparent ? 'none' : c.stroke);
+  bg.setAttribute('stroke-width', '1.5');
+  g.appendChild(bg);
+
+  lines.forEach((line, i) => {
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', String(padX));
+    t.setAttribute('y', String(padY + lineH * (i + 0.82)));
+    t.setAttribute('font-size', '12');
+    t.setAttribute('font-family', 'system-ui,sans-serif');
+    t.setAttribute('fill', c.text);
+    t.textContent = line || ' ';
+    g.appendChild(t);
+  });
+
+  // Delete button (top-right)
+  const delG = document.createElementNS(NS, 'g');
+  delG.setAttribute('class', 'meridian-label-delete');
+  delG.setAttribute('transform', `translate(${w - 15},2)`);
+  const delBg = document.createElementNS(NS, 'rect');
+  delBg.setAttribute('width', '13'); delBg.setAttribute('height', '13');
+  delBg.setAttribute('rx', '3'); delBg.setAttribute('fill', c.del);
+  delG.appendChild(delBg);
+  const delTxt = document.createElementNS(NS, 'text');
+  delTxt.setAttribute('x', '2'); delTxt.setAttribute('y', '10');
+  delTxt.setAttribute('font-size', '11'); delTxt.setAttribute('fill', c.delText);
+  delTxt.setAttribute('font-weight', 'bold');
+  delTxt.textContent = '×';
+  delG.appendChild(delTxt);
+  g.appendChild(delG);
+
+  return g;
+}
+
+function applyCanvasLabels(svg) {
+  if (!svg) return;
+  svg.querySelector('#meridian-label-layer')?.remove();
+  canvasLabelLoad();
+  if (!_canvasLabels.length) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const layer = document.createElementNS(NS, 'g');
+  layer.setAttribute('id', 'meridian-label-layer');
+  svg.appendChild(layer);
+  _canvasLabels.forEach(lbl => layer.appendChild(_makeLabelSvgGroup(NS, lbl)));
+  attachLabelInteractions(svg);
+}
+
+function attachLabelInteractions(svg) {
+  if (!svg) return;
+  svg.querySelectorAll('.meridian-canvas-label').forEach(g => {
+    const lid = g.getAttribute('data-label-id');
+    let isDrag = false;
+
+    // Drag to reposition; single click (no drag) → open color popover
+    g.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      if (e.target.closest('.meridian-label-delete')) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const pt = svg.createSVGPoint();
+      function toSVG(cx, cy) { pt.x = cx; pt.y = cy; return pt.matrixTransform(svg.getScreenCTM().inverse()); }
+
+      const tm = (g.getAttribute('transform') || '').match(/translate\(\s*([+-]?[\d.eE+-]+)[, \t]+([+-]?[\d.eE+-]+)\s*\)/);
+      const ox = tm ? parseFloat(tm[1]) : 0, oy = tm ? parseFloat(tm[2]) : 0;
+      const s0 = toSVG(e.clientX, e.clientY);
+      isDrag = false;
+
+      function onMove(ev) {
+        const s = toSVG(ev.clientX, ev.clientY);
+        const dx = s.x - s0.x, dy = s.y - s0.y;
+        if (!isDrag && Math.hypot(dx, dy) < 3) return;
+        isDrag = true;
+        g.setAttribute('transform', `translate(${ox + dx},${oy + dy})`);
+      }
+
+      function onUp(ev) {
+        if (isDrag) {
+          const s = toSVG(ev.clientX, ev.clientY);
+          const nx = ox + s.x - s0.x, ny = oy + s.y - s0.y;
+          canvasLabelLoad();
+          const lbl = _canvasLabels.find(l => String(l.id) === lid);
+          if (lbl) { lbl.x = nx; lbl.y = ny; canvasLabelSave(); }
+        } else {
+          // Single click without drag → open color popover
+          _openLabelColorPop(e, lid, g, svg);
+        }
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    // Double-click to edit
+    g.addEventListener('dblclick', e => {
+      if (e.target.closest('.meridian-label-delete')) return;
+      e.stopPropagation();
+      canvasLabelLoad();
+      const lbl = _canvasLabels.find(l => String(l.id) === lid);
+      if (lbl) _openLabelEditor(g, lbl, svg);
+    });
+
+    // Delete button
+    g.querySelector('.meridian-label-delete')?.addEventListener('click', e => {
+      e.stopPropagation();
+      canvasLabelLoad();
+      _canvasLabels = _canvasLabels.filter(l => String(l.id) !== lid);
+      canvasLabelSave();
+      g.remove();
+    });
+  });
+}
+
+function _openLabelEditor(labelG, lbl, svg) {
+  const box = labelG.getBoundingClientRect();
+  const existing = document.getElementById('meridian-label-editor');
+  if (existing) existing.remove();
+
+  const ta = document.createElement('textarea');
+  ta.id = 'meridian-label-editor';
+  ta.value = lbl.text;
+  ta.style.cssText = [
+    `position:fixed`, `left:${Math.max(4, box.left)}px`, `top:${Math.max(4, box.top)}px`,
+    `min-width:${Math.max(box.width, 100)}px`, `min-height:${Math.max(box.height, 36)}px`,
+    `font-size:12px`, `font-family:system-ui,sans-serif`,
+    `background:${_labelColors().fill}`, `color:${_labelColors().text}`,
+    `border:2px solid #d97706`, `border-radius:5px`, `padding:6px 10px`,
+    `z-index:10000`, `resize:both`, `outline:none`, `line-height:1.5`,
+  ].join(';');
+  document.body.appendChild(ta);
+  ta.focus(); ta.select();
+
+  function commit() {
+    const newText = ta.value.trim() || 'Label';
+    ta.remove();
+    canvasLabelLoad();
+    const found = _canvasLabels.find(l => String(l.id) === String(lbl.id));
+    if (found) found.text = newText;
+    canvasLabelSave();
+    // Rebuild the label element in the SVG overlay
+    const layer = svg.querySelector('#meridian-label-layer');
+    if (layer && found) {
+      labelG.remove();
+      const NS = 'http://www.w3.org/2000/svg';
+      const newG = _makeLabelSvgGroup(NS, found);
+      layer.appendChild(newG);
+      attachLabelInteractions(svg); // re-bind for the newly created element
+    }
+  }
+
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { ta.remove(); }
+  });
+  ta.addEventListener('blur', commit, { once: true });
+}
+
+let _lcpActiveLid = null, _lcpActiveSvg = null, _lcpActiveG = null;
+
+function _closeLabelColorPop() {
+  document.getElementById('labelColorPop')?.classList.remove('vis');
+  _lcpActiveLid = _lcpActiveSvg = _lcpActiveG = null;
+}
+
+function _openLabelColorPop(e, lid, labelG, svg) {
+  _closeLabelColorPop();
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === lid);
+  if (!lbl) return;
+  _lcpActiveLid = lid; _lcpActiveSvg = svg; _lcpActiveG = labelG;
+
+  const pop = document.getElementById('labelColorPop');
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const defBg   = dark ? '#2a2616' : '#fef9c3';
+  const defText = dark ? '#fde68a' : '#1e293b';
+
+  document.getElementById('lcpBgColor').value   = lbl.bgColor   || defBg;
+  document.getElementById('lcpTextColor').value = lbl.textColor || defText;
+
+  const vw = window.innerWidth, vh = window.innerHeight;
+  let px = e.clientX + 8, py = e.clientY + 8;
+  if (px + 210 > vw - 8) px = e.clientX - 218;
+  if (py + 130 > vh - 8) py = e.clientY - 138;
+  pop.style.left = px + 'px';
+  pop.style.top  = py + 'px';
+  pop.classList.add('vis');
+}
+
+function _rebuildLabelEl(lid, svg) {
+  canvasLabelLoad();
+  const lbl = _canvasLabels.find(l => String(l.id) === lid);
+  if (!lbl || !svg) return;
+  const layer = svg.querySelector('#meridian-label-layer');
+  if (!layer) return;
+  const old = layer.querySelector(`.meridian-canvas-label[data-label-id="${lid}"]`);
+  if (old) old.remove();
+  const NS = 'http://www.w3.org/2000/svg';
+  const newG = _makeLabelSvgGroup(NS, lbl);
+  layer.appendChild(newG);
+  attachLabelInteractions(svg);
+}
+
+function _enterLabelAddMode() {
+  _labelAddMode = true;
+  document.getElementById('addLabelBtn')?.classList.add('active');
+  document.getElementById('zoomWrapper')?.classList.add('label-add-mode');
+  toast('Click on the diagram to place a label · Esc to cancel');
+}
+
+function _exitLabelAddMode() {
+  _labelAddMode = false;
+  document.getElementById('addLabelBtn')?.classList.remove('active');
+  document.getElementById('zoomWrapper')?.classList.remove('label-add-mode');
+}
+
+function _placeLabelAt(svgX, svgY) {
+  canvasLabelLoad();
+  const id = Date.now();
+  const lbl = { id, text: 'Label', x: svgX, y: svgY };
+  _canvasLabels.push(lbl);
+  canvasLabelSave();
+  _exitLabelAddMode();
+
+  const svg = $preview.querySelector('svg');
+  if (!svg) return;
+  let layer = svg.querySelector('#meridian-label-layer');
+  if (!layer) {
+    const NS = 'http://www.w3.org/2000/svg';
+    layer = document.createElementNS(NS, 'g');
+    layer.setAttribute('id', 'meridian-label-layer');
+    svg.appendChild(layer);
+  }
+  const NS = 'http://www.w3.org/2000/svg';
+  const newG = _makeLabelSvgGroup(NS, lbl);
+  layer.appendChild(newG);
+  attachLabelInteractions(svg);
+  // Immediately open editor for the new label
+  _openLabelEditor(newG, lbl, svg);
+}
 
 // ════════════════════════════════════════════════════════════════
 //  isInputFocused helper  (used before adapter is built)
