@@ -446,6 +446,16 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 #ncpColorPicker { width:26px;height:22px;border:1px solid var(--border);border-radius:4px;background:none;cursor:pointer;padding:1px;flex-shrink:0; }
 .ncp-color-clear { font-size:10px;color:var(--text-dim);background:none;border:none;cursor:pointer;padding:1px 5px;border-radius:3px;white-space:nowrap; }
 .ncp-color-clear:hover { background:var(--surface-2);color:var(--text); }
+.gcp-layout-row { display:flex;align-items:center;gap:7px;padding:5px 8px;background:var(--surface-0);border-radius:6px;margin:4px 0; }
+.gcp-layout-row span { font-size:11px;color:var(--text-muted);flex:1; }
+.gcp-col-btns { display:flex;gap:4px; }
+.gcp-col-btn {
+  width:26px;height:22px;border:1px solid var(--border);border-radius:4px;
+  background:var(--surface-2);color:var(--text-muted);font-size:11px;font-weight:700;
+  cursor:pointer;transition:background .1s,color .1s,border-color .1s;
+}
+.gcp-col-btn:hover { background:var(--surface-3);color:var(--text); }
+.gcp-col-btn.active { background:var(--accent-bg);border-color:var(--accent);color:var(--accent-text); }
 
 /* ── Add node form ── */
 #nodeAddForm {
@@ -1619,6 +1629,15 @@ BatchJob writes to db:Warehouse</div>
   <div class="ncp-x" onclick="closeGroupCtx()">✕</div>
   <div class="ncp-hdr">Group</div>
   <div id="gcpName" class="ncp-name"></div>
+  <div class="gcp-layout-row">
+    <span>Columns</span>
+    <div class="gcp-col-btns" id="gcpColumnBtns">
+      <button type="button" class="gcp-col-btn" data-cols="2" title="Align entities in 2 columns">2</button>
+      <button type="button" class="gcp-col-btn" data-cols="3" title="Align entities in 3 columns">3</button>
+      <button type="button" class="gcp-col-btn" data-cols="4" title="Align entities in 4 columns">4</button>
+    </div>
+  </div>
+  <button class="ncp-btn" id="gcpColumnClear" style="display:none">Clear column layout</button>
   <div class="ncp-color-row">
     <span>Border</span>
     <input type="color" id="gcpColorPicker" title="Set custom group border color">
@@ -6727,6 +6746,284 @@ function attachClusterInteractions() {
 // ════════════════════════════════════════════════════════════════
 //  CLUSTER (DOMAIN / SUBDOMAIN) RESIZE HANDLES
 // ════════════════════════════════════════════════════════════════
+function normalizeGroupColumns(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.max(2, Math.min(8, n)) : 0;
+}
+
+function activeGroupColumns(gid) {
+  groupLayoutLoad();
+  return normalizeGroupColumns(_groupLayouts[gid]?.columns);
+}
+
+function groupColumnLayoutEntityIds(p, gid) {
+  const ids = allGroupLeafChildren(p, gid);
+  if (!p.domains?.has(gid)) return ids;
+
+  const nested = new Set();
+  for (const [subId, parentId] of (p.subdomainParents || new Map())) {
+    if (parentId !== gid) continue;
+    allGroupLeafChildren(p, subId).forEach(id => nested.add(id));
+  }
+  return ids.filter(id => !nested.has(id));
+}
+
+function findGroupCluster(svg, gid) {
+  if (!svg || !gid) return null;
+  for (const cluster of svg.querySelectorAll('g.cluster')) {
+    if (resolveClusterGroupId(cluster) === gid) return cluster;
+  }
+  return null;
+}
+
+function readNodeCenter(g) {
+  const t = g?.getAttribute?.('transform') || '';
+  const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
+  return tm ? { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) } : null;
+}
+
+function setNodeCenter(g, cx, cy) {
+  g.setAttribute('transform', `translate(${Number(cx).toFixed(2)},${Number(cy).toFixed(2)})`);
+}
+
+function svgViewBoxParts(svg) {
+  const vb = (svg?.getAttribute?.('viewBox') || '').trim().split(/\s+/).map(Number);
+  if (vb.length === 4 && vb.every(Number.isFinite) && vb[2] > 0 && vb[3] > 0) {
+    return { x: vb[0], y: vb[1], w: vb[2], h: vb[3] };
+  }
+  const w = parseFloat(svg?.getAttribute?.('width') || '0');
+  const h = parseFloat(svg?.getAttribute?.('height') || '0');
+  return { x: 0, y: 0, w: Math.max(1, w || 800), h: Math.max(1, h || 600) };
+}
+
+function ensureSvgBaseBounds(svg) {
+  if (!svg) return null;
+  if (!svg.dataset.meridianBaseVb) {
+    const vb = svgViewBoxParts(svg);
+    svg.dataset.meridianBaseVb = `${vb.x} ${vb.y} ${vb.w} ${vb.h}`;
+    svg.dataset.meridianBaseMaxWidth = svg.style.maxWidth || '';
+    svg.dataset.meridianBaseWidthStyle = svg.style.width || '';
+    svg.dataset.meridianBaseHeightStyle = svg.style.height || '';
+  }
+  const parts = svg.dataset.meridianBaseVb.split(/\s+/).map(Number);
+  return { x: parts[0], y: parts[1], w: parts[2], h: parts[3] };
+}
+
+function updatePreviewScrollBounds(svg = $preview?.querySelector?.('svg')) {
+  if (!svg || !$wrapper) return false;
+  const base = ensureSvgBaseBounds(svg);
+  if (!base) return false;
+
+  let box;
+  try { box = svg.getBBox(); } catch { return false; }
+  if (!box || !Number.isFinite(box.width) || !Number.isFinite(box.height)) return false;
+
+  const pad = 36;
+  const right = Math.max(base.x + base.w, box.x + box.width + pad);
+  const bottom = Math.max(base.y + base.h, box.y + box.height + pad);
+  const width = Math.max(1, Math.ceil(right - base.x));
+  const height = Math.max(1, Math.ceil(bottom - base.y));
+  const expanded = width > base.w + 1 || height > base.h + 1;
+
+  if (expanded) {
+    svg.setAttribute('viewBox', `${base.x} ${base.y} ${width} ${height}`);
+    svg.setAttribute('width', String(width));
+    svg.setAttribute('height', String(height));
+    svg.style.width = `${width}px`;
+    svg.style.height = `${height}px`;
+    svg.style.maxWidth = 'none';
+    $wrapper.style.width = `${width}px`;
+    $wrapper.style.height = `${height}px`;
+  } else if (svg.dataset.meridianBoundsExpanded === '1') {
+    svg.setAttribute('viewBox', `${base.x} ${base.y} ${base.w} ${base.h}`);
+    svg.setAttribute('width', String(base.w));
+    svg.setAttribute('height', String(base.h));
+    svg.style.width = svg.dataset.meridianBaseWidthStyle || '';
+    svg.style.height = svg.dataset.meridianBaseHeightStyle || '';
+    svg.style.maxWidth = svg.dataset.meridianBaseMaxWidth || '';
+    $wrapper.style.width = '';
+    $wrapper.style.height = '';
+  }
+
+  svg.dataset.meridianBoundsExpanded = expanded ? '1' : '0';
+  scheduleMinimapViewportUpdate();
+  setTimeout(scheduleMinimapViewportUpdate, 180);
+  return expanded;
+}
+
+function annotateParallelEdges(edges) {
+  const groups = new Map();
+  edges.forEach(edge => {
+    if (!edge?.fromId || !edge?.toId) return;
+    const ids = [edge.fromId, edge.toId].sort();
+    const key = `${ids[0]}\u0000${ids[1]}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(edge);
+  });
+
+  groups.forEach(group => {
+    group.sort((a, b) => (a.pathIdx ?? 0) - (b.pathIdx ?? 0));
+    const count = group.length;
+    group.forEach((edge, i) => {
+      edge.parallelCount = count;
+      edge.parallelOffset = 0;
+      if (count <= 1) return;
+      const ids = [edge.fromId, edge.toId].sort();
+      const lane = i - (count - 1) / 2;
+      const directionSign = edge.fromId === ids[0] ? 1 : -1;
+      edge.parallelOffset = lane * 30 * directionSign;
+    });
+  });
+  return edges;
+}
+
+function redrawEdgesForCurrentNodes(svg, conns) {
+  if (!svg || !conns?.length) return;
+  const nodes = new Map();
+  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
+    const pos = readNodeCenter(g);
+    if (pos) nodes.set(eid, pos);
+  });
+  conns.forEach(edge => _redrawEdge(edge, nodes));
+}
+
+function positionClusterResizeHandle(cluster) {
+  const rect = cluster?.querySelector?.('rect');
+  const handle = cluster?.querySelector?.('.meridian-cluster-resize-handle');
+  if (!rect || !handle) return;
+  const x = parseFloat(rect.getAttribute('x') || '0');
+  const y = parseFloat(rect.getAttribute('y') || '0');
+  const w = parseFloat(rect.getAttribute('width') || '0');
+  const h = parseFloat(rect.getAttribute('height') || '0');
+  handle.setAttribute('transform', `translate(${x + w - 12},${y + h - 12})`);
+}
+
+function groupColumnLayoutMetrics(svg, gid, columns) {
+  const cluster = findGroupCluster(svg, gid);
+  const rect = cluster?.querySelector?.('rect');
+  const requestedCols = normalizeGroupColumns(columns);
+  if (!cluster || !rect || !requestedCols) return null;
+
+  const nodes = groupColumnLayoutEntityIds(parser, gid)
+    .map(eid => ({ eid, el: meridianNodeGroup(svg, eid) }))
+    .filter(item => item.el);
+  if (nodes.length < 2) return null;
+
+  let maxW = 72, maxH = 36;
+  nodes.forEach(({ el }) => {
+    try {
+      const b = el.getBBox();
+      if (Number.isFinite(b.width)) maxW = Math.max(maxW, b.width);
+      if (Number.isFinite(b.height)) maxH = Math.max(maxH, b.height);
+    } catch (_) {}
+  });
+
+  const effectiveCols = Math.max(1, Math.min(requestedCols, nodes.length));
+  const rows = Math.ceil(nodes.length / effectiveCols);
+  const padX = 30, padTop = 54, padBottom = 28;
+  const colGap = 24, rowGap = 22;
+  const minW = padX * 2 + effectiveCols * maxW + Math.max(0, effectiveCols - 1) * colGap;
+  const minH = padTop + padBottom + rows * maxH + Math.max(0, rows - 1) * rowGap;
+  const rectBox = {
+    x: parseFloat(rect.getAttribute('x') || '0'),
+    y: parseFloat(rect.getAttribute('y') || '0'),
+    width: parseFloat(rect.getAttribute('width') || '0'),
+    height: parseFloat(rect.getAttribute('height') || '0'),
+  };
+  return { cluster, rect, nodes, columns: effectiveCols, rows, rectBox, minW, minH, padX, padTop, padBottom };
+}
+
+function groupColumnMinSize(svg, gid, columns) {
+  const m = groupColumnLayoutMetrics(svg, gid, columns);
+  return m ? { w: m.minW, h: m.minH } : { w: 40, h: 30 };
+}
+
+function fitGroupEntitiesToColumns(svg, gid, columns, opts = {}) {
+  const m = groupColumnLayoutMetrics(svg, gid, columns);
+  if (!m) return { changed: false, count: 0 };
+
+  const start = new Map();
+  m.nodes.forEach(({ eid, el }) => {
+    const pos = readNodeCenter(el);
+    if (pos) start.set(eid, pos);
+  });
+
+  const targetW = opts.expand === false ? m.rectBox.width : Math.max(m.rectBox.width, m.minW);
+  const targetH = opts.expand === false ? m.rectBox.height : Math.max(m.rectBox.height, m.minH);
+  const grewW = targetW - m.rectBox.width;
+  const grewH = targetH - m.rectBox.height;
+  if (grewW || grewH) {
+    m.rect.setAttribute('width', String(targetW));
+    m.rect.setAttribute('height', String(targetH));
+    positionClusterResizeHandle(m.cluster);
+    if (opts.persistGroupSize) {
+      groupSizeLoad();
+      const prev = _groupSizes[gid] || { dw: 0, dh: 0 };
+      _groupSizes[gid] = {
+        dw: (prev.dw || 0) + grewW,
+        dh: (prev.dh || 0) + grewH,
+        gDx: prev.gDx || 0,
+        gDy: prev.gDy || 0,
+      };
+      groupSizeSave();
+    }
+  }
+
+  const innerX = m.rectBox.x + m.padX;
+  const innerY = m.rectBox.y + m.padTop;
+  const innerW = Math.max(1, targetW - m.padX * 2);
+  const innerH = Math.max(1, targetH - m.padTop - m.padBottom);
+  const cellW = innerW / m.columns;
+  const cellH = innerH / m.rows;
+
+  m.nodes.forEach(({ el }, i) => {
+    const col = i % m.columns;
+    const row = Math.floor(i / m.columns);
+    const cx = innerX + cellW * (col + 0.5);
+    const cy = innerY + cellH * (row + 0.5);
+    setNodeCenter(el, cx, cy);
+  });
+
+  if (opts.persistNodes) {
+    posLoad();
+    m.nodes.forEach(({ eid, el }) => {
+      const before = start.get(eid);
+      const after = readNodeCenter(el);
+      if (!before || !after) return;
+      const prev = _nodePositions[eid] || { dx: 0, dy: 0 };
+      _nodePositions[eid] = {
+        dx: (prev.dx || 0) + (after.cx - before.cx),
+        dy: (prev.dy || 0) + (after.cy - before.cy),
+      };
+    });
+    posSave();
+  }
+
+  redrawEdgesForCurrentNodes(svg, opts.edgeConns || buildEdgeConnections(svg));
+  return { changed: true, count: m.nodes.length, columns: m.columns };
+}
+
+function updateGroupColumnControls(gid) {
+  const cols = gid ? activeGroupColumns(gid) : 0;
+  document.querySelectorAll('#gcpColumnBtns .gcp-col-btn').forEach(btn => {
+    btn.classList.toggle('active', Number(btn.dataset.cols) === cols);
+  });
+  const clear = document.getElementById('gcpColumnClear');
+  if (clear) clear.style.display = cols ? 'block' : 'none';
+}
+
+function clearColumnLayoutsForNode(eid) {
+  groupLayoutLoad();
+  let changed = false;
+  Object.keys(_groupLayouts).forEach(gid => {
+    if (groupColumnLayoutEntityIds(parser, gid).includes(eid)) {
+      delete _groupLayouts[gid];
+      changed = true;
+    }
+  });
+  if (changed) groupLayoutSave();
+}
+
 function attachClusterResizeHandles(svg) {
   if (!svg) return;
   svg.querySelectorAll('.meridian-cluster-resize-handle').forEach(el => el.remove());
@@ -6780,9 +7077,10 @@ function attachClusterResizeHandles(svg) {
       const startH = parseFloat(clusterRect.getAttribute('height') || '60');
       const bbrX = box.x + box.width;
       const bbrY = box.y + box.height;
+      const columnCols = activeGroupColumns(gid);
 
       // Snapshot child entity positions for proportional repositioning
-      const childIds = allGroupLeafChildren(parser, gid);
+      const childIds = columnCols ? groupColumnLayoutEntityIds(parser, gid) : allGroupLeafChildren(parser, gid);
       const childSnaps = new Map(); // eid → {el, cx, cy, relX, relY}
       const topLeft = { x: box.x, y: box.y };
       childIds.forEach(eid => {
@@ -6816,12 +7114,18 @@ function attachClusterResizeHandles(svg) {
 
       function onMove(ev) {
         const { dx, dy } = screenDeltaToLocal(ev.clientX - startX, ev.clientY - startY);
-        const newW = Math.max(40, startW + dx);
-        const newH = Math.max(30, startH + dy);
+        const minSize = columnCols ? groupColumnMinSize(svg, gid, columnCols) : { w: 40, h: 30 };
+        const newW = Math.max(minSize.w, startW + dx);
+        const newH = Math.max(minSize.h, startH + dy);
         clusterRect.setAttribute('width',  String(newW));
         clusterRect.setAttribute('height', String(newH));
         handleG.setAttribute('transform',
           `translate(${bbrX + newW - startW - HSZ},${bbrY + newH - startH - HSZ})`);
+
+        if (columnCols) {
+          fitGroupEntitiesToColumns(svg, gid, columnCols, { expand: false, edgeConns });
+          return;
+        }
 
         // Proportionally reposition child entities
         if (childSnaps.size && startW > 0 && startH > 0) {
@@ -6834,13 +7138,7 @@ function attachClusterResizeHandles(svg) {
             allNodeMap.set(eid, { cx: newCx, cy: newCy });
           });
           // Redraw edges
-          edgeConns.forEach(({ path, fromId, toId, labelEl }) => {
-            const f = allNodeMap.get(fromId), t2 = allNodeMap.get(toId);
-            if (!f || !t2) return;
-            const mx = (f.cx + t2.cx) / 2, my = (f.cy + t2.cy) / 2;
-            path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t2.cy} ${t2.cx},${t2.cy}`);
-            if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
-          });
+          edgeConns.forEach(edge => _redrawEdge(edge, allNodeMap));
         }
       }
 
@@ -6858,16 +7156,19 @@ function attachClusterResizeHandles(svg) {
         groupSizeSave();
         // Persist repositioned child node offsets
         if (childSnaps.size && startW > 0 && startH > 0) {
-          const scaleX = finalW / startW, scaleY = finalH / startH;
           posLoad();
-          childSnaps.forEach(({ cx, cy, relX, relY }, eid) => {
-            const newCx = topLeft.x + relX * scaleX;
-            const newCy = topLeft.y + relY * scaleY;
+          childSnaps.forEach(({ el, cx, cy, relX, relY }, eid) => {
+            const after = columnCols ? readNodeCenter(el) : null;
+            const scaleX = finalW / startW, scaleY = finalH / startH;
+            const newCx = after?.cx ?? (topLeft.x + relX * scaleX);
+            const newCy = after?.cy ?? (topLeft.y + relY * scaleY);
             const prev2 = _nodePositions[eid] || { dx: 0, dy: 0 };
             _nodePositions[eid] = { dx: prev2.dx + (newCx - cx), dy: prev2.dy + (newCy - cy) };
           });
           posSave();
         }
+        updatePreviewScrollBounds(svg);
+        refreshMinimap();
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup',   onUp);
       }
@@ -6970,13 +7271,7 @@ function attachGroupDrag(svg) {
         if (resizeHandle) resizeHandle.setAttribute('transform', `translate(${rhx0 + dx},${rhy0 + dy})`);
 
         // Redraw all connected edges + labels
-        edgeConns.forEach(({ path, fromId, toId, labelEl }) => {
-          const f = allNodeMap.get(fromId), t2 = allNodeMap.get(toId);
-          if (!f || !t2) return;
-          const mx = (f.cx + t2.cx) / 2, my = (f.cy + t2.cy) / 2;
-          path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t2.cy} ${t2.cx},${t2.cy}`);
-          if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
-        });
+        edgeConns.forEach(edge => _redrawEdge(edge, allNodeMap));
       }
 
       function onUp() {
@@ -7000,6 +7295,8 @@ function attachGroupDrag(svg) {
           groupSizeSave();
 
           // Refresh decorations — resize handle is already at correct position so getBBox is clean
+          updatePreviewScrollBounds(svg);
+          refreshMinimap();
           decorateGroupControls(svg);
           attachClusterResizeHandles(svg);
         }
@@ -7064,6 +7361,7 @@ function attachDragToNodes() {
   // ── Edge click → highlight relationship in source ─────────────
   // Use edge.pathIdx (not the filtered-array index i) to look up the matching
   // g.edgeLabel — their order matches the full .edgePaths path NodeList.
+  annotateParallelEdges(edges);
   const edgeLabelGroups = Array.from(svg.querySelectorAll('g.edgeLabel'));
   edges.forEach((edge) => {
     const { path, fromId, toId } = edge;
@@ -7125,6 +7423,9 @@ function attachDragToNodes() {
           const prev = _nodePositions[eid] || { dx: 0, dy: 0 };
           _nodePositions[eid] = { dx: prev.dx + (node.cx - cx0), dy: prev.dy + (node.cy - cy0) };
           posSave();
+          clearColumnLayoutsForNode(eid);
+          updatePreviewScrollBounds(svg);
+          refreshMinimap();
         }
         node.el.style.cursor = 'grab';
         document.removeEventListener('mousemove', onMove);
@@ -7137,15 +7438,18 @@ function attachDragToNodes() {
   });
 }
 
-function _redrawEdge({ path, fromId, toId, labelEl }, nodes) {
+function _redrawEdge({ path, fromId, toId, labelEl, parallelOffset = 0 }, nodes) {
   const f = nodes.get(fromId), t = nodes.get(toId);
   if (!f || !t) return;
-  // f.cx/cy and t.cx/cy are in SVG-root coords = path's coordinate space
   const mx = (f.cx + t.cx) / 2;
   const my = (f.cy + t.cy) / 2;
-  path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t.cy} ${t.cx},${t.cy}`);
-  // Move the edge label to the geometric midpoint of the redrawn curve
-  if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
+  const dx = t.cx - f.cx;
+  const dy = t.cy - f.cy;
+  const len = Math.hypot(dx, dy) || 1;
+  const ox = (-dy / len) * (Number(parallelOffset) || 0);
+  const oy = ( dx / len) * (Number(parallelOffset) || 0);
+  path.setAttribute('d', `M${f.cx},${f.cy} C${mx + ox},${f.cy + oy} ${mx + ox},${t.cy + oy} ${t.cx},${t.cy}`);
+  if (labelEl) labelEl.setAttribute('transform', `translate(${mx + ox},${my + oy})`);
 }
 
 // ── Edge connection helpers ────────────────────────────────────
@@ -7184,30 +7488,14 @@ function buildEdgeConnections(svg) {
     }
   });
 
-  return conns;
+  return annotateParallelEdges(conns);
 }
 
 // Call AFTER applyNodePositions() — re-routes each path and its label to the
 // now-offset node centres using the pre-built from/to mapping.
-function applyEdgeConnections(svg, conns) {
-  if (!svg || !conns.length || !Object.keys(_nodePositions).length) return;
-
-  const nodes = new Map();
-  meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
-    const t  = g.getAttribute('transform') || '';
-    const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
-    if (!tm) return;
-    nodes.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
-  });
-
-  conns.forEach(({ path, fromId, toId, labelEl }) => {
-    const f = nodes.get(fromId), t = nodes.get(toId);
-    if (!f || !t) return;
-    const mx = (f.cx + t.cx) / 2;
-    const my = (f.cy + t.cy) / 2;
-    path.setAttribute('d', `M${f.cx},${f.cy} C${mx},${f.cy} ${mx},${t.cy} ${t.cx},${t.cy}`);
-    if (labelEl) labelEl.setAttribute('transform', `translate(${mx},${my})`);
-  });
+function applyEdgeConnections(svg, conns, force = false) {
+  if (!svg || !conns.length || (!force && !Object.keys(_nodePositions).length)) return;
+  redrawEdgesForCurrentNodes(svg, conns);
 }
 
 // ── Node context panel ──────────────────────────────────────────
@@ -7281,11 +7569,12 @@ function showGroupCtx(gid, x, y) {
   const saved = _groupColors[gid];
   picker.value = saved || (visual?.stroke || '#6366f1');
   clearBtn.style.display = saved ? 'inline-block' : 'none';
+  updateGroupColumnControls(gid);
 
-  const pw = 218;
+  const pw = 232;
   let px = x + 10, py = y - 10;
   if (px + pw > window.innerWidth  - 12) px = x - pw - 10;
-  if (py + 180  > window.innerHeight - 12) py = y - 160;
+  if (py + 230  > window.innerHeight - 12) py = y - 210;
   $groupCtx.style.left = px + 'px';
   $groupCtx.style.top  = py + 'px';
   $groupCtx.classList.add('vis');
@@ -7498,6 +7787,7 @@ function setZoom(val) {
   $zoomDisp.textContent = Math.round(zoom * 100) + '%';
   saveToStorage();
   scheduleMinimapViewportUpdate();
+  setTimeout(scheduleMinimapViewportUpdate, 180);
 }
 
 function fitZoom() {
@@ -7569,6 +7859,7 @@ function scrollToNewNodes() {
 }
 
 let _minimapViewportFrame = 0;
+let _minimapNavigateSeq = 0;
 
 function clampNumber(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -7594,8 +7885,12 @@ function minimapMetrics() {
   if ($minimap.classList.contains('hidden') || $minimap.classList.contains('collapsed')) return null;
   const bodyRect = $minimapBody.getBoundingClientRect();
   const hostRect = $minimapHost.getBoundingClientRect();
-  const totalW = Math.max($previewScroll.scrollWidth, $previewScroll.clientWidth, 1);
-  const totalH = Math.max($previewScroll.scrollHeight, $previewScroll.clientHeight, 1);
+  const clientW = Math.max($previewScroll.clientWidth, 1);
+  const clientH = Math.max($previewScroll.clientHeight, 1);
+  const maxScrollLeft = Math.max(0, $previewScroll.scrollWidth - clientW);
+  const maxScrollTop = Math.max(0, $previewScroll.scrollHeight - clientH);
+  const totalW = Math.max(clientW + maxScrollLeft, 1);
+  const totalH = Math.max(clientH + maxScrollTop, 1);
   const hostW = Math.max(hostRect.width, 1);
   const hostH = Math.max(hostRect.height, 1);
   const scale = Math.min(hostW / totalW, hostH / totalH);
@@ -7613,8 +7908,10 @@ function minimapMetrics() {
     mapH,
     totalW,
     totalH,
-    clientW: Math.max($previewScroll.clientWidth, 1),
-    clientH: Math.max($previewScroll.clientHeight, 1),
+    clientW,
+    clientH,
+    maxScrollLeft,
+    maxScrollTop,
   };
 }
 
@@ -7630,10 +7927,12 @@ function updateMinimapViewport() {
   clone.style.width = `${m.mapW}px`;
   clone.style.height = `${m.mapH}px`;
 
-  const viewW = Math.min(m.mapW, Math.max(8, (m.clientW / m.totalW) * m.mapW));
-  const viewH = Math.min(m.mapH, Math.max(8, (m.clientH / m.totalH) * m.mapH));
-  const left = clampNumber(m.x + ($previewScroll.scrollLeft / m.totalW) * m.mapW, m.x, m.x + m.mapW - viewW);
-  const top = clampNumber(m.y + ($previewScroll.scrollTop / m.totalH) * m.mapH, m.y, m.y + m.mapH - viewH);
+  const viewW = m.maxScrollLeft > 0 ? Math.min(m.mapW, Math.max(8, (m.clientW / m.totalW) * m.mapW)) : m.mapW;
+  const viewH = m.maxScrollTop > 0 ? Math.min(m.mapH, Math.max(8, (m.clientH / m.totalH) * m.mapH)) : m.mapH;
+  const leftRatio = m.maxScrollLeft > 0 ? $previewScroll.scrollLeft / m.maxScrollLeft : 0;
+  const topRatio = m.maxScrollTop > 0 ? $previewScroll.scrollTop / m.maxScrollTop : 0;
+  const left = clampNumber(m.x + leftRatio * (m.mapW - viewW), m.x, m.x + m.mapW - viewW);
+  const top = clampNumber(m.y + topRatio * (m.mapH - viewH), m.y, m.y + m.mapH - viewH);
 
   Object.assign($minimapViewport.style, {
     display: 'block',
@@ -7689,11 +7988,22 @@ function navigateMinimap(clientX, clientY) {
   if (!m) return;
   const localX = clampNumber(clientX - m.bodyRect.left - m.x, 0, m.mapW);
   const localY = clampNumber(clientY - m.bodyRect.top - m.y, 0, m.mapH);
-  const maxScrollLeft = Math.max(0, m.totalW - m.clientW);
-  const maxScrollTop = Math.max(0, m.totalH - m.clientH);
-  $previewScroll.scrollLeft = clampNumber((localX / m.mapW) * m.totalW - m.clientW / 2, 0, maxScrollLeft);
-  $previewScroll.scrollTop = clampNumber((localY / m.mapH) * m.totalH - m.clientH / 2, 0, maxScrollTop);
-  updateMinimapViewport();
+  const xRatio = m.mapW > 0 ? localX / m.mapW : 0;
+  const yRatio = m.mapH > 0 ? localY / m.mapH : 0;
+  const seq = ++_minimapNavigateSeq;
+
+  const apply = () => {
+    if (seq !== _minimapNavigateSeq) return;
+    const latest = minimapMetrics();
+    if (!latest) return;
+    $previewScroll.scrollLeft = clampNumber(xRatio * latest.maxScrollLeft, 0, latest.maxScrollLeft);
+    $previewScroll.scrollTop = clampNumber(yRatio * latest.maxScrollTop, 0, latest.maxScrollTop);
+    updateMinimapViewport();
+  };
+
+  apply();
+  requestAnimationFrame(apply);
+  setTimeout(apply, 180);
 }
 
 (function initMinimapInteractions() {
@@ -7944,6 +8254,7 @@ function renderDesignBoard(code) {
     attachNodeInteractions();
     attachDragToNodes();
     attachGroupDrag(svgEl);
+    updatePreviewScrollBounds(svgEl);
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
@@ -8008,8 +8319,9 @@ async function renderDiagram(code) {
     $wrapper.classList.remove('no-diagram');
     posLoad();
     applyNodePositions();
-    applyEdgeConnections(svgEl, edgeConns);
     applyGroupSizes(svgEl);
+    const groupLayoutChanged = applyGroupColumnLayouts(svgEl, edgeConns);
+    applyEdgeConnections(svgEl, edgeConns, groupLayoutChanged);
     applyGroupColors(svgEl);
     applyEntityColors(svgEl);
     applyCanvasLabels(svgEl);
@@ -8020,6 +8332,7 @@ async function renderDiagram(code) {
     attachClusterInteractions();
     decorateGroupControls(svgEl);
     attachClusterResizeHandles(svgEl);
+    updatePreviewScrollBounds(svgEl);
     if (_prevRenderEmpty) requestAnimationFrame(fitZoom);
     _prevRenderEmpty = false;
     clearCmLintError();
@@ -8251,6 +8564,8 @@ function cleanNodePositions(value) {
 
 function currentProjectBundle() {
   posLoad();
+  groupSizeLoad();
+  groupLayoutLoad();
   return {
     format: PROJECT_FORMAT,
     version: PROJECT_VERSION,
@@ -8268,6 +8583,7 @@ function currentProjectBundle() {
     },
     nodePositions: cleanNodePositions(_nodePositions),
     groupSizes: Object.assign({}, _groupSizes),
+    groupLayouts: cleanGroupLayouts(_groupLayouts),
     entityColors: Object.assign({}, _entityColors),
     groupColors: Object.assign({}, _groupColors),
     canvasLabels: _canvasLabels.slice(),
@@ -8366,6 +8682,11 @@ function applyProjectBundle(bundle) {
         _groupSizes[id] = { dw, dh, gDx, gDy };
     });
     groupSizeSave();
+  }
+  if (bundle.groupLayouts && typeof bundle.groupLayouts === 'object') {
+    _groupLayouts = cleanGroupLayouts(bundle.groupLayouts);
+    _groupLayoutsLoaded = true;
+    groupLayoutSave();
   }
   if (bundle.entityColors && typeof bundle.entityColors === 'object') {
     _entityColors = {};
@@ -8985,6 +9306,44 @@ document.getElementById('gcpColorClearBtn').addEventListener('click', () => {
   groupColorSave();
   document.getElementById('gcpColorClearBtn').style.display = 'none';
   if (lastCode) renderDiagram(lastCode);
+});
+
+document.getElementById('gcpColumnBtns')?.addEventListener('click', e => {
+  const btn = e.target.closest('[data-cols]');
+  if (!btn || !activeGroupId) return;
+  const columns = normalizeGroupColumns(btn.dataset.cols);
+  const svgEl = $preview.querySelector('svg');
+  if (!columns || !svgEl) return;
+
+  const edgeConns = buildEdgeConnections(svgEl);
+  const result = fitGroupEntitiesToColumns(svgEl, activeGroupId, columns, {
+    persistNodes: true,
+    persistGroupSize: true,
+    edgeConns,
+  });
+  if (!result.changed) {
+    toast('Add at least two direct entities to align');
+    return;
+  }
+
+  groupLayoutLoad();
+  _groupLayouts[activeGroupId] = { columns };
+  groupLayoutSave();
+  updateGroupColumnControls(activeGroupId);
+  decorateGroupControls(svgEl);
+  attachClusterResizeHandles(svgEl);
+  updatePreviewScrollBounds(svgEl);
+  refreshMinimap();
+  toast(`Aligned ${result.count} entities in ${columns} columns`);
+});
+
+document.getElementById('gcpColumnClear')?.addEventListener('click', () => {
+  if (!activeGroupId) return;
+  groupLayoutLoad();
+  delete _groupLayouts[activeGroupId];
+  groupLayoutSave();
+  updateGroupColumnControls(activeGroupId);
+  toast('Column layout cleared');
 });
 
 document.getElementById('gcpFind').addEventListener('click', () => {
@@ -9974,11 +10333,12 @@ function posClearAll() {
   _nodePositions = {};
   localStorage.removeItem(POS_KEY);
   groupSizeReset();
+  groupLayoutReset();
   entityColorReset();
   groupColorReset();
   canvasLabelReset();
   if (lastCode) renderDiagram(lastCode);
-  toast('All positions, sizes, colors and labels cleared');
+  toast('All positions, sizes, layouts, colors and labels cleared');
 }
 
 function applyNodePositions() {
@@ -10020,6 +10380,35 @@ function groupSizeReset() {
   localStorage.removeItem(GROUP_SIZE_KEY);
 }
 
+const GROUP_LAYOUT_KEY = 'meridian_grouplayouts_v1';
+let _groupLayouts = {};       // { [groupId]: { columns } }
+let _groupLayoutsLoaded = false;
+
+function cleanGroupLayouts(layouts) {
+  const out = {};
+  Object.entries(layouts || {}).forEach(([id, layout]) => {
+    const columns = normalizeGroupColumns(layout?.columns ?? layout);
+    if (id && columns) out[id] = { columns };
+  });
+  return out;
+}
+
+function groupLayoutLoad() {
+  if (_groupLayoutsLoaded) return;
+  try { _groupLayouts = cleanGroupLayouts(JSON.parse(localStorage.getItem(GROUP_LAYOUT_KEY) || '{}')); } catch { _groupLayouts = {}; }
+  _groupLayoutsLoaded = true;
+}
+
+function groupLayoutSave() {
+  localStorage.setItem(GROUP_LAYOUT_KEY, JSON.stringify(cleanGroupLayouts(_groupLayouts)));
+}
+
+function groupLayoutReset() {
+  _groupLayouts = {};
+  _groupLayoutsLoaded = false;
+  localStorage.removeItem(GROUP_LAYOUT_KEY);
+}
+
 function applyGroupSizes(svg) {
   groupSizeLoad();
   if (!Object.keys(_groupSizes).length) return;
@@ -10058,6 +10447,22 @@ function applyGroupSizes(svg) {
 // ════════════════════════════════════════════════════════════════
 //  PERSISTENT ENTITY COLORS
 // ════════════════════════════════════════════════════════════════
+function applyGroupColumnLayouts(svg, edgeConns = null) {
+  groupLayoutLoad();
+  let changed = false;
+  Object.entries(_groupLayouts).forEach(([gid, layout]) => {
+    const columns = normalizeGroupColumns(layout?.columns);
+    if (!columns || _collapsedGroups.has(gid)) return;
+    const result = fitGroupEntitiesToColumns(svg, gid, columns, {
+      persistNodes: false,
+      persistGroupSize: false,
+      edgeConns,
+    });
+    changed = changed || !!result.changed;
+  });
+  return changed;
+}
+
 const ENTITY_COLOR_KEY = 'meridian_entitycolors_v1';
 let _entityColors       = {};   // { [entityId]: hexColor }
 let _entityColorsLoaded = false;
