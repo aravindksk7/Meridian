@@ -1012,6 +1012,9 @@ BatchJob writes to db:Warehouse</div>
         </table>
         <p class="text-xs text-gray-500 mb-4">All settings are saved to <code>localStorage</code> automatically. <strong>Reset all</strong> restores every setting to its default value.</p>
 
+        <div class="help-h3">💾 Storage tab</div>
+        <p class="text-xs text-gray-400 mb-4">Diagram data — the source text, dragged node positions, group sizes &amp; layouts, colours, canvas labels, and collapsed groups — is stored durably in <strong>IndexedDB</strong> (database <code>meridian</code>) with <code>localStorage</code> as a synchronous cache. The <strong>Storage</strong> tab shows live record counts and offers two clean-up actions: <em>Clear layout &amp; styles</em> (keeps your diagram text) and <em>Erase all saved data</em> (full wipe of both storage tiers, then reloads the default template).</p>
+
         <div class="help-h3">🌙 / ☀️ Theme toggle</div>
         <p class="text-xs text-gray-400">Switches the app between dark and light themes. The preference is saved to <code>localStorage</code> and restored on next open.</p>
       </div>
@@ -1128,6 +1131,7 @@ BatchJob writes to db:Warehouse</div>
         <button class="stt-tab active" data-stt="editor">Editor</button>
         <button class="stt-tab" data-stt="diagram">Diagram</button>
         <button class="stt-tab" data-stt="linting">Linting</button>
+        <button class="stt-tab" data-stt="storage">Storage</button>
       </div>
     </div>
 
@@ -1231,6 +1235,31 @@ BatchJob writes to db:Warehouse</div>
             <input type="number" id="lintMaxLength" min="0" max="200" value="0" step="1"
               style="width:60px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 8px;font-size:12px;outline:none;">
             <span style="font-size:11px;color:var(--text-dim)">0 = disabled</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Storage panel ── -->
+      <div id="stt-storage" class="stt-panel">
+        <div class="stt-row">
+          <div class="stt-lbl">Backend</div>
+          <div class="stt-ctrl"><span id="storageBackendInfo" style="font-size:12px;color:var(--text-dim)">…</span></div>
+        </div>
+        <div class="stt-row">
+          <div class="stt-lbl">Saved data</div>
+          <div class="stt-ctrl"><span id="storageRecordInfo" style="font-size:12px;color:var(--text-dim)">…</span></div>
+        </div>
+        <div class="stt-row" style="align-items:flex-start">
+          <div class="stt-lbl">Clean up</div>
+          <div class="stt-ctrl" style="flex-direction:column;align-items:flex-start;gap:8px;">
+            <button class="stt-reset-all" id="storageClearLayoutBtn"
+              title="Clear dragged node positions, group sizes/layouts, custom colours, canvas labels, and collapsed groups — keeps the diagram text">🧹 Clear layout &amp; styles</button>
+            <button class="stt-reset-all" id="storageEraseAllBtn" style="border-color:#b91c1c;color:#ef4444;"
+              title="Remove everything saved by Meridian (IndexedDB + localStorage) and load the default template">🗑 Erase all saved data</button>
+            <span style="font-size:11px;color:var(--text-dim);max-width:320px;">
+              <strong>Clear layout &amp; styles</strong> keeps your diagram text but removes all saved positions, sizes, colours, and labels.
+              <strong>Erase all saved data</strong> also deletes the saved diagram from IndexedDB and localStorage, then loads the default template.
+            </span>
           </div>
         </div>
       </div>
@@ -3854,7 +3883,7 @@ function loadCollapsedGroups() {
   } catch {}
 }
 function saveCollapsedGroups() {
-  try { localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify([..._collapsedGroups])); } catch {}
+  try { persistSet(LS_COLLAPSED_KEY, JSON.stringify([..._collapsedGroups])); } catch {}
 }
 
 function _reId(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -6882,7 +6911,7 @@ function redrawEdgesForCurrentNodes(svg, conns) {
   const nodes = new Map();
   meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
     const pos = readNodeCenter(g);
-    if (pos) nodes.set(eid, pos);
+    if (pos) nodes.set(eid, { el: g, ...pos });
   });
   conns.forEach(edge => _redrawEdge(edge, nodes));
 }
@@ -7102,7 +7131,7 @@ function attachClusterResizeHandles(svg) {
       meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
         const t = g.getAttribute('transform') || '';
         const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
-        if (tm) allNodeMap.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+        if (tm) allNodeMap.set(eid, { el: g, cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
       });
 
       function screenDeltaToLocal(sdx, sdy) {
@@ -7135,7 +7164,7 @@ function attachClusterResizeHandles(svg) {
             const newCx = topLeft.x + relX * scaleX;
             const newCy = topLeft.y + relY * scaleY;
             el.setAttribute('transform', `translate(${newCx},${newCy})`);
-            allNodeMap.set(eid, { cx: newCx, cy: newCy });
+            allNodeMap.set(eid, { el, cx: newCx, cy: newCy });
           });
           // Redraw edges
           edgeConns.forEach(edge => _redrawEdge(edge, allNodeMap));
@@ -7246,7 +7275,7 @@ function attachGroupDrag(svg) {
       meridianNodeGroups(svg).forEach(({ el: g, eid }) => {
         const t = g.getAttribute('transform') || '';
         const tm = t.match(/translate\(\s*([\d.eE+-]+)[, \t]+([\d.eE+-]+)\s*\)/);
-        if (tm) allNodeMap.set(eid, { cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
+        if (tm) allNodeMap.set(eid, { el: g, cx: parseFloat(tm[1]), cy: parseFloat(tm[2]) });
       });
 
       let dragging = false, lastDx = 0, lastDy = 0;
@@ -7261,7 +7290,7 @@ function attachGroupDrag(svg) {
         // Move child nodes
         nodeSnaps.forEach(({ el, cx, cy }, eid) => {
           el.setAttribute('transform', `translate(${cx + dx},${cy + dy})`);
-          allNodeMap.set(eid, { cx: cx + dx, cy: cy + dy });
+          allNodeMap.set(eid, { el, cx: cx + dx, cy: cy + dy });
         });
 
         // Move cluster visual: rect + label + resize handle (keeps getBBox accurate in all directions)
@@ -7438,18 +7467,60 @@ function attachDragToNodes() {
   });
 }
 
+// Translate-independent bounding box of a node group in its local coordinate
+// space (getBBox excludes the element's own transform, so this is stable while
+// the node is dragged). Cached per element — node DOM is rebuilt every render.
+function _nodeExtents(el) {
+  if (!el || !el.getBBox) return null;
+  if (el.__meridianExtents !== undefined) return el.__meridianExtents;
+  let ext = null;
+  try {
+    const bb = el.getBBox();
+    if (bb && bb.width > 0 && bb.height > 0) {
+      ext = { ox: bb.x + bb.width / 2, oy: bb.y + bb.height / 2, hw: bb.width / 2, hh: bb.height / 2 };
+    }
+  } catch {}
+  el.__meridianExtents = ext;
+  return ext;
+}
+
+// Point where the ray from a node's bbox centre toward (tx,ty) crosses the
+// bbox border. Falls back to the centre when the target is inside the bbox
+// (overlapping nodes) or when no bbox is available.
+function _clipToNodeBorder(node, tx, ty) {
+  const ext = _nodeExtents(node.el);
+  const cx = node.cx + (ext ? ext.ox : 0);
+  const cy = node.cy + (ext ? ext.oy : 0);
+  if (!ext) return { x: cx, y: cy };
+  const dx = tx - cx, dy = ty - cy;
+  const s = Math.max(Math.abs(dx) / ext.hw, Math.abs(dy) / ext.hh);
+  if (!Number.isFinite(s) || s <= 1) return { x: cx, y: cy };
+  return { x: cx + dx / s, y: cy + dy / s };
+}
+
 function _redrawEdge({ path, fromId, toId, labelEl, parallelOffset = 0 }, nodes) {
   const f = nodes.get(fromId), t = nodes.get(toId);
   if (!f || !t) return;
-  const mx = (f.cx + t.cx) / 2;
-  const my = (f.cy + t.cy) / 2;
   const dx = t.cx - f.cx;
   const dy = t.cy - f.cy;
   const len = Math.hypot(dx, dy) || 1;
-  const ox = (-dy / len) * (Number(parallelOffset) || 0);
-  const oy = ( dx / len) * (Number(parallelOffset) || 0);
-  path.setAttribute('d', `M${f.cx},${f.cy} C${mx + ox},${f.cy + oy} ${mx + ox},${t.cy + oy} ${t.cx},${t.cy}`);
-  if (labelEl) labelEl.setAttribute('transform', `translate(${mx + ox},${my + oy})`);
+  const off = Number(parallelOffset) || 0;
+  // Midpoint, shifted perpendicular for parallel edges so reciprocal
+  // relationships stay visually separated.
+  const mx = (f.cx + t.cx) / 2 + (-dy / len) * off;
+  const my = (f.cy + t.cy) / 2 + ( dx / len) * off;
+  // Clip both endpoints to the node bounding-box borders: edge paths render
+  // beneath node shapes, so a centre-to-centre path would bury the arrowhead
+  // marker (and the edge itself) under the nodes it connects.
+  const p0 = _clipToNodeBorder(f, mx, my);
+  const p1 = _clipToNodeBorder(t, mx, my);
+  path.setAttribute('d', `M${p0.x},${p0.y} Q${mx},${my} ${p1.x},${p1.y}`);
+  if (labelEl) {
+    // Place the label on the curve itself (quadratic Bézier point at t = 0.5)
+    const lx = p0.x / 4 + mx / 2 + p1.x / 4;
+    const ly = p0.y / 4 + my / 2 + p1.y / 4;
+    labelEl.setAttribute('transform', `translate(${lx},${ly})`);
+  }
 }
 
 // ── Edge connection helpers ────────────────────────────────────
@@ -9546,13 +9617,185 @@ function loadFromHash(skipText) {
 }
 
 // ════════════════════════════════════════════════════════════════
+//  INDEXEDDB PERSISTENCE LAYER
+// ════════════════════════════════════════════════════════════════
+// IndexedDB is the durable store for the diagram document (the source text
+// that defines nodes + links), dragged node positions, and layout/style
+// overlays. localStorage doubles as a synchronous in-session cache so the
+// existing call sites keep working: every save writes through to both via
+// persistSet()/persistRemove(), and hydrate() runs before the app boots —
+// copying IndexedDB → localStorage (IndexedDB wins) and migrating legacy
+// localStorage-only data into IndexedDB on first run. If IndexedDB is
+// unavailable (private mode, file:// quirks), everything degrades to
+// localStorage-only behaviour.
+const MeridianDB = (() => {
+  const DB_NAME = 'meridian';
+  const DB_VERSION = 1;
+  const STORES = ['documents', 'layout', 'styles'];
+
+  // localStorage key → IndexedDB location. Keys are literal because they are
+  // stable storage identifiers (LS_KEY, POS_KEY, … are declared in their own
+  // sections further down this file).
+  const KEY_MAP = {
+    'smartMermaid_v2':           { store: 'documents', key: 'current' },         // { input, type, theme, split, zoom }
+    'meridian_nodepos_v1':       { store: 'layout',    key: 'nodePositions' },   // { [entityId]: { dx, dy } }
+    'meridian_groupsizes_v1':    { store: 'layout',    key: 'groupSizes' },      // { [groupId]: { dw, dh, gDx, gDy } }
+    'meridian_grouplayouts_v1':  { store: 'layout',    key: 'groupLayouts' },    // { [groupId]: { columns } }
+    'meridian_collapsed_v1':     { store: 'layout',    key: 'collapsedGroups' }, // [groupId]
+    'meridian_canvas_labels_v1': { store: 'layout',    key: 'canvasLabels' },    // [{ id, text, x, y, … }]
+    'meridian_entitycolors_v1':  { store: 'styles',    key: 'entityColors' },    // { [entityId]: '#rrggbb' }
+    'meridian_groupcolors_v1':   { store: 'styles',    key: 'groupColors' },     // { [groupId]: '#rrggbb' }
+  };
+
+  let _dbPromise = null;
+
+  function open() {
+    if (_dbPromise) return _dbPromise;
+    _dbPromise = new Promise((resolve) => {
+      if (typeof indexedDB === 'undefined') return resolve(null);
+      let req;
+      try { req = indexedDB.open(DB_NAME, DB_VERSION); } catch { return resolve(null); }
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        STORES.forEach(name => {
+          if (!db.objectStoreNames.contains(name)) db.createObjectStore(name, { keyPath: 'key' });
+        });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    });
+    return _dbPromise;
+  }
+
+  function put(lsKey, rawJson) {
+    const loc = KEY_MAP[lsKey];
+    if (!loc) return;
+    open().then(db => {
+      if (!db) return;
+      let value;
+      try { value = JSON.parse(rawJson); } catch { value = rawJson; }
+      try {
+        db.transaction(loc.store, 'readwrite')
+          .objectStore(loc.store)
+          .put({ key: loc.key, value, updatedAt: Date.now() });
+      } catch {}
+    });
+  }
+
+  function remove(lsKey) {
+    const loc = KEY_MAP[lsKey];
+    if (!loc) return;
+    open().then(db => {
+      if (!db) return;
+      try {
+        db.transaction(loc.store, 'readwrite').objectStore(loc.store).delete(loc.key);
+      } catch {}
+    });
+  }
+
+  // Boot-time hydration. Resolves once localStorage and IndexedDB agree:
+  //  · localStorage value present → it wins (it is written synchronously on
+  //    every save, so it is never older than the async IndexedDB copy) and is
+  //    backfilled into IndexedDB when the copies differ — this also migrates
+  //    legacy localStorage-only installs on first run
+  //  · localStorage value missing → restored from IndexedDB (cache evicted,
+  //    cleared, or first load in a new browser profile)
+  function hydrate() {
+    const work = open().then(db => {
+      if (!db) return;
+      return new Promise((resolve) => {
+        let tx;
+        try { tx = db.transaction(STORES, 'readwrite'); } catch { return resolve(); }
+        Object.entries(KEY_MAP).forEach(([lsKey, loc]) => {
+          const store = tx.objectStore(loc.store);
+          const get = store.get(loc.key);
+          get.onsuccess = () => {
+            const rec = get.result;
+            const recJson = rec && rec.value !== undefined
+              ? (typeof rec.value === 'string' ? rec.value : JSON.stringify(rec.value))
+              : null;
+            let cached = null;
+            try { cached = localStorage.getItem(lsKey); } catch {}
+            if (cached !== null) {
+              if (recJson !== cached) {
+                let value;
+                try { value = JSON.parse(cached); } catch { value = cached; }
+                try { store.put({ key: loc.key, value, updatedAt: Date.now() }); } catch {}
+              }
+            } else if (recJson !== null) {
+              try { localStorage.setItem(lsKey, recJson); } catch {}
+            }
+          };
+        });
+        tx.oncomplete = () => resolve();
+        tx.onerror    = () => resolve();
+        tx.onabort    = () => resolve();
+      });
+    }).catch(() => {});
+    // Never let a wedged IndexedDB block app startup
+    const timeout = new Promise(resolve => setTimeout(resolve, 1500));
+    return Promise.race([work, timeout]);
+  }
+
+  // Empty every store (the per-key persistRemove() calls already delete known
+  // records — this also sweeps anything unknown, e.g. from future versions).
+  function clearAll() {
+    return open().then(db => {
+      if (!db) return false;
+      return new Promise((resolve) => {
+        let tx;
+        try { tx = db.transaction(STORES, 'readwrite'); } catch { return resolve(false); }
+        STORES.forEach(name => { try { tx.objectStore(name).clear(); } catch {} });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror    = () => resolve(false);
+        tx.onabort    = () => resolve(false);
+      });
+    });
+  }
+
+  // Record counts per store for the Settings → Storage panel.
+  // Resolves null when IndexedDB is unavailable.
+  function recordCounts() {
+    return open().then(db => {
+      if (!db) return null;
+      return new Promise((resolve) => {
+        let tx;
+        try { tx = db.transaction(STORES, 'readonly'); } catch { return resolve(null); }
+        const out = {};
+        STORES.forEach(name => {
+          const req = tx.objectStore(name).count();
+          req.onsuccess = () => { out[name] = req.result; };
+        });
+        tx.oncomplete = () => resolve(out);
+        tx.onerror    = () => resolve(null);
+      });
+    });
+  }
+
+  return { hydrate, put, remove, clearAll, recordCounts };
+})();
+
+// Write-through helpers: localStorage stays the synchronous cache, the
+// authoritative copy lands in IndexedDB asynchronously.
+function persistSet(lsKey, rawJson) {
+  localStorage.setItem(lsKey, rawJson);
+  MeridianDB.put(lsKey, rawJson);
+}
+
+function persistRemove(lsKey) {
+  localStorage.removeItem(lsKey);
+  MeridianDB.remove(lsKey);
+}
+
+// ════════════════════════════════════════════════════════════════
 //  LOCAL STORAGE AUTOSAVE
 // ════════════════════════════════════════════════════════════════
 const LS_KEY = 'smartMermaid_v2';
 
 function saveToStorage() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify({
+    persistSet(LS_KEY, JSON.stringify({
       input: $input.value,
       type:  normalizeDiagramType(document.getElementById('diagramType').value),
       theme: document.getElementById('mermaidTheme').value,
@@ -9878,9 +10121,28 @@ function refreshInspector() {
 
 function openSettings() {
   document.getElementById('settingsModal').classList.remove('hidden');
+  refreshStorageInfo();
 }
 function closeSettings() {
   document.getElementById('settingsModal').classList.add('hidden');
+}
+
+// Populate the Settings → Storage panel with live IndexedDB record counts.
+async function refreshStorageInfo() {
+  const backendEl = document.getElementById('storageBackendInfo');
+  const recordsEl = document.getElementById('storageRecordInfo');
+  if (!backendEl || !recordsEl) return;
+  const counts = await MeridianDB.recordCounts();
+  if (counts) {
+    backendEl.textContent = 'IndexedDB (database “meridian”) + localStorage cache';
+    const total = Object.values(counts).reduce((a, b) => a + b, 0);
+    recordsEl.textContent = total
+      ? `${total} record${total === 1 ? '' : 's'} — documents: ${counts.documents || 0} · layout: ${counts.layout || 0} · styles: ${counts.styles || 0}`
+      : 'No saved records yet';
+  } else {
+    backendEl.textContent = 'localStorage only (IndexedDB unavailable in this browser)';
+    recordsEl.textContent = '—';
+  }
 }
 
 function applyDiagramSettings() {
@@ -10116,6 +10378,43 @@ function initSettingsPanel() {
     toast('Settings reset to defaults');
   });
 
+  // ── Storage panel ──────────────────────────────────────────────
+  const storageTab = document.querySelector('.stt-tab[data-stt="storage"]');
+  if (storageTab) storageTab.addEventListener('click', refreshStorageInfo);
+
+  document.getElementById('storageClearLayoutBtn').addEventListener('click', () => {
+    // posClearAll() wipes positions, group sizes/layouts, colours, and canvas
+    // labels from both storage tiers, then re-renders.
+    posClearAll();
+    if (_collapsedGroups.size) {
+      _collapsedGroups.clear();
+      persistRemove(LS_COLLAPSED_KEY);
+      onInput(); // regenerate code without collapse proxies
+    }
+    refreshStorageInfo();
+  });
+
+  document.getElementById('storageEraseAllBtn').addEventListener('click', async () => {
+    const ok = confirm(
+      'Erase ALL locally saved Meridian data?\n\n' +
+      'This removes the saved diagram, node positions, group sizes & layouts, ' +
+      'colours, canvas labels, and collapsed groups from IndexedDB and ' +
+      'localStorage, then loads the default template.'
+    );
+    if (!ok) return;
+    // In-memory state
+    _nodePositions = {}; _groupSizes = {}; _groupLayouts = {};
+    _entityColors = {}; _groupColors = {}; _canvasLabels = [];
+    _collapsedGroups.clear();
+    // Both storage tiers — each persistRemove() also deletes the IndexedDB record
+    [LS_KEY, POS_KEY, GROUP_SIZE_KEY, GROUP_LAYOUT_KEY, LS_COLLAPSED_KEY,
+     LABEL_KEY, ENTITY_COLOR_KEY, GROUP_COLOR_KEY].forEach(persistRemove);
+    await MeridianDB.clearAll(); // sweep anything the key list doesn't know about
+    loadTemplate('microservices');
+    refreshStorageInfo();
+    toast('All saved data erased — default template loaded');
+  });
+
   // ── Close handlers ─────────────────────────────────────────────
   document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
   document.getElementById('settingsCloseX').addEventListener('click', closeSettings);
@@ -10319,7 +10618,7 @@ function posLoad() {
 }
 
 function posSave() {
-  localStorage.setItem(POS_KEY, JSON.stringify(_nodePositions));
+  persistSet(POS_KEY, JSON.stringify(_nodePositions));
 }
 
 function posReset() {
@@ -10331,7 +10630,7 @@ function posReset() {
 
 function posClearAll() {
   _nodePositions = {};
-  localStorage.removeItem(POS_KEY);
+  persistRemove(POS_KEY);
   groupSizeReset();
   groupLayoutReset();
   entityColorReset();
@@ -10371,13 +10670,13 @@ function groupSizeLoad() {
 }
 
 function groupSizeSave() {
-  localStorage.setItem(GROUP_SIZE_KEY, JSON.stringify(_groupSizes));
+  persistSet(GROUP_SIZE_KEY, JSON.stringify(_groupSizes));
 }
 
 function groupSizeReset() {
   _groupSizes = {};
   _groupSizesLoaded = false;
-  localStorage.removeItem(GROUP_SIZE_KEY);
+  persistRemove(GROUP_SIZE_KEY);
 }
 
 const GROUP_LAYOUT_KEY = 'meridian_grouplayouts_v1';
@@ -10400,13 +10699,13 @@ function groupLayoutLoad() {
 }
 
 function groupLayoutSave() {
-  localStorage.setItem(GROUP_LAYOUT_KEY, JSON.stringify(cleanGroupLayouts(_groupLayouts)));
+  persistSet(GROUP_LAYOUT_KEY, JSON.stringify(cleanGroupLayouts(_groupLayouts)));
 }
 
 function groupLayoutReset() {
   _groupLayouts = {};
   _groupLayoutsLoaded = false;
-  localStorage.removeItem(GROUP_LAYOUT_KEY);
+  persistRemove(GROUP_LAYOUT_KEY);
 }
 
 function applyGroupSizes(svg) {
@@ -10474,13 +10773,13 @@ function entityColorLoad() {
 }
 
 function entityColorSave() {
-  localStorage.setItem(ENTITY_COLOR_KEY, JSON.stringify(_entityColors));
+  persistSet(ENTITY_COLOR_KEY, JSON.stringify(_entityColors));
 }
 
 function entityColorReset() {
   _entityColors = {};
   _entityColorsLoaded = false;
-  localStorage.removeItem(ENTITY_COLOR_KEY);
+  persistRemove(ENTITY_COLOR_KEY);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -10497,13 +10796,13 @@ function groupColorLoad() {
 }
 
 function groupColorSave() {
-  localStorage.setItem(GROUP_COLOR_KEY, JSON.stringify(_groupColors));
+  persistSet(GROUP_COLOR_KEY, JSON.stringify(_groupColors));
 }
 
 function groupColorReset() {
   _groupColors = {};
   _groupColorsLoaded = false;
-  localStorage.removeItem(GROUP_COLOR_KEY);
+  persistRemove(GROUP_COLOR_KEY);
 }
 
 function applyGroupColors(svg) {
@@ -10553,13 +10852,13 @@ function canvasLabelLoad() {
 }
 
 function canvasLabelSave() {
-  localStorage.setItem(LABEL_KEY, JSON.stringify(_canvasLabels));
+  persistSet(LABEL_KEY, JSON.stringify(_canvasLabels));
 }
 
 function canvasLabelReset() {
   _canvasLabels = [];
   _canvasLabelsLoaded = false;
-  localStorage.removeItem(LABEL_KEY);
+  persistRemove(LABEL_KEY);
 }
 
 function _labelColors(label = {}) {
@@ -11067,11 +11366,19 @@ function boot(skipText) {
 // ════════════════════════════════════════════════════════════════
 //  CM READY GATE  — waits for module bootstrap then calls initCM
 // ════════════════════════════════════════════════════════════════
-if (window.__CM) {
-  initCM(window.__CM);
-} else {
-  document.addEventListener('cm-ready', () => initCM(window.__CM), { once: true });
-}
+// Hydrate persisted state from IndexedDB into the localStorage cache BEFORE
+// the editor boots — peekInitialDoc(), loadFromStorage(), posLoad(), etc. all
+// read localStorage synchronously during startup.
+MeridianDB.hydrate().then(() => {
+  // Collapsed groups were read at script parse time (before hydration could
+  // restore the localStorage cache) — re-read them now that the cache is warm.
+  loadCollapsedGroups();
+  if (window.__CM) {
+    initCM(window.__CM);
+  } else {
+    document.addEventListener('cm-ready', () => initCM(window.__CM), { once: true });
+  }
+});
 </script>
 
 <!-- ── Footer ── -->

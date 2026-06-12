@@ -142,9 +142,11 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 - **Resize a domain / subdomain** — SE-corner handle resizes the cluster box; entities inside reposition proportionally; survives re-renders
 - **Group context panel** — click a domain/subdomain title to open a panel with border colour picker, rename, find in source, and collapse/expand
 - **Custom node colour** — node context panel includes a colour swatch; pick any fill colour; overrides Mermaid auto-colour and persists
-- **Canvas annotation labels** — toolbar **✚ Label** button places free-floating sticky notes; single-click opens colour popover (background, text, Match BG); double-click edits text; drag to reposition; persists in localStorage
+- **Canvas annotation labels** — toolbar **✚ Label** button places free-floating sticky notes; single-click opens colour popover (background, text, Match BG); double-click edits text; drag to reposition; persists locally
 - **↺ Reset layout (plain click)** — refreshes Mermaid auto-layout without clearing manually dragged positions, group positions, sizes, or colours
 - **↺ Reset layout (Shift+click)** — clears all positions, sizes, colours, and canvas labels
+- **Durable local persistence** — the diagram source, node positions, group sizes/layouts, colours, labels, and collapsed groups are stored in IndexedDB (database `meridian`: `documents`, `layout`, `styles` stores) and restored on startup; localStorage acts as a synchronous cache and automatic fallback, and legacy localStorage-only data is migrated on first load
+- **Storage manager (⚙️ → Storage)** — shows live IndexedDB record counts and provides one-click clean-up: **Clear layout & styles** (keeps the diagram text) or **Erase all saved data** (wipes IndexedDB + localStorage and reloads the default template)
 
 ### Diagrams
 - **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class
