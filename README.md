@@ -138,16 +138,18 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 
 ### Live Preview Interactions
 - **Drag a node** — repositions node and redraws connected edges + labels in real time; positions persist across reloads and export
-- **Drag a domain / subdomain group** — moves all entities inside the group together with the cluster box, edges, and labels; position persists
-- **Resize a domain / subdomain** — SE-corner handle resizes the cluster box; entities inside reposition proportionally; survives re-renders
+- **Drag a domain / subdomain group** — moves all entities inside the group together with the cluster box, nested subdomain frames, edges, and labels; position persists
+- **Resize a domain / subdomain** — SE-corner handle resizes the cluster box; entities inside reposition proportionally, and nested subdomain frames scale with their contents; survives re-renders
 - **Group context panel** — click a domain/subdomain title to open a panel with border colour picker, rename, find in source, and collapse/expand
 - **Custom node colour** — node context panel includes a colour swatch; pick any fill colour; overrides Mermaid auto-colour and persists
-- **Canvas annotation labels** — toolbar **✚ Label** button places free-floating sticky notes; single-click opens colour popover (background, text, Match BG); double-click edits text; drag to reposition; persists in localStorage
+- **Canvas annotation labels** — toolbar **✚ Label** button places free-floating sticky notes; single-click opens colour popover (background, text, Match BG); double-click edits text; drag to reposition; persists locally
 - **↺ Reset layout (plain click)** — refreshes Mermaid auto-layout without clearing manually dragged positions, group positions, sizes, or colours
 - **↺ Reset layout (Shift+click)** — clears all positions, sizes, colours, and canvas labels
+- **Durable local persistence** — the diagram source, diagram-type-specific node positions, group sizes/layouts, colours, labels, and collapsed groups are stored in IndexedDB (database `meridian`: `documents`, `layout`, `styles` stores) and restored on startup; localStorage acts as a synchronous cache and automatic fallback, and legacy localStorage-only data is migrated on first load
+- **Storage manager (⚙️ → Storage)** — shows live IndexedDB status and record counts, with clean-up actions for **Clear layout & styles** (keeps the diagram text), **Reset DB cache** (clears stale browser storage and re-saves the current diagram), and **Erase all saved data** (wipes IndexedDB + localStorage and reloads the default template)
 
 ### Diagrams
-- **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class
+- **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class; manual layout state is scoped per diagram type so LR and TD edits do not skew each other
 - **Design Board renderer** — colourful open-design SVG canvas with lanes, rich cards, gradients, and connection curves
 - **5 themes** — Default, Dark, Forest, Neutral, Base
 - **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
@@ -318,7 +320,7 @@ Load the **Flow Diagram** template (Templates → ◇ Flow Diagram) for a ready-
 Export / Import save the complete state as `.meridian.json` or `.mmd`:
 - Smart Input text, diagram type, Mermaid theme
 - Editor and diagram settings
-- Node positions, group sizes/positions
+- Diagram-type-specific node positions and group sizes/positions
 - Custom entity colours, group border colours
 - Canvas annotation labels
 
