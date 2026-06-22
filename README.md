@@ -148,6 +148,18 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 - **Durable local persistence** — the diagram source, diagram-type-specific node positions, group sizes/layouts, colours, labels, and collapsed groups are stored in IndexedDB (database `meridian`: `documents`, `layout`, `styles` stores) and restored on startup; localStorage acts as a synchronous cache and automatic fallback, and legacy localStorage-only data is migrated on first load
 - **Storage manager (⚙️ → Storage)** — shows live IndexedDB status and record counts, with clean-up actions for **Clear layout & styles** (keeps the diagram text), **Reset DB cache** (clears stale browser storage and re-saves the current diagram), and **Erase all saved data** (wipes IndexedDB + localStorage and reloads the default template)
 
+### Figma-style Workspace
+- **Live Preview properties** — canvas treatments, Fit/Selection/custom zoom, Edit/Present/Inspect modes, device frames, background tokens, connection visibility, minimap state, layout direction, quality, and independent snap controls
+- **Component Properties** — boolean, variant, instance-swap, text, number, colour-token, and interaction-state controls bound to the canvas and selected nodes
+- **Layers panel** — searchable hierarchy of domains, groups, nodes, relationships, and annotations with source navigation
+- **Design Tokens** — central palette, typography, spacing, radii, shadows, and edge styling; follows the selected light/dark diagram theme until explicitly overridden
+- **Multi-select and alignment** — Shift-select from canvas or Layers, bulk editing, grouping, grid alignment, six edge/centre alignments, and horizontal/vertical distribution
+- **Command Palette** — `Ctrl+K` / `Cmd+K` searches templates, current nodes, exports, navigation, editor panels, and settings
+- **Presentation mode** — canvas-only view with fullscreen support and persisted named views containing zoom, scroll position, and selection
+- **Comments and review pins** — plain-text feedback attached to nodes or canvas coordinates with open/resolved filtering
+- **Version History** — up to 50 named snapshots, sanitized side-by-side visual comparison, and reversible restore checkpoints
+- **Responsive Preview** — desktop, laptop, tablet, mobile, and named custom viewport presets with automatic or explicit diagram density
+
 ### Diagrams
 - **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class; manual layout state is scoped per diagram type so LR and TD edits do not skew each other
 - **Design Board renderer** — colourful open-design SVG canvas with lanes, rich cards, gradients, and connection curves
@@ -181,6 +193,7 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 | Shortcut | Action |
 |----------|--------|
 | `Ctrl+Enter` | Render diagram |
+| `Ctrl+K` / `Cmd+K` | Open Command Palette |
 | `Ctrl+Z` | Undo |
 | `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
 | `Ctrl+/` | Toggle `//` comment |
