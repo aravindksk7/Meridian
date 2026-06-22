@@ -301,6 +301,45 @@ test.describe('Settings → Storage panel', () => {
     expect(records).toMatch(/layout: [1-9]/);
   });
 
+  test('status bar shows the IndexedDB save state', async ({ page }) => {
+    await gotoApp(page);
+    await loadDiagram(page, SIMPLE_CODE);
+    await dragNode(page, 'APP_Beta', 100, 60);
+    await waitForIdbRecord(page, 'layout', 'nodePositions', r => r.value && r.value.APP_Beta);
+
+    await expect(page.locator('#storageDot')).toBeVisible();
+    await expect(page.locator('#storageDot')).toContainText(/IndexedDB: (saved|saving)/);
+    await expect.poll(async () => page.locator('#storageDot').getAttribute('title'))
+      .toMatch(/IndexedDB|record|Writing/);
+  });
+
+  test('Reset DB cache clears stale layout records but keeps the current diagram', async ({ page }) => {
+    await gotoApp(page);
+    await loadDiagram(page, SIMPLE_CODE);
+    await dragNode(page, 'APP_Beta', 100, 60);
+    await waitForIdbRecord(page, 'layout', 'nodePositions', r => r.value && r.value.APP_Beta);
+    await waitForIdbRecord(page, 'documents', 'current',
+      r => r.value && (r.value.input || '').includes('app:Alpha'));
+
+    await openStorageTab(page);
+    page.once('dialog', d => d.accept());
+    await page.click('#storageResetDbBtn');
+    await page.waitForTimeout(1000);
+
+    const input = await page.evaluate(() => $input.value);
+    expect(input).toContain('app:Alpha --> app:Beta');
+
+    const doc = await waitForIdbRecord(page, 'documents', 'current',
+      r => r.value && (r.value.input || '').includes('app:Alpha'));
+    expect(doc, 'current diagram should be re-saved after DB reset').toBeTruthy();
+    const pos = await idbGet(page, 'layout', 'nodePositions');
+    expect(pos).toBeNull();
+    const layoutsByType = await idbGet(page, 'layout', 'layoutsByType');
+    expect(layoutsByType).toBeNull();
+    const lsPos = await page.evaluate(() => localStorage.getItem('meridian_nodepos_v1'));
+    expect(lsPos).toBeNull();
+  });
+
   test('Clear layout & styles removes layout records but keeps the diagram', async ({ page }) => {
     await gotoApp(page);
     await loadDiagram(page, SIMPLE_CODE);
