@@ -3197,7 +3197,15 @@ document:Generate_Report --> predefined:Send_Notification
 predefined:Send_Notification --> terminal:End`,
 
   enterpriseDomains: `// Enterprise Domain Architecture
-// Each domain:BU group colours entities by business ownership
+// Each domain: group colours entities by business unit ownership
+
+domain:Platform {
+  instance:K8s_Cluster
+  server:API_Gateway
+  app:Auth_Service
+  db:User_DB
+  config:JWT_Config
+}
 
 domain:Finance {
   app:Payment_Service
@@ -3208,17 +3216,9 @@ domain:Finance {
 
 domain:Operations {
   app:Inventory_System
-  db:Warehouse_DB
-  batch:Stock_Sync
   ftp:Supplier_FTP
-}
-
-domain:Platform {
-  server:API_Gateway
-  app:Auth_Service
-  db:User_DB
-  config:JWT_Config
-  instance:K8s_Cluster
+  batch:Stock_Sync
+  db:Warehouse_DB
 }
 
 domain:Analytics {
@@ -3228,23 +3228,30 @@ domain:Analytics {
   watcher:Event_Collector
 }
 
-// Cross-domain flows
+// Infrastructure flows
 instance:K8s_Cluster --> server:API_Gateway
 config:JWT_Config --> app:Auth_Service
-app:Auth_Service --> db:User_DB
+
+// Platform → Finance
 server:API_Gateway --> app:Payment_Service
-server:API_Gateway --> app:Inventory_System
+server:API_Gateway --> app:Billing_API
 app:Payment_Service --> app:Auth_Service
-app:Inventory_System --> app:Auth_Service
 app:Billing_API --> db:Transactions_DB
 app:Reporting_Tool --> db:Transactions_DB
+app:Payment_Service --> db:User_DB
+
+// Platform → Operations
+server:API_Gateway --> app:Inventory_System
+app:Inventory_System --> app:Auth_Service
+ftp:Supplier_FTP --feeds--> batch:Stock_Sync
+batch:Stock_Sync --> db:Warehouse_DB
+
+// Finance + Operations → Analytics
 app:Payment_Service --events--> batch:ETL_Pipeline
 app:Inventory_System --events--> batch:ETL_Pipeline
-batch:ETL_Pipeline --> db:Data_Warehouse
-app:BI_Dashboard --> db:Data_Warehouse
 ftp:Supplier_FTP --SFTP--> watcher:Event_Collector
-ftp:Supplier_FTP --feeds--> batch:Stock_Sync
-batch:Stock_Sync --> db:Warehouse_DB`,
+batch:ETL_Pipeline --> db:Data_Warehouse
+app:BI_Dashboard --> db:Data_Warehouse`,
 
   aiApp: `// LLM-Powered RAG Application
 // Shows a production AI pipeline: ingestion, retrieval, orchestration, and observability.
@@ -7364,8 +7371,8 @@ function initComponentProps() {
   document.getElementById('cpInteractionState').addEventListener('change',e => { if(!selectedNodeId)return; const states={..._diagramSettings.componentProps.states};selectedNodeIds.forEach(id=>states[id]=e.target.value);commit('states',states); });
   ['selectionDuplicate','selectionLock','selectionAlign','selectionClose'].forEach((id,index) => document.getElementById(id).addEventListener('click',[duplicateSelectedNode,toggleSelectedNodeLock,alignSelectedNodeToGrid,clearNodeSelection][index]));
   document.getElementById('selectionDelete').addEventListener('click',deleteSelectedNodes);
-  document.getElementById('selectionConnect').addEventListener('click',() => { if(!selectedNodeId)return; activeNodeId=selectedNodeId; showNodeCtx(selectedNodeId,innerWidth/2,innerHeight/2); openConnectToPanel(); });
-  document.getElementById('selectionIcon').addEventListener('click',() => { if(!selectedNodeId)return; _iconReplaceTarget=selectedNodeId; toggleIconPicker(); });
+  document.getElementById('selectionConnect').addEventListener('click', e => { e.stopPropagation(); if(!selectedNodeId)return; activeNodeId=selectedNodeId; showNodeCtx(selectedNodeId,innerWidth/2,innerHeight/2); openConnectToPanel(); });
+  document.getElementById('selectionIcon').addEventListener('click', e => { e.stopPropagation(); if(!selectedNodeId)return; _iconReplaceTarget=selectedNodeId; toggleIconPicker(); });
   document.getElementById('selectionColor').addEventListener('input',e => { if(!selectedNodeId)return; entityColorLoad(); selectedNodeIds.forEach(id=>_entityColors[id]=e.target.value); entityColorSave(); applyEntityColors($preview.querySelector('svg')); });
   document.getElementById('selectionArrange').addEventListener('change',e=>{if(e.target.value)arrangeSelectedNodes(e.target.value);e.target.value='';});
   document.getElementById('selectionGroup').addEventListener('click',toggleSelectionGroup);
@@ -11940,7 +11947,7 @@ function insertPrefix(prefix) {
 const TEMPLATE_TYPES = {
   microservices: 'LR', threeTier: 'LR', cicd: 'LR', cloud: 'LR',
   aiApp: 'LR', designBoard: 'design',
-  etlPipeline: 'LR', fileProcessing: 'LR', networkArch: 'LR', enterpriseDomains: 'LR',
+  etlPipeline: 'LR', fileProcessing: 'LR', networkArch: 'LR', enterpriseDomains: 'TD',
 };
 
 function loadTemplate(name) {
