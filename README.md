@@ -138,23 +138,24 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 
 ### Live Preview Interactions
 - **Drag a node** — repositions node and redraws connected edges + labels in real time; positions persist across reloads and export
-- **Drag a domain / subdomain group** — moves all entities inside the group together with the cluster box, edges, and labels; position persists
-- **Resize a domain / subdomain** — SE-corner handle resizes the cluster box; entities inside reposition proportionally; survives re-renders
+- **Drag a domain / subdomain group** — moves all entities inside the group together with the cluster box, nested subdomain frames, edges, and labels; position persists
+- **Resize a domain / subdomain** — SE-corner handle resizes the cluster box; entities inside reposition proportionally, and nested subdomain frames scale with their contents; survives re-renders
 - **Group context panel** — click a domain/subdomain title to open a panel with border colour picker, rename, find in source, and collapse/expand
 - **Custom node colour** — node context panel includes a colour swatch; pick any fill colour; overrides Mermaid auto-colour and persists
 - **Canvas annotation labels** — toolbar **✚ Label** button places free-floating sticky notes; single-click opens colour popover (background, text, Match BG); double-click edits text; drag to reposition; persists locally
 - **↺ Reset layout (plain click)** — refreshes Mermaid auto-layout without clearing manually dragged positions, group positions, sizes, or colours
 - **↺ Reset layout (Shift+click)** — clears all positions, sizes, colours, and canvas labels
-- **Durable local persistence** — the diagram source, node positions, group sizes/layouts, colours, labels, and collapsed groups are stored in IndexedDB (database `meridian`: `documents`, `layout`, `styles` stores) and restored on startup; localStorage acts as a synchronous cache and automatic fallback, and legacy localStorage-only data is migrated on first load
-- **Storage manager (⚙️ → Storage)** — shows live IndexedDB record counts and provides one-click clean-up: **Clear layout & styles** (keeps the diagram text) or **Erase all saved data** (wipes IndexedDB + localStorage and reloads the default template)
+- **Durable local persistence** — the diagram source, diagram-type-specific node positions, group sizes/layouts, colours, labels, and collapsed groups are stored in IndexedDB (database `meridian`: `documents`, `layout`, `styles` stores) and restored on startup; localStorage acts as a synchronous cache and automatic fallback, and legacy localStorage-only data is migrated on first load
+- **Storage manager (⚙️ → Storage)** — shows live IndexedDB status and record counts, with clean-up actions for **Clear layout & styles** (keeps the diagram text), **Reset DB cache** (clears stale browser storage and re-saves the current diagram), and **Erase all saved data** (wipes IndexedDB + localStorage and reloads the default template)
 
 ### Diagrams
-- **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class
+- **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class; manual layout state is scoped per diagram type so LR and TD edits do not skew each other
 - **Design Board renderer** — colourful open-design SVG canvas with lanes, rich cards, gradients, and connection curves
-- **5 themes** — Default, Dark, Forest, Neutral, Base
+- **One light / dark theme** — the header toggle drives the app chrome, Mermaid diagram theme, edge and label colours, editor palette and sketch ink together; lines and text are kept readable (WCAG contrast) in both
 - **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
 - **Animated edges option** — slow or fast moving-arrow overlays without changing the generated Mermaid code
-- **12 natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, and more
+- **50+ natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, `stores in`, `consumes from`, `routes to`, `triggers`, `authenticates with`, `syncs with`, and more; lists (`A calls B, C and D`), chains (`A calls B which writes to C`), articles (`The API calls the database`) and several sentences per line all work
+- **Sketch layer (Excalidraw-style)** — hand-drawn rectangle, diamond, ellipse, arrow, line, pen, text and eraser tools over the Live Preview with select / move / resize, style panel (stroke, background, hachure / cross-hatch / solid fill, width, dashed / dotted, sloppiness, font size, opacity), undo / redo, tool lock and keyboard shortcuts (`V R D O A L P T E H`, `1`–`9`); sketches pan and zoom with the diagram, follow the theme and are saved, exported and versioned with the project
 
 ### Cloud Service Icon Picker (☁️ Icons ▾)
 - **1,313 named services** across five provider tabs — AWS, GCP, Azure, General (256), and AI
@@ -263,7 +264,15 @@ domain:Finance {
 app:Frontend calls app:Backend
 app:Backend reads from db:Postgres
 batch:ETL writes to db:Warehouse
+The web app calls the API Gateway
+API Gateway routes to Order Service and User Service
+Order Service writes to db:Orders and publishes to Kafka
+Billing consumes from Kafka
 ```
+
+### Sketch Layer
+
+Pick a tool from the floating toolbar at the top of the Live Preview (or press its key) and drag on the canvas. In **Select** (`V`) every Meridian interaction (node drag, groups, labels, context menus) works as before, and clicking a sketch selects it for moving, resizing (corner handles) and styling. `Del` deletes, `Ctrl+D` duplicates, `Ctrl+Z` / `Ctrl+Y` undo and redo sketch edits, `Q` keeps the current tool active, `Esc` returns to Select.
 
 ### Semantic Linting
 
@@ -318,9 +327,9 @@ Load the **Flow Diagram** template (Templates → ◇ Flow Diagram) for a ready-
 ## Project Bundles
 
 Export / Import save the complete state as `.meridian.json` or `.mmd`:
-- Smart Input text, diagram type, Mermaid theme
+- Smart Input text, diagram type, sketch layer
 - Editor and diagram settings
-- Node positions, group sizes/positions
+- Diagram-type-specific node positions and group sizes/positions
 - Custom entity colours, group border colours
 - Canvas annotation labels
 
