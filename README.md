@@ -151,11 +151,10 @@ decision:Is_Valid --no--> io:Re_Enter_Data --> decision:Is_Valid
 ### Diagrams
 - **5 diagram types** — Flowchart LR, Flowchart TD, Design Board, Sequence, Class; manual layout state is scoped per diagram type so LR and TD edits do not skew each other
 - **Design Board renderer** — colourful open-design SVG canvas with lanes, rich cards, gradients, and connection curves
-- **One light / dark theme** — the header toggle drives the app chrome, Mermaid diagram theme, edge and label colours, editor palette and sketch ink together; lines and text are kept readable (WCAG contrast) in both
+- **One light / dark theme** — the header toggle drives the app chrome, Mermaid diagram theme, edge and label colours and editor palette together; lines and text are kept readable (WCAG contrast) in both
 - **All arrow styles** — normal, labelled, bidirectional, pre-dependency, post-dependency, chained (`>>`)
 - **Animated edges option** — slow or fast moving-arrow overlays without changing the generated Mermaid code
 - **50+ natural language connectors** — `connects to`, `calls`, `queries`, `reads from`, `writes to`, `depends on`, `stores in`, `consumes from`, `routes to`, `triggers`, `authenticates with`, `syncs with`, and more; lists (`A calls B, C and D`), chains (`A calls B which writes to C`), articles (`The API calls the database`) and several sentences per line all work
-- **Sketch layer (Excalidraw-style)** — hand-drawn rectangle, diamond, ellipse, arrow, line, pen, text and eraser tools over the Live Preview with select / move / resize, style panel (stroke, background, hachure / cross-hatch / solid fill, width, dashed / dotted, sloppiness, font size, opacity), undo / redo, tool lock and keyboard shortcuts (`V R D O A L P T E H`, `1`–`9`); sketches pan and zoom with the diagram, follow the theme and are saved, exported and versioned with the project
 
 ### Cloud Service Icon Picker (☁️ Icons ▾)
 - **1,313 named services** across five provider tabs — AWS, GCP, Azure, General (256), and AI
@@ -270,10 +269,6 @@ Order Service writes to db:Orders and publishes to Kafka
 Billing consumes from Kafka
 ```
 
-### Sketch Layer
-
-Pick a tool from the floating toolbar at the top of the Live Preview (or press its key) and drag on the canvas. In **Select** (`V`) every Meridian interaction (node drag, groups, labels, context menus) works as before, and clicking a sketch selects it for moving, resizing (corner handles) and styling. `Del` deletes, `Ctrl+D` duplicates, `Ctrl+Z` / `Ctrl+Y` undo and redo sketch edits, `Q` keeps the current tool active, `Esc` returns to Select.
-
 ### Semantic Linting
 
 | Warning | Meaning |
@@ -327,7 +322,7 @@ Load the **Flow Diagram** template (Templates → ◇ Flow Diagram) for a ready-
 ## Project Bundles
 
 Export / Import save the complete state as `.meridian.json` or `.mmd`:
-- Smart Input text, diagram type, sketch layer
+- Smart Input text, diagram type
 - Editor and diagram settings
 - Diagram-type-specific node positions and group sizes/positions
 - Custom entity colours, group border colours
