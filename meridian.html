@@ -2499,6 +2499,10 @@ Billing consumes from Kafka</div>
 // ════════════════════════════════════════════════════════════════
 const BASE_MERMAID_CONFIG = {
   startOnLoad: false,
+  // Mermaid's default 50k cap is hit by ~180 icon nodes (each icon label is
+  // ~280 chars of HTML) and silently renders a single "Maximum text size" box.
+  maxTextSize: 1000000,
+  maxEdges: 5000,
   flowchart: { curve: 'basis', padding: 20, useMaxWidth: true, htmlLabels: true },
   sequence:   { useMaxWidth: true },
   securityLevel: 'loose',
@@ -6729,7 +6733,7 @@ const ICONIFY_OVERRIDES = {
   'gcp-app-engine'                        : 'logos:google-cloud',
   'gcp-firestore'                         : 'logos:firebase',
   'gcp-firebase-rtdb'                     : 'logos:firebase',
-  'gcp-bigquery'                          : 'logos:google-bigquery',
+  'gcp-bigquery'                          : 'simple-icons:googlebigquery',
   'gcp-vertex-ai'                         : 'logos:google-cloud',
   'gcp-gemini-gcp'                        : 'logos:google-gemini',
   'gcp-firebase-hosting'                  : 'logos:firebase',
@@ -6745,7 +6749,7 @@ const ICONIFY_OVERRIDES = {
   'gcp-firebase-test-lab'                 : 'logos:firebase',
   'gcp-firebase-dynamic-links'            : 'logos:firebase',
   // azure
-  'azure-azure-functions'                 : 'logos:azure-functions',
+  'azure-azure-functions'                 : 'logos:azure-icon',
   'azure-virtual-machine'                 : 'logos:microsoft-azure',
   'azure-aks'                             : 'logos:microsoft-azure',
   'azure-app-service'                     : 'logos:microsoft-azure',
@@ -6923,7 +6927,7 @@ const ICONIFY_OVERRIDES = {
   'ai-anthropic-claude'                   : 'simple-icons:anthropic',
   'ai-google-gemini'                      : 'logos:google-gemini',
   'ai-meta-llama'                         : 'logos:meta-icon',
-  'ai-mistral-ai'                         : 'simple-icons:mistral',
+  'ai-mistral-ai'                         : 'logos:mistral-ai-icon',
   'ai-aws-bedrock'                        : 'logos:aws',
   'ai-aws-sagemaker'                      : 'logos:aws',
   'ai-azure-openai-svc'                   : 'logos:microsoft-azure',
@@ -6941,16 +6945,16 @@ const ICONIFY_OVERRIDES = {
   'ai-smolagents'                         : 'logos:hugging-face-icon',
   'ai-pytorch'                            : 'logos:pytorch-icon',
   'ai-tensorflow'                         : 'logos:tensorflow',
-  'ai-scikit-learn'                       : 'logos:scikit-learn',
-  'ai-keras'                              : 'logos:keras',
+  'ai-scikit-learn'                       : 'devicon:scikitlearn',
+  'ai-keras'                              : 'devicon:keras',
   'ai-pandas'                             : 'logos:pandas-icon',
   'ai-numpy'                              : 'logos:numpy',
   'ai-transformers'                       : 'logos:hugging-face-icon',
   'ai-accelerate'                         : 'logos:hugging-face-icon',
-  'ai-mlflow'                             : 'logos:mlflow-icon',
-  'ai-kubeflow'                           : 'logos:kubeflow',
-  'ai-dvc'                                : 'logos:dvc-icon',
-  'ai-ray'                                : 'logos:ray-icon',
+  'ai-mlflow'                             : 'simple-icons:mlflow',
+  'ai-kubeflow'                           : 'devicon:kubeflow',
+  'ai-dvc'                                : 'simple-icons:dvc',
+  'ai-ray'                                : 'simple-icons:ray',
   'ai-peft'                               : 'logos:hugging-face-icon',
   'ai-trl'                                : 'logos:hugging-face-icon',
   'ai-hf-datasets'                        : 'logos:hugging-face-icon',
@@ -7126,10 +7130,23 @@ function sameSubcat(a, b) {
 
 function iconPreviewHtml(item) {
   if (item.svg) return `<span class="ip-preview-svg">${item.svg}</span>`;
-  if (item.url) return `<img class="ip-preview-img" alt="" src="${esc(item.url)}">`;
-  if (item.nativeRef) return `<img class="ip-preview-img" alt="" src="${esc(iconifyImageUrl(item.nativeRef))}">`;
+  // lazy: a provider tab lists up to ~300 icons; loading them all at once
+  // trips the Iconify rate limit (HTTP 429). data-fallback is shown on error.
+  const img = src => `<img class="ip-preview-img" alt="" loading="lazy" decoding="async" data-fallback="${esc(item.emoji || '*')}" src="${esc(src)}">`;
+  if (item.url) return img(item.url);
+  if (item.nativeRef) return img(iconifyImageUrl(item.nativeRef));
   return esc(item.emoji || '*');
 }
+
+// Broken remote icons (offline, rate-limited, removed upstream) degrade to the
+// item's emoji in the picker and disappear from rendered node labels instead
+// of showing a broken-image glyph. 'error' does not bubble, so use capture.
+document.addEventListener('error', e => {
+  const el = e.target;
+  if (!(el instanceof HTMLImageElement || el instanceof SVGImageElement)) return;
+  if (el.classList.contains('ip-preview-img')) { el.replaceWith(document.createTextNode(el.dataset.fallback || '*')); return; }
+  if (el.closest('#mermaidOutput, #minimapSvgHost')) el.style.display = 'none';
+}, true);
 
 function iconInsertText(item) {
   const name = String(item.name || item.id).trim().replace(/\s+/g, '_').replace(/["'\[\]{}|<>]/g, '');
@@ -7695,6 +7712,46 @@ function applyReadableNodeLabels(svg) {
   });
 }
 
+// Dark-theme counterparts of the flowchart classDef pastels: deep tinted fill
+// + bright stroke per entity type, so types stay distinguishable on dark
+// canvases (blending the pastels toward navy made every node the same ash).
+const ENTITY_DARK_PALETTE = (() => {
+  const p = {
+    env:{fill:'#172554',stroke:'#60a5fa'}, app:{fill:'#14532d',stroke:'#4ade80'}, db:{fill:'#451a03',stroke:'#f59e0b'},
+    server:{fill:'#3b0764',stroke:'#c084fc'}, instance:{fill:'#4c0519',stroke:'#fb7185'}, interface:{fill:'#083344',stroke:'#22d3ee'},
+    config:{fill:'#422006',stroke:'#facc15'}, batch:{fill:'#042f2e',stroke:'#2dd4bf'}, watcher:{fill:'#2e1065',stroke:'#a78bfa'},
+    ftp:{fill:'#500724',stroke:'#f472b6'}, net:{fill:'#0c4a6e',stroke:'#38bdf8'}, domain:{fill:'#4a044e',stroke:'#e879f9'},
+    subdomain:{fill:'#1e1b4b',stroke:'#818cf8'},
+  };
+  Object.assign(p, { process:p.env, decision:p.db, terminal:p.app, io:p.server, document:p.interface, predefined:p.watcher, connector:p.ftp });
+  return p;
+})();
+// Some Mermaid shapes (stadium, rough "outer-path") wrap their paths in a <g>;
+// the inner paths carry their own classDef fill, so paint them as well.
+// value === null clears the override.
+function paintShape(shape, prop, value) {
+  const targets = [shape];
+  if (shape.tagName.toLowerCase() === 'g') targets.push(...shape.querySelectorAll('path,rect,polygon,circle,ellipse'));
+  targets.forEach(t => value === null ? t.style.removeProperty(prop) : t.style.setProperty(prop, value, 'important'));
+}
+// Group boxes (env / net / domain) are styled with light pastel fills and
+// dark titles; on a dark canvas re-tint them from their own stroke colour.
+function darkenClusters(svg) {
+  svg.querySelectorAll('g.cluster').forEach(cluster => {
+    const rect = cluster.querySelector('rect');
+    if (!rect) return;
+    const rgb = getComputedStyle(rect).stroke.match(/\d+(?:\.\d+)?/g)?.slice(0, 3);
+    if (rgb?.length !== 3) return;
+    rect.style.setProperty('fill', `rgba(${rgb.join(',')},0.14)`, 'important');
+    cluster.querySelectorAll('.cluster-label .nodeLabel, .cluster-label span, .cluster-label p').forEach(l => l.style.setProperty('color', '#e5e7eb', 'important'));
+    cluster.querySelectorAll('.cluster-label text, .cluster-label tspan').forEach(l => l.style.setProperty('fill', '#e5e7eb', 'important'));
+  });
+}
+function entityDarkPalette(nodeEl) {
+  for (const cls of nodeEl.classList) if (Object.prototype.hasOwnProperty.call(ENTITY_DARK_PALETTE, cls)) return ENTITY_DARK_PALETTE[cls];
+  return null;
+}
+
 function applyDesignTokens(svg = $preview.querySelector('svg')) {
   const t = _diagramSettings.designTokens = validatedDesignTokens(_diagramSettings.designTokens);
   BASE_MERMAID_CONFIG.flowchart.padding=t.nodePadding;BASE_MERMAID_CONFIG.flowchart.nodeSpacing=t.groupGap;BASE_MERMAID_CONFIG.flowchart.rankSpacing=t.groupGap;
@@ -7715,7 +7772,8 @@ function applyDesignTokens(svg = $preview.querySelector('svg')) {
   svg.querySelectorAll('g.edgeLabel').forEach(label=>{label.style.fontFamily=families[t.fontFamily];label.style.fontSize=`${t.fontSize}px`;});
   if(t.followTheme){
     svg.querySelectorAll('.edgePaths path').forEach(path=>{path.style.stroke=effective.relationship;path.style.strokeWidth=`${t.edgeWidth}px`;});
-    meridianNodeGroups(svg).forEach(({el,eid})=>{const shape=primaryNodeShape(el);if(shape){if(_entityColors[eid])shape.style.setProperty('fill',_entityColors[eid],'important');else if(dark){const rgb=getComputedStyle(shape).fill.match(/\d+(?:\.\d+)?/g)?.slice(0,3).map(Number);if(rgb?.length===3){const base=[11,16,32];shape.style.setProperty('fill',`rgb(${rgb.map((v,i)=>Math.round(v*.3+base[i]*.7)).join(',')})`,'important');}}else shape.style.removeProperty('fill');const labelColor=readableTextOn(getComputedStyle(shape).fill);el.querySelectorAll('.nodeLabel,.label,span,p').forEach(label=>label.style.setProperty('color',labelColor,'important'));el.querySelectorAll('text').forEach(label=>label.style.setProperty('fill',labelColor,'important'));shape.style.setProperty('stroke',effective.border,'important');shape.style.strokeWidth=`${t.edgeWidth}px`;if(shape.tagName.toLowerCase()==='rect'){shape.setAttribute('rx',String(t.nodeRadius));shape.setAttribute('ry',String(t.nodeRadius));}}el.querySelectorAll('text,.nodeLabel,.label').forEach(label=>{label.style.color=effective.text;label.style.fill=effective.text;});});
+    meridianNodeGroups(svg).forEach(({el,eid})=>{const shape=primaryNodeShape(el);if(shape){if(_entityColors[eid])shape.style.setProperty('fill',_entityColors[eid],'important');else if(dark){const pal=entityDarkPalette(el);paintShape(shape,'fill',pal?pal.fill:'#1e293b');}else paintShape(shape,'fill',null);const labelColor=readableTextOn(getComputedStyle(shape).fill);el.querySelectorAll('.nodeLabel,.label,span,p').forEach(label=>label.style.setProperty('color',labelColor,'important'));el.querySelectorAll('text').forEach(label=>label.style.setProperty('fill',labelColor,'important'));paintShape(shape,'stroke',(dark&&!_entityColors[eid]&&entityDarkPalette(el)?.stroke)||effective.border);shape.style.strokeWidth=`${t.edgeWidth}px`;if(shape.tagName.toLowerCase()==='rect'){shape.setAttribute('rx',String(t.nodeRadius));shape.setAttribute('ry',String(t.nodeRadius));}}el.querySelectorAll('text,.nodeLabel,.label').forEach(label=>{label.style.color=effective.text;label.style.fill=effective.text;});});
+    if(dark) darkenClusters(svg);
     svg.querySelectorAll('g.edgeLabel').forEach(label=>label.style.color=effective.text);
     return;
   }
@@ -10113,7 +10171,16 @@ function refreshMinimap() {
   if (!svg) { clearMinimap(); return; }
 
   const clone = svg.cloneNode(true);
-  clone.removeAttribute('id');
+  // Mermaid scopes its theme CSS to the SVG id (#mg_… .node rect {fill…}).
+  // Give the clone its own id and re-point those selectors, otherwise every
+  // shape falls back to the SVG default black fill.
+  if (svg.id) {
+    const mmId = svg.id + '-minimap';
+    clone.id = mmId;
+    clone.querySelectorAll('style').forEach(st => { st.textContent = st.textContent.split('#' + svg.id).join('#' + mmId); });
+  } else {
+    clone.removeAttribute('id');
+  }
   clone.setAttribute('aria-hidden', 'true');
   clone.setAttribute('focusable', 'false');
   clone.classList.add('meridian-minimap-svg');

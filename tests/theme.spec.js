@@ -181,3 +181,25 @@ for (const theme of ['dark', 'light']) {
     });
   });
 }
+
+// Dark theme used to blend every pastel classDef toward navy, so all entity
+// types ended up the same ash grey. Each type must keep its own colour.
+test('dark theme keeps entity types distinguishable', async ({ page }) => {
+  await openApp(page, { theme: 'dark' });
+  await setInput(page, 'env:Prod{app:Web}\napp:Web --> db:Store\nserver:Box --> ftp:Drop\ninterface:Api --> config:Cfg');
+  await page.waitForTimeout(400);
+  const info = await page.evaluate(() => {
+    const lum = c => { const [r, g, b] = c.match(/\d+/g).map(Number); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+    const nodes = [...document.querySelectorAll('#mermaidOutput svg g.node')].map(g => {
+      const type = ['app', 'db', 'server', 'ftp', 'interface', 'config'].find(t => g.classList.contains(t));
+      const shapes = [...g.querySelectorAll('rect, path, polygon, circle, ellipse')].filter(s => !s.closest('.label, foreignObject, image'));
+      return { type, fills: shapes.map(s => getComputedStyle(s).fill).filter(f => f.startsWith('rgb')) };
+    });
+    const cluster = getComputedStyle(document.querySelector('#mermaidOutput svg g.cluster rect')).fill;
+    return { nodes: nodes.map(n => ({ ...n, lums: n.fills.map(lum) })), clusterLum: lum(cluster) };
+  });
+  const primary = info.nodes.map(n => n.fills[0]);
+  expect(new Set(primary).size).toBe(info.nodes.length); // every type differs
+  for (const n of info.nodes) for (const l of n.lums) expect(l, `${n.type} has a light fill on dark canvas`).toBeLessThan(0.45);
+  expect(info.clusterLum).toBeLessThan(0.45);
+});

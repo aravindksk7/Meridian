@@ -52,3 +52,19 @@ test('no page errors while toggling theme repeatedly', async ({ page }) => {
   await expect(page.locator('#mermaidOutput svg g.node').first()).toBeVisible();
   expect(errors, errors.join(' | ')).toEqual([]);
 });
+
+// Minimap clone must keep Mermaid's id-scoped theme CSS; without it every
+// node fell back to the SVG default black fill ("dark shadow" map).
+for (const theme of ['light', 'dark']) {
+  test(`minimap nodes use the same fill as the live preview (${theme})`, async ({ page }) => {
+    await openApp(page, { theme });
+    await page.evaluate(() => { $input.value = 'app:Web --> app:Api\napp:Api --> db:Store'; });
+    await page.waitForSelector('#minimapSvgHost svg g.node');
+    const fills = await page.evaluate(() => {
+      const f = sel => getComputedStyle(document.querySelector(sel)).fill;
+      return { main: f('#mermaidOutput svg g.node rect.label-container'), map: f('#minimapSvgHost svg g.node rect.label-container') };
+    });
+    expect(fills.map).not.toBe('rgb(0, 0, 0)');
+    expect(fills.map).toBe(fills.main);
+  });
+}
