@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Meridian</title>
+<script>try{var _t=localStorage.getItem('meridian-app-theme');if(_t==='light'||_t==='dark')document.documentElement.setAttribute('data-theme',_t);}catch(e){}</script>
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <!-- ── CodeMirror 6 bootstrap (module) ── -->
@@ -315,6 +317,66 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 /* In add-label mode, the preview canvas shows a crosshair */
 #zoomWrapper.label-add-mode { cursor: crosshair !important; }
 
+/* ── Sketch layer (Excalidraw-style tools over the Live Preview) ── */
+:root { --sketch-font:'Segoe Print','Bradley Hand','Chalkboard SE','Comic Sans MS',cursive; }
+#sketchDock { position:relative; height:0; z-index:35; }
+#sketchDock, #sketchDock * { user-select:none; -webkit-user-select:none; }
+#sketchDock { --sketch-panel-bg:#131c2f; }
+[data-theme="light"] #sketchDock { --sketch-panel-bg:#ffffff; }
+#sketchDock #sketchToolbar, #sketchDock #sketchProps { background:var(--sketch-panel-bg) !important; }
+#sketchToolbar { position:absolute; top:8px; left:0; right:0; margin:0 auto; width:max-content; display:flex; flex-wrap:wrap; justify-content:center;
+  gap:2px; align-items:center; padding:4px; max-width:calc(100% - 20px); border-radius:11px; background:var(--surface-1);
+  border:1px solid var(--border); box-shadow:0 6px 22px rgba(2,6,23,.28); }
+#sketchToolbar.collapsed .sk-group { display:none; }
+.sk-btn { width:30px; height:30px; border-radius:7px; display:inline-flex; align-items:center; justify-content:center; position:relative;
+  color:var(--text); background:transparent; border:0; cursor:pointer; padding:0; }
+.sk-btn:hover { background:var(--surface-2); color:var(--text-em); }
+.sk-btn:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.sk-btn.active { background:var(--accent-bg); color:var(--accent-text); box-shadow:inset 0 0 0 1px var(--accent); }
+.sk-btn:disabled { opacity:.35; cursor:default; background:transparent; }
+.sk-btn svg { width:17px; height:17px; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; pointer-events:none; }
+.sk-btn .sk-key { position:absolute; right:2px; bottom:0; font-size:8px; line-height:1; color:var(--text-muted); pointer-events:none; }
+.sk-sep { width:1px; height:20px; background:var(--border); margin:0 3px; }
+.sk-group { display:contents; }
+#sketchProps { position:absolute; top:56px; left:10px; width:204px; display:none; flex-direction:column; gap:9px; padding:10px;
+  border-radius:11px; background:var(--surface-1); border:1px solid var(--border); box-shadow:0 6px 22px rgba(2,6,23,.28);
+  color:var(--text); font-size:11px; max-height:calc(100vh - 220px); overflow:auto; }
+#sketchProps.vis { display:flex; }
+#sketchProps[hidden] { display:none !important; }
+.skp-sec { display:flex; flex-direction:column; gap:4px; }
+.skp-sec[hidden] { display:none; }
+.skp-title { font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); font-weight:600; }
+.skp-row { display:flex; flex-wrap:wrap; gap:4px; align-items:center; }
+.skp-opt { min-width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+  cursor:pointer; display:inline-flex; align-items:center; justify-content:center; font-size:11px; padding:0 6px; }
+.skp-opt:hover { border-color:var(--text-muted); }
+.skp-opt.active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); color:var(--text-em); }
+.skp-swatch { width:22px; height:22px; min-width:22px; padding:0; border-radius:6px; }
+.skp-swatch.none { background:repeating-linear-gradient(135deg,transparent 0 4px,var(--border) 4px 5px); }
+.skp-opt input[type=color] { width:18px; height:18px; border:0; padding:0; background:none; cursor:pointer; }
+.skp-range { width:100%; accent-color:var(--accent); }
+#rightPanel:not([data-sketch-tool="select"]) #nodeHandle,
+#rightPanel:not([data-sketch-tool="select"]) #selectionToolbar { display:none !important; }
+#rightPanel[data-sketch-tool="rectangle"] #previewScroll, #rightPanel[data-sketch-tool="rectangle"] #previewScroll *,
+#rightPanel[data-sketch-tool="diamond"] #previewScroll, #rightPanel[data-sketch-tool="diamond"] #previewScroll *,
+#rightPanel[data-sketch-tool="ellipse"] #previewScroll, #rightPanel[data-sketch-tool="ellipse"] #previewScroll *,
+#rightPanel[data-sketch-tool="arrow"] #previewScroll, #rightPanel[data-sketch-tool="arrow"] #previewScroll *,
+#rightPanel[data-sketch-tool="line"] #previewScroll, #rightPanel[data-sketch-tool="line"] #previewScroll *,
+#rightPanel[data-sketch-tool="freedraw"] #previewScroll, #rightPanel[data-sketch-tool="freedraw"] #previewScroll * { cursor:crosshair !important; }
+#rightPanel[data-sketch-tool="text"] #previewScroll, #rightPanel[data-sketch-tool="text"] #previewScroll * { cursor:text !important; }
+#rightPanel[data-sketch-tool="hand"] #previewScroll, #rightPanel[data-sketch-tool="hand"] #previewScroll * { cursor:grab !important; }
+#rightPanel[data-sketch-tool="eraser"] #previewScroll, #rightPanel[data-sketch-tool="eraser"] #previewScroll * { cursor:cell !important; }
+#meridian-sketch-layer .sketch-draw, #meridian-sketch-layer .sketch-draw * { pointer-events:none; }
+#meridian-sketch-layer .sketch-hit { pointer-events:stroke; cursor:move; }
+#meridian-sketch-layer .sketch-hit.filled { pointer-events:all; }
+#meridian-sketch-ui { pointer-events:none; }
+#meridian-sketch-ui .sketch-handle { pointer-events:all; cursor:nwse-resize; }
+#meridian-sketch-ui .sketch-handle[data-handle="ne"], #meridian-sketch-ui .sketch-handle[data-handle="sw"] { cursor:nesw-resize; }
+body.presentation-mode #sketchDock,
+#rightPanel[data-view-mode="present"] #sketchDock { display:none !important; }
+.sketch-text-editor { position:fixed; z-index:9999; margin:0; padding:0; border:1px dashed var(--accent); outline:none; resize:none;
+  overflow:hidden; background:transparent; font-family:var(--sketch-font); line-height:1.25; white-space:pre; min-width:24px; }
+
 /* ── Undo / Redo ── */
 .ur-btn:disabled { opacity:.35;cursor:default;pointer-events:none; }
 
@@ -340,24 +402,8 @@ body.fullscreen-preview #rightPanel { width:100% !important; }
 #mermaidOutput svg g.node-src-hl > ellipse,
 #mermaidOutput svg g.node-src-hl > path { stroke:#818cf8!important;stroke-width:2px!important;stroke-dasharray:3,2!important; }
 
-/* ── Dark mode: Mermaid edge & arrowhead visibility ── */
-/* Mermaid's default/neutral themes render edges as near-black (#333).
-   These rules lift them to a readable gray when the app is in dark mode.
-   They only apply when the user has NOT set a custom lineColor (because
-   a custom lineColor is already injected as a themeVariable in renderDiagram). */
-[data-theme="dark"] #mermaidOutput svg .edgePaths path,
-[data-theme="dark"] #mermaidOutput svg .edgePath > path {
-  stroke: #9ca3af !important;
-}
-[data-theme="dark"] #mermaidOutput svg defs marker path,
-[data-theme="dark"] #mermaidOutput svg defs marker polygon {
-  fill: #9ca3af !important;
-}
-[data-theme="dark"] #mermaidOutput svg .edgeLabel .label,
-[data-theme="dark"] #mermaidOutput svg .edgeLabel span.edgeLabel {
-  color: #e2e8f0 !important;
-  background: transparent !important;
-}
+/* Edge / label colours come from the single theme source: setAppTheme() ->
+   renderDiagram() injects THEME_DIAGRAM_VARS[theme] as Mermaid themeVariables. */
 #mermaidOutput svg .meridian-edge-animation { pointer-events:none; }
 @media (prefers-reduced-motion: reduce) {
   #mermaidOutput svg .meridian-edge-animation { display:none; }
@@ -826,6 +872,25 @@ body > header + div {
 #addLabelBtn { color:#f0abfc!important; }
 #fullscreenBtn { color:#67e8f9!important; }
 
+/* ── Readability in both themes (>= 4.5:1 text, >= 3:1 UI) ── */
+#parseIndicator, #entityCount { color:var(--text-muted)!important; }
+#smartInput .cm-gutters .cm-gutterElement { color:var(--text-muted); }
+[data-theme="dark"] #leftPanel p.flex-shrink-0 code.text-indigo-400 { color:#a5b4fc!important; }
+[data-theme="dark"] #leftPanel p.flex-shrink-0 code.text-teal-400 { color:#5eead4!important; }
+[data-theme="dark"] #leftPanel p.flex-shrink-0 code { color:#c7d2fe; }
+[data-theme="light"] .text-gray-500 { color:#64748b !important; }
+[data-theme="light"] #previewStatus { color:#047857!important; }
+[data-theme="light"] #addLabelBtn { color:#a21caf!important; }
+[data-theme="light"] #fullscreenBtn { color:#0e7490!important; }
+[data-theme="light"] #smartInput .cm-activeLineGutter { color:#4338ca!important; }
+[data-theme="light"] #leftPanel p.flex-shrink-0 code.text-indigo-400 { color:#4338ca!important; }
+[data-theme="light"] #leftPanel p.flex-shrink-0 code.text-teal-400 { color:#0f766e!important; }
+[data-theme="light"] #leftPanel p.flex-shrink-0 code { color:#4338ca; }
+[data-theme="light"] #leftPanel p.flex-shrink-0 { color:#475569 !important; }
+[data-theme="dark"] #leftPanel p.flex-shrink-0 code[style*="#c026d3"] { color:#f0abfc !important; }
+[data-theme="dark"] #leftPanel p.flex-shrink-0 code[style*="#4f46e5"] { color:#a5b4fc !important; }
+[data-theme="light"] footer, [data-theme="light"] footer span { color:#475569 !important; }
+
 /* Floating surfaces */
 .copy-menu,#shapePicker,#iconPicker,#tplPicker,#viewPicker,#nodeCtxPanel,#groupCtxPanel,#connectToPanel,#addNodeForm,
 #labelColorPop,.zoom-picker {
@@ -1163,6 +1228,7 @@ body.comment-placement #previewScroll { cursor:crosshair!important; }
       <button class="help-nav" data-section="arrows">→ Arrows</button>
       <button class="help-nav" data-section="grouping">⬡ Grouping</button>
       <button class="help-nav" data-section="natural">💬 Natural Language</button>
+      <button class="help-nav" data-section="sketch">✏️ Sketch Layer</button>
       <button class="help-nav" data-section="linting">Linting</button>
       <button class="help-nav" data-section="toolbar">🛠️ Toolbar</button>
       <button class="help-nav" data-section="workspace">Workspace</button>
@@ -1372,27 +1438,69 @@ domain:Finance {
         <table class="help-tbl">
           <thead><tr><th>Phrase</th><th>Rendered arrow label</th></tr></thead>
           <tbody>
-            <tr><td><code>A connects to B</code></td><td>connects to</td></tr>
-            <tr><td><code>A calls B</code></td><td>calls</td></tr>
-            <tr><td><code>A queries B</code></td><td>queries</td></tr>
-            <tr><td><code>A reads from B</code></td><td>reads from</td></tr>
-            <tr><td><code>A writes to B</code></td><td>writes to</td></tr>
-            <tr><td><code>A depends on B</code></td><td>depends on</td></tr>
-            <tr><td><code>A sends data to B</code></td><td>sends to</td></tr>
-            <tr><td><code>A talks to B</code></td><td>talks to</td></tr>
-            <tr><td><code>A uses B</code></td><td>uses</td></tr>
-            <tr><td><code>A forwards to B</code></td><td>forwards to</td></tr>
-            <tr><td><code>A publishes to B</code></td><td>publishes to</td></tr>
-            <tr><td><code>A subscribes to B</code></td><td>subscribes to</td></tr>
+            <tr><td><code>A connects to B</code> · <code>A talks to B</code></td><td>connects to · talks to</td></tr>
+            <tr><td><code>A calls B</code> · <code>A invokes B</code> · <code>A queries B</code></td><td>calls · invokes · queries</td></tr>
+            <tr><td><code>A reads (data) from B</code> · <code>A writes (data) to B</code></td><td>reads from · writes to</td></tr>
+            <tr><td><code>A depends on B</code> · <code>A requires B</code></td><td>depends on · requires (dotted)</td></tr>
+            <tr><td><code>A sends (order events) to B</code> · <code>A forwards to B</code> · <code>A routes to B</code></td><td>sends to · forwards to · routes to</td></tr>
+            <tr><td><code>A publishes to B</code> · <code>A subscribes to B</code> · <code>A consumes from B</code> · <code>A produces to B</code></td><td>messaging verbs</td></tr>
+            <tr><td><code>A stores data in B</code> · <code>A fetches from B</code> · <code>A loads into B</code> · <code>A caches in B</code></td><td>storage verbs</td></tr>
+            <tr><td><code>A authenticates with B</code> · <code>Users log in to B</code> · <code>A accesses B</code></td><td>auth verbs</td></tr>
+            <tr><td><code>A triggers B</code> · <code>A notifies B</code> · <code>A monitors B</code> · <code>A uses B</code></td><td>triggers (thick) · notifies · monitors · uses</td></tr>
+            <tr><td><code>A syncs with B</code></td><td>syncs with (two-way)</td></tr>
+            <tr><td><code>Data flows from A to B</code></td><td>flows to</td></tr>
+          </tbody>
+        </table>
+        <div class="help-h3">Sentences that just work</div>
+        <table class="help-tbl">
+          <tbody>
+            <tr><td><code>The API calls the database</code></td><td>Leading articles (the / a / an) are dropped</td></tr>
+            <tr><td><code>API calls Auth, Billing and Search</code></td><td>Comma / "and" lists fan out to several arrows</td></tr>
+            <tr><td><code>Web, Mobile call API</code></td><td>Lists work on the left side too</td></tr>
+            <tr><td><code>API reads from Cache and writes to Postgres</code></td><td>Second verb reuses the subject</td></tr>
+            <tr><td><code>Gateway calls Orders which writes to db:Orders</code></td><td>"which / that" continues from the last target</td></tr>
+            <tr><td><code>A calls B; B queries C.</code></td><td>Several sentences per line</td></tr>
+            <tr><td><code>App uses Redis for caching</code></td><td>Trailing purpose ("for …", "via …") is ignored</td></tr>
           </tbody>
         </table>
         <div class="help-h3">Example</div>
-        <div class="help-ex">UserAPI connects to PostgreSQL
-AuthService calls UserAPI
-BatchJob reads from db:Staging
-BatchJob writes to db:Warehouse</div>
+        <div class="help-ex">The web app calls the API Gateway
+API Gateway routes to Order Service and User Service
+Order Service writes to db:Orders and publishes to Kafka
+Billing consumes from Kafka</div>
 
         <p class="text-xs text-gray-500 mt-2">Entity names are auto-typed by keywords — "PostgreSQL" becomes a db, "BatchJob" becomes a batch node. You can still use explicit prefixes to override.</p>
+      </div>
+
+      <!-- ── Sketch layer ── -->
+      <div id="hs-sketch" class="help-section">
+        <div class="help-h2">Sketch Layer</div>
+        <div class="help-sub">Hand-drawn whiteboard tools float over the Live Preview. Sketches sit on top of the rendered diagram, pan and zoom with it, follow the light/dark theme, and are included in SVG/PNG/GIF export, project files and version history.</div>
+        <table class="help-tbl">
+          <thead><tr><th>Tool</th><th>Key</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td>Hand</td><td><kbd>H</kbd></td><td>Pan the canvas without touching nodes</td></tr>
+            <tr><td>Select</td><td><kbd>V</kbd> / <kbd>1</kbd></td><td>Normal Meridian editing (drag nodes, groups, labels) plus select / move / resize sketches</td></tr>
+            <tr><td>Rectangle · Diamond · Ellipse</td><td><kbd>R</kbd> <kbd>D</kbd> <kbd>O</kbd> / <kbd>2</kbd>–<kbd>4</kbd></td><td>Drag to draw; hold <kbd>Shift</kbd> for a square / circle</td></tr>
+            <tr><td>Arrow · Line</td><td><kbd>A</kbd> <kbd>L</kbd> / <kbd>5</kbd> <kbd>6</kbd></td><td>Drag to draw; <kbd>Shift</kbd> snaps to 15° steps</td></tr>
+            <tr><td>Draw</td><td><kbd>P</kbd> / <kbd>7</kbd></td><td>Freehand pen</td></tr>
+            <tr><td>Text</td><td><kbd>T</kbd> / <kbd>8</kbd></td><td>Click to type; <kbd>Esc</kbd> or click away to finish; double-click text to edit</td></tr>
+            <tr><td>Eraser</td><td><kbd>E</kbd> / <kbd>9</kbd></td><td>Drag across sketches to delete them</td></tr>
+            <tr><td>Keep tool active</td><td><kbd>Q</kbd></td><td>Stay on the drawing tool after each shape</td></tr>
+          </tbody>
+        </table>
+        <div class="help-h3">Editing</div>
+        <table class="help-tbl">
+          <tbody>
+            <tr><td><kbd>Del</kbd> / <kbd>Backspace</kbd></td><td>Delete selected sketches</td></tr>
+            <tr><td><kbd>Ctrl+D</kbd></td><td>Duplicate selection</td></tr>
+            <tr><td><kbd>Ctrl+Z</kbd> / <kbd>Ctrl+Y</kbd></td><td>Undo / redo sketch changes (after you last touched the canvas)</td></tr>
+            <tr><td>Arrow keys</td><td>Nudge selection (<kbd>Shift</kbd> = 10px)</td></tr>
+            <tr><td><kbd>Shift</kbd>+click</td><td>Add / remove from selection</td></tr>
+            <tr><td>Style panel</td><td>Stroke colour, background, fill style (hachure / cross / solid), width, dashed / dotted, sloppiness, font size, opacity, front / back</td></tr>
+          </tbody>
+        </table>
+        <p class="text-xs text-gray-500 mt-2">Colours are theme-aware: "Ink" is dark on the light theme and light on the dark theme, and every palette colour has a light/dark variant so sketches stay readable after toggling the theme.</p>
       </div>
 
       <!-- ── Linting ── -->
@@ -1786,15 +1894,6 @@ BatchJob writes to db:Warehouse</div>
       <option value="class">Class</option>
     </select>
 
-    <!-- Theme -->
-    <select id="mermaidTheme" title="Diagram theme"
-      class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500 cursor-pointer">
-      <option value="default">☀️ Light</option>
-      <option value="dark">🌙 Dark</option>
-      <option value="forest">🌲 Forest</option>
-      <option value="neutral">⬜ Neutral</option>
-      <option value="base">🎨 Base</option>
-    </select>
   </div>
 
   <!-- Settings button -->
@@ -2321,6 +2420,12 @@ BatchJob writes to db:Warehouse</div>
 
     <div id="lintPanel"></div>
 
+    <!-- Sketch layer tools (Excalidraw-style); built by initSketchLayer() -->
+    <div id="sketchDock">
+      <div id="sketchToolbar" role="toolbar" aria-label="Sketch tools"></div>
+      <div id="sketchProps" role="group" aria-label="Sketch style"></div>
+    </div>
+
     <!-- Preview scroll area -->
     <div id="previewScroll" class="flex-1 overflow-auto p-4">
       <div id="zoomWrapper">
@@ -2494,6 +2599,12 @@ const BASE_MERMAID_CONFIG = {
   sequence:   { useMaxWidth: true },
   securityLevel: 'loose',
   fontSize: 14,
+};
+
+// Mermaid colours per app theme, chosen for >= 4.5:1 contrast on the canvas.
+const THEME_DIAGRAM_VARS = {
+  dark:  { lineColor: '#a5b4cb', textColor: '#e5e7eb', edgeLabelBackground: '#1e293b', clusterBkg: 'rgba(30,41,59,.55)', clusterBorder: '#64748b', titleColor: '#e5e7eb' },
+  light: { lineColor: '#475569', textColor: '#1e293b', edgeLabelBackground: '#ffffff', clusterBkg: 'rgba(241,245,249,.7)', clusterBorder: '#94a3b8', titleColor: '#1e293b' },
 };
 
 mermaid.initialize({ ...BASE_MERMAID_CONFIG, theme: 'default' });
@@ -2883,7 +2994,7 @@ function buildMeridianLanguage(CM) {
 
 function buildMeridianHighlight(CM) {
   const { HighlightStyle, tags } = CM;
-  const preset   = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const preset   = activeEditorPreset();
   const tOverride = _editorSettings.tokenColors || {};
   return HighlightStyle.define([
     { tag: tags.lineComment,  color: preset.cmt, fontStyle: 'italic' },
@@ -2900,9 +3011,27 @@ function buildMeridianHighlight(CM) {
   ]);
 }
 
+// The default "Meridian" editor palette follows the app theme; other
+// palettes are explicit syntax colour schemes the user picked.
+const MERIDIAN_LIGHT_EDITOR = {
+  name: 'Meridian', dark: false,
+  bg: '#ffffff', fg: '#1e293b', gutBg: '#f1f5f9', gutFg: '#64748b',
+  act: 'rgba(15,23,42,.04)', sel: 'rgba(99,102,241,.22)',
+  cmt: '#64748b', kw: '#7c3aed', op: '#0e7490', str: '#15803d',
+  num: '#c2410c', br: '#0e7490', id: '#1e293b',
+  types: { env:'#1d4ed8',app:'#15803d',db:'#b45309',server:'#7e22ce',
+           instance:'#be123c',interface:'#0e7490',config:'#a16207',
+           batch:'#0f766e',watcher:'#6d28d9',ftp:'#be185d',net:'#c2410c',domain:'#a21caf',subdomain:'#4338ca' },
+};
+function activeEditorPreset() {
+  const key = _editorSettings.theme || 'meridian';
+  if (key === 'meridian' && !isDarkTheme()) return MERIDIAN_LIGHT_EDITOR;
+  return EDITOR_THEMES[key] || EDITOR_THEMES.meridian;
+}
+
 function buildMeridianEditorTheme(CM) {
   const { EditorView } = CM;
-  const p  = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const p  = activeEditorPreset();
   const ff = FONT_FAMILIES[_editorSettings.fontFamily] || FONT_FAMILIES.system;
   const fs = (_editorSettings.fontSize || 13) + 'px';
   return EditorView.theme({
@@ -2938,7 +3067,7 @@ function meridianCompletion(context) {
   // Detect if cursor is after an arrow / NL connector → favour entity targets
   const lineStart = context.state.doc.lineAt(word.from).from;
   const before = context.state.sliceDoc(lineStart, word.from);
-  const AFTER_ARROW = /(?:-->|->|<->|>>|\bcalls\b|\breads?\s+from\b|\bsends?\s+to\b|\bconnects?\s+to\b|\bwrites?\s+to\b|\bpublishes?\s+to\b|\bsubscribes?\s+to\b|\bdepends?\s+on\b)\s*$/i.test(before);
+  const AFTER_ARROW = NL_AFTER_VERB_RE.test(before);
 
   const TYPE_PREFIXES = Object.keys(CM_TYPE_TOKENS).map(k => ({
     label: k + ':', type: 'keyword', boost: 5,
@@ -3562,6 +3691,69 @@ const TYPE_ALIAS_MAP = {
 };
 const CONTAINER_TYPES = new Set(['env', 'net', 'domain', 'subdomain']);
 
+// ── Natural-language connectors ──────────────────────────────────
+// Each verb phrase becomes a labelled arrow. NL_FILL lets a short object sit
+// between verb and preposition ("sends order events to", "reads data from").
+// `trim` verbs drop trailing purpose clauses ("uses Redis for caching").
+const NL_FILL = '(?:[\\w-]+\\s+){0,3}?';
+const NL_VERBS = [
+  { src: 'connects?\\s+(?:to|with)', label: 'connects to' },
+  { src: 'talks?\\s+(?:to|with)', label: 'talks to' },
+  { src: 'calls?', label: 'calls', trim: true },
+  { src: 'invokes?', label: 'invokes', trim: true },
+  { src: 'quer(?:y|ies)', label: 'queries', trim: true },
+  { src: `reads?\\s+${NL_FILL}from`, label: 'reads from' },
+  { src: `writes?\\s+${NL_FILL}(?:to|into)`, label: 'writes to' },
+  { src: 'depends?\\s+(?:up)?on', label: 'depends on' },
+  { src: 'requires?', label: 'requires', style: 'pre', trim: true },
+  { src: `sends?\\s+${NL_FILL}(?:to|into)`, label: 'sends to' },
+  { src: `forwards?\\s+${NL_FILL}to`, label: 'forwards to' },
+  { src: `routes?\\s+${NL_FILL}to`, label: 'routes to' },
+  { src: `(?:proxies|proxy)\\s+${NL_FILL}to`, label: 'proxies to' },
+  { src: `publish(?:es)?\\s+${NL_FILL}(?:to|on|into)`, label: 'publishes to' },
+  { src: 'subscribes?\\s+(?:to|on)', label: 'subscribes to' },
+  { src: `consumes?\\s+${NL_FILL}from`, label: 'consumes from' },
+  { src: `produces?\\s+${NL_FILL}(?:to|into)`, label: 'produces to' },
+  { src: `streams?\\s+${NL_FILL}(?:to|into)`, label: 'streams to' },
+  { src: `emits?\\s+${NL_FILL}(?:to|into|on)`, label: 'emits to' },
+  { src: `(?:pushes|push)\\s+${NL_FILL}(?:to|into)`, label: 'pushes to' },
+  { src: `pulls?\\s+${NL_FILL}from`, label: 'pulls from' },
+  { src: `fetch(?:es)?\\s+${NL_FILL}from`, label: 'fetches from' },
+  { src: `receives?\\s+${NL_FILL}from`, label: 'receives from' },
+  { src: `loads?\\s+${NL_FILL}into`, label: 'loads into' },
+  { src: `stores?\\s+${NL_FILL}(?:in|into|to|on)`, label: 'stores in' },
+  { src: `saves?\\s+${NL_FILL}(?:in|into|to)`, label: 'saves to' },
+  { src: `caches?\\s+${NL_FILL}(?:in|into)`, label: 'caches in' },
+  { src: `replicates?\\s+${NL_FILL}to`, label: 'replicates to' },
+  { src: `backs?\\s+up\\s+${NL_FILL}to`, label: 'backs up to' },
+  { src: `syncs?\\s+${NL_FILL}with`, label: 'syncs with', bidir: true },
+  { src: `returns?\\s+${NL_FILL}to`, label: 'returns to' },
+  { src: 'listens?\\s+(?:to|on)', label: 'listens to' },
+  { src: `authenticates?\\s+${NL_FILL}(?:with|against|via|through)`, label: 'authenticates with' },
+  { src: '(?:logs?|signs?)\\s+in(?:\\s+to|to)', label: 'logs in to' },
+  { src: '(?:runs?\\s+on|is\\s+hosted\\s+on|hosted\\s+on|lives?\\s+in)', label: 'runs on' },
+  { src: `deploys?\\s+${NL_FILL}to`, label: 'deploys to' },
+  { src: 'triggers?', label: 'triggers', style: 'post', trim: true },
+  { src: 'notif(?:y|ies)', label: 'notifies', trim: true },
+  { src: 'monitors?', label: 'monitors', trim: true },
+  { src: 'polls?', label: 'polls', trim: true },
+  { src: 'serves?', label: 'serves', trim: true },
+  { src: 'access(?:es)?', label: 'accesses', trim: true },
+  { src: 'manages?', label: 'manages', trim: true },
+  { src: 'handles?', label: 'handles', trim: true },
+  { src: 'contains?', label: 'contains', trim: true },
+  { src: 'owns?', label: 'owns', trim: true },
+  { src: 'extends?', label: 'extends', trim: true },
+  { src: 'implements?', label: 'implements', trim: true },
+  { src: 'uses?', label: 'uses', trim: true },
+].map(v => ({ ...v, re: new RegExp(`(^|\\s)(${v.src})(?=\\s|$)`, 'gi') }));
+// Autocomplete: cursor right after an arrow or a connector verb → suggest entities.
+const NL_AFTER_VERB_RE = new RegExp(`(?:-->|->|<->|>>|(?:^|\\s)(?:${NL_VERBS.map(v => v.src).join('|')}))\\s*$`, 'i');
+const NL_ARTICLE_RE =/^(?:the|an|a|our|my|your|their|its|this|that|these|those|each|every|all)\s+(?=\S)/i;
+const NL_PURPOSE_RE = /\s+(?:for|via|using|over|with|when|whenever|if|every|in\s+order\s+to|to)\s+.*$/i;
+const NL_CHAIN_RE   = /\s*,\s*(?:and\s+then|then|and|which|that|who)?\s*|\s+(?:and\s+then|then|and|which|that|who)\s+/gi;
+const NL_FLOW_RE    = /^(?:(?:[\w-]+\s+){0,3}?(?:flows?|goes|go|moves?|travels?|passes|pass)\s+)?from\s+(.+?)\s+(?:to|into)\s+(.+)$/i;
+
 const DOMAIN_PALETTE = [
   { fill: '#fdf4ff', stroke: '#c026d3', color: '#701a75' },
   { fill: '#fff7ed', stroke: '#f97316', color: '#c2410c' },
@@ -3854,7 +4046,7 @@ class SmartParser {
   autoType(token) {
     const t = token.toLowerCase().replace(/_/g, ' ').replace(/-/g, ' ');
     if (/\b(prod|production|staging|stage|dev|develop|development|test|qa|sandbox|uat|preprod)\b/.test(t)) return 'env';
-    if (/\b(postgres|postgresql|mysql|mariadb|redis|mongodb|mongo|dynamodb|cassandra|sqlite|mssql|oracle|elasticsearch|aurora|rds|elasticache|memcached)\b/.test(t)) return 'db';
+    if (/\b(postgres|postgresql|mysql|mariadb|redis|mongodb|mongo|dynamodb|cassandra|sqlite|mssql|oracle|elasticsearch|aurora|rds|elasticache|memcached|database|databases|db|datastore|warehouse|datalake|data lake|cache|s3|bucket|storage|blob)\b/.test(t)) return 'db';
     if (/\b(nginx|apache|haproxy|caddy|traefik|iis|tomcat|alb|nlb|lb|loadbalancer|cloudfront|proxy|gateway)\b/.test(t)) return 'server';
     if (/\b(ec2|container|docker|pod|kubernetes|k8s|vm|lambda|fargate|ecs|eks|instance|runner|agent|worker)\b/.test(t)) return 'instance';
     if (/\b(rest|grpc|graphql|websocket|ws|http|https|rpc|soap|amqp|mqtt|kafka|rabbitmq|pubsub|webhook|queue|bus)\b/.test(t)) return 'interface';
@@ -3868,12 +4060,13 @@ class SmartParser {
     return 'app';
   }
 
-  parseToken(token, line = 1, raw = '') {
+  parseToken(token, line = 1, raw = '', opts = {}) {
     token = (token || '').trim();
     if (!token) return null;
-    // Skip structural punctuation and stop-words
+    // Skip structural punctuation and stop-words. Relationship endpoints pass
+    // keepStop so single-letter names such as "A --> B" still work.
     if (/^[{}|\\]$/.test(token)) return null;
-    if (/^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
+    if (!opts.keepStop && /^(to|from|via|through|using|with|and|or|the|a|an|on|at|in|of|for|by|is|are|as|its)$/i.test(token)) return null;
 
     // Explicit prefix: type:Label
     const unknownPrefix = token.match(/^([A-Za-z][\w-]*):/);
@@ -3951,7 +4144,7 @@ class SmartParser {
     if (line.includes('>>') && !line.includes('->')) {
       const parts = line.split(/\s*>>\s*/).map(s => s.trim()).filter(Boolean);
       if (parts.length >= 2) {
-        const ents = parts.map(p => this.parseToken(p, lineNo, raw)).filter(Boolean);
+        const ents = parts.map(p => this.parseToken(p, lineNo, raw, { keepStop: true })).filter(Boolean);
         for (let i = 0; i < ents.length - 1; i++) {
           this.addRel(ents[i].id, ents[i + 1].id, 'triggers', false, 'post', { line: lineNo, raw });
         }
@@ -3963,8 +4156,8 @@ class SmartParser {
     const biRe = /^(.+?)\s*<-+>\s*(.+)$/;
     const bi   = line.match(biRe);
     if (bi) {
-      const from = this.parseToken(bi[1].trim(), lineNo, raw);
-      const to   = this.parseToken(bi[2].trim(), lineNo, raw);
+      const from = this.parseToken(bi[1].trim(), lineNo, raw, { keepStop: true });
+      const to   = this.parseToken(bi[2].trim(), lineNo, raw, { keepStop: true });
       if (from && to) this.addRel(from.id, to.id, '', true, 'normal', { line: lineNo, raw });
       return;
     }
@@ -3978,8 +4171,8 @@ class SmartParser {
         const il = am[2].match(/^--([^-]+)-->/);
         if (il) label = il[1].trim();
       }
-      const from = this.parseToken(am[1].trim(), lineNo, raw);
-      const to   = this.parseToken(am[4].trim(), lineNo, raw);
+      const from = this.parseToken(am[1].trim(), lineNo, raw, { keepStop: true });
+      const to   = this.parseToken(am[4].trim(), lineNo, raw, { keepStop: true });
       if (from && to) {
         // Detect pre/post dependency style from label
         const lbl = label.toLowerCase().trim();
@@ -3997,31 +4190,8 @@ class SmartParser {
       return;
     }
 
-    // Natural language connectors
-    const NL = [
-      { re: /\bconnects?\s+to\b/i,          label: 'connects to' },
-      { re: /\bcalls?\b/i,                  label: 'calls' },
-      { re: /\bqueries\b/i,                 label: 'queries' },
-      { re: /\breads?\s+from\b/i,           label: 'reads from' },
-      { re: /\bwrites?\s+to\b/i,            label: 'writes to' },
-      { re: /\bdepends?\s+on\b/i,           label: 'depends on' },
-      { re: /\bsends?\s+(?:data\s+)?to\b/i, label: 'sends to' },
-      { re: /\btalks?\s+to\b/i,             label: 'talks to' },
-      { re: /\buses?\b/i,                   label: 'uses' },
-      { re: /\bforwards?\s+to\b/i,          label: 'forwards to' },
-      { re: /\bpublishes?\s+to\b/i,         label: 'publishes to' },
-      { re: /\bsubscribes?\s+to\b/i,        label: 'subscribes to' },
-    ];
-    for (const { re, label } of NL) {
-      if (re.test(line)) {
-        const parts = line.split(re);
-        if (parts.length >= 2) {
-          const from = this.parseToken(parts[0].trim(), lineNo, raw);
-          const to   = this.parseToken(parts[1].trim(), lineNo, raw);
-          if (from && to) { this.addRel(from.id, to.id, label, false, 'normal', { line: lineNo, raw }); return; }
-        }
-      }
-    }
+    // Natural language: "A calls B", "A reads from B and writes to C", …
+    if (this.parseNaturalLanguage(line, lineNo, raw)) return;
 
     // Bare declarations — split on commas or on whitespace immediately before a type prefix.
     // Keeps multi-word prefixed labels (e.g. "instance:⚡ Lambda") as a single token.
@@ -4035,6 +4205,102 @@ class SmartParser {
         t.split(/\s+/).filter(Boolean).forEach(w => this.parseToken(w, lineNo, raw)); // bare auto-type words
       }
     });
+  }
+
+  // ── Natural language ─────────────────────────────────────────
+  // All verb-phrase matches in `text`, best first: lowercase verbs beat
+  // capitalised ones (so "Health Monitor calls API" picks "calls"), then the
+  // earliest position, then the longest phrase.
+  nlVerbMatches(text) {
+    const found = [];
+    for (const verb of NL_VERBS) {
+      verb.re.lastIndex = 0;
+      let m;
+      while ((m = verb.re.exec(text))) {
+        const index = m.index + m[1].length;
+        const word = m[2];
+        found.push({ index, end: index + word.length, verb, lower: word === word.toLowerCase() });
+        verb.re.lastIndex = index + 1;
+      }
+    }
+    return found.sort((a, b) =>
+      (b.lower - a.lower) || (a.index - b.index) || ((b.end - b.index) - (a.end - a.index)));
+  }
+
+  // Split one side of a sentence into entity labels (fan-out on "," / "and").
+  nlSideLabels(text, trimPurpose) {
+    let t = String(text || '').trim().replace(/^[,:\s]+|[,.;:!?\s]+$/g, '');
+    if (!t) return [];
+    if (trimPurpose && !_pfxTest.test(t)) t = t.replace(NL_PURPOSE_RE, '').trim();
+    return t.split(/\s*,\s*(?:and\s+|or\s+)?|\s+(?:and|or|&)\s+/i)
+      .map(part => {
+        const p = part.trim().replace(/^["']|["']$/g, '');
+        const art = p.match(NL_ARTICLE_RE);
+        return art && art[0].trim() !== 'A' ? p.slice(art[0].length) : p;
+      })
+      .filter(Boolean);
+  }
+
+  nlEntities(labels, lineNo, raw) {
+    return labels.map(l => this.parseToken(l, lineNo, raw, { keepStop: true })?.id).filter(Boolean);
+  }
+
+  // Find "…, which/that/and/then <verb> …" inside the object side of a clause.
+  nlFindChain(rest) {
+    NL_CHAIN_RE.lastIndex = 0;
+    let m;
+    while ((m = NL_CHAIN_RE.exec(rest))) {
+      if (!m[0].length) { NL_CHAIN_RE.lastIndex++; continue; }
+      const after = rest.slice(m.index + m[0].length);
+      if (m.index > 0 && this.nlVerbMatches(after).some(v => v.index === 0)) {
+        return { cut: m.index, clause: after, relative: /\b(?:which|that|who)\b/i.test(m[0]) };
+      }
+    }
+    return null;
+  }
+
+  nlClause(text, subjects, lineNo, raw) {
+    text = String(text || '').trim().replace(/[.!?]+$/, '').trim();
+    if (!text) return false;
+    for (const verb of this.nlVerbMatches(text)) {
+      const left = text.slice(0, verb.index).trim();
+      if (subjects ? left : !left) continue;
+      let rest = text.slice(verb.end).trim();
+      const chain = this.nlFindChain(rest);
+      if (chain) rest = rest.slice(0, chain.cut).trim();
+      const fromLabels = subjects ? null : this.nlSideLabels(left, false);
+      const toLabels = this.nlSideLabels(rest, verb.verb.trim);
+      if ((!subjects && !fromLabels.length) || !toLabels.length) continue;
+      const fromIds = subjects || this.nlEntities(fromLabels, lineNo, raw);
+      const toIds = this.nlEntities(toLabels, lineNo, raw);
+      if (!fromIds.length || !toIds.length) continue;
+      const { label, bidir = false, style = 'normal' } = verb.verb;
+      fromIds.forEach(f => toIds.forEach(t => {
+        if (f !== t) this.addRel(f, t, label, bidir, style, { line: lineNo, raw });
+      }));
+      if (chain) this.nlClause(chain.clause, chain.relative ? toIds : fromIds, lineNo, raw);
+      return true;
+    }
+    return false;
+  }
+
+  parseNaturalLanguage(line, lineNo, raw) {
+    const flow = line.match(NL_FLOW_RE);
+    if (flow) {
+      const fromIds = this.nlEntities(this.nlSideLabels(flow[1], false), lineNo, raw);
+      const toIds = this.nlEntities(this.nlSideLabels(flow[2], false), lineNo, raw);
+      if (fromIds.length && toIds.length) {
+        fromIds.forEach(f => toIds.forEach(t => {
+          if (f !== t) this.addRel(f, t, 'flows to', false, 'normal', { line: lineNo, raw });
+        }));
+        return true;
+      }
+    }
+    // Several sentences on one line: "A calls B; B queries C." / "A calls B. B queries C."
+    const sentences = line.split(/\s*;\s*|(?<=[\w)\]])\.\s+(?=[A-Za-z])/);
+    let handled = false;
+    sentences.forEach(sentence => { if (this.nlClause(sentence, null, lineNo, raw)) handled = true; });
+    return handled;
   }
 
   // ── Output helpers ───────────────────────────────────────────
@@ -7317,7 +7583,7 @@ function syncComponentPropsUI() {
   document.getElementById('componentPropsTarget').textContent = ent ? ent.label : 'Canvas';
   const checks = { cpLabels:p.labels,cpMinimap:p.minimap,cpGrid:p.grid,cpInspector:_inspectorVisible,cpWarnings:p.warnings };
   Object.entries(checks).forEach(([id,value]) => { document.getElementById(id).checked = value; });
-  document.getElementById('cpTheme').value = document.getElementById('mermaidTheme').value;
+  document.getElementById('cpTheme').value = isDarkTheme() ? 'dark' : 'light';
   document.getElementById('cpCanvasMode').value = _diagramSettings.preview.canvas;
   document.getElementById('cpConnectionStyle').value = p.connectionStyle;
   document.getElementById('cpSpacing').value = p.spacing; document.getElementById('cpRadius').value = p.radius;
@@ -7337,7 +7603,7 @@ function syncComponentPropsUI() {
 
 function initComponentProps() {
   const button = document.getElementById('componentPropsBtn'), panel = document.getElementById('componentPropsPanel');
-  document.getElementById('cpTheme').innerHTML = document.getElementById('mermaidTheme').innerHTML;
+  document.getElementById('cpTheme').innerHTML = '<option value="light">☀️ Light</option><option value="dark">🌙 Dark</option>';
   document.getElementById('cpNodeType').innerHTML = ETYPES.map(item => `<option value="${esc(item.type)}">${esc(item.type)}</option>`).join('');
   const position = () => { const b = button.getBoundingClientRect(); panel.style.left = `${Math.max(8,Math.min(innerWidth-334,b.right-326))}px`; panel.style.top = `${b.bottom+7}px`; };
   button.addEventListener('click',e => { e.stopPropagation(); const open = !panel.classList.contains('vis'); panel.classList.toggle('vis',open); button.setAttribute('aria-expanded',String(open)); if (open) { syncComponentPropsUI(); position(); } });
@@ -7352,7 +7618,7 @@ function initComponentProps() {
   document.getElementById('cpMinimap').addEventListener('change',e => { commit('minimap',e.target.checked); commitPreviewSetting('minimap',e.target.checked?'expanded':'hidden'); });
   document.getElementById('cpGrid').addEventListener('change',e => { commit('grid',e.target.checked); commitPreviewSetting('canvas',e.target.checked?'grid':'plain'); });
   document.getElementById('cpInspector').addEventListener('change',e => { if (e.target.checked !== _inspectorVisible) toggleInspector(); commit('inspector',e.target.checked); });
-  document.getElementById('cpTheme').addEventListener('change',e => { const theme = document.getElementById('mermaidTheme'); theme.value=e.target.value; theme.dispatchEvent(new Event('change')); });
+  document.getElementById('cpTheme').addEventListener('change',e => setAppTheme(e.target.value));
   document.getElementById('cpCanvasMode').addEventListener('change',e => commitPreviewSetting('canvas',e.target.value));
   document.getElementById('cpConnectionStyle').addEventListener('change',e => commit('connectionStyle',e.target.value));
   document.getElementById('cpNodeType').addEventListener('change',e => changeSelectedNodeType(e.target.value));
@@ -7495,12 +7761,40 @@ function initLayersPanel() {
 
 initLayersPanel();
 
+// Dark or light label colour, whichever reads better on the given CSS fill.
+function readableTextOn(fillCss) {
+  const rgb = String(fillCss || '').match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
+  if (!rgb || rgb.length < 3) return isDarkTheme() ? '#e5e7eb' : '#1e293b';
+  const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+  const lum = 0.2126 * lin(rgb[0]) + 0.7152 * lin(rgb[1]) + 0.0722 * lin(rgb[2]);
+  return lum > 0.22 ? '#1e293b' : '#f1f5f9';
+}
+
+// Final pass after all node styling: every node label gets whichever of a
+// dark/light text colour reads best on its actual fill, in either theme.
+function applyReadableNodeLabels(svg) {
+  if (!svg) return;
+  // Class/sequence shapes are multi-part (divider paths have no real fill);
+  // Mermaid's own themed text colours are correct there.
+  if (!['LR', 'TD', 'design'].includes(document.getElementById('diagramType').value)) return;
+  meridianNodeGroups(svg).forEach(({ el }) => {
+    const shape = primaryNodeShape(el);
+    if (!shape) return;
+    const fill = getComputedStyle(shape).fill;
+    if (!fill || fill === 'none' || /rgba\([^)]*,\s*0\)/.test(fill)) return;
+    const color = readableTextOn(fill);
+    el.querySelectorAll('.nodeLabel, .label, span, p').forEach(label => label.style.setProperty('color', color, 'important'));
+    el.querySelectorAll('text, tspan').forEach(label => label.style.setProperty('fill', color, 'important'));
+  });
+}
+
 function applyDesignTokens(svg = $preview.querySelector('svg')) {
   const t = _diagramSettings.designTokens = validatedDesignTokens(_diagramSettings.designTokens);
   BASE_MERMAID_CONFIG.flowchart.padding=t.nodePadding;BASE_MERMAID_CONFIG.flowchart.nodeSpacing=t.groupGap;BASE_MERMAID_CONFIG.flowchart.rankSpacing=t.groupGap;
   const families = { system:'Inter,ui-sans-serif,system-ui,sans-serif',inter:'Inter,ui-sans-serif,system-ui,sans-serif',mono:'"Cascadia Code","Fira Code",monospace' };
-  const theme=document.getElementById('mermaidTheme')?.value || 'default',dark=theme==='dark';
-  const effective=t.followTheme?{canvas:dark?'#0b1020':'#f8fafc',surface:dark?'#11182a':'#ffffff',text:dark?'#e5e7eb':'#172033',border:dark?'#94a3b8':'#64748b',relationship:dark?'#9ca3af':'#475569'}:{canvas:t.canvas,surface:t.surface,text:t.text,border:t.border,relationship:t.relationship};
+  const dark=isDarkTheme();
+  const themeVars=THEME_DIAGRAM_VARS[dark?'dark':'light'];
+  const effective=t.followTheme?{canvas:dark?'#0b1020':'#f8fafc',surface:dark?'#11182a':'#ffffff',text:themeVars.textColor,border:dark?'#94a3b8':'#64748b',relationship:_diagramSettings.lineColor||themeVars.lineColor}:{canvas:t.canvas,surface:t.surface,text:t.text,border:t.border,relationship:t.relationship};
   const root = document.documentElement;
   Object.entries({canvas:effective.canvas,surface:effective.surface,node:t.nodeFill,border:effective.border,text:effective.text,accent:t.accent,relationship:effective.relationship}).forEach(([name,value]) => root.style.setProperty(`--token-${name}`,value));
   root.style.setProperty('--token-panel-radius',`${t.panelRadius}px`);
@@ -7514,7 +7808,7 @@ function applyDesignTokens(svg = $preview.querySelector('svg')) {
   svg.querySelectorAll('g.edgeLabel').forEach(label=>{label.style.fontFamily=families[t.fontFamily];label.style.fontSize=`${t.fontSize}px`;});
   if(t.followTheme){
     svg.querySelectorAll('.edgePaths path').forEach(path=>{path.style.stroke=effective.relationship;path.style.strokeWidth=`${t.edgeWidth}px`;});
-    meridianNodeGroups(svg).forEach(({el,eid})=>{const shape=primaryNodeShape(el);if(shape){if(_entityColors[eid])shape.style.setProperty('fill',_entityColors[eid],'important');else if(dark){const rgb=getComputedStyle(shape).fill.match(/\d+(?:\.\d+)?/g)?.slice(0,3).map(Number);if(rgb?.length===3){const base=[11,16,32];shape.style.setProperty('fill',`rgb(${rgb.map((v,i)=>Math.round(v*.38+base[i]*.62)).join(',')})`,'important');}}else shape.style.removeProperty('fill');shape.style.setProperty('stroke',effective.border,'important');shape.style.strokeWidth=`${t.edgeWidth}px`;if(shape.tagName.toLowerCase()==='rect'){shape.setAttribute('rx',String(t.nodeRadius));shape.setAttribute('ry',String(t.nodeRadius));}}el.querySelectorAll('text,.nodeLabel,.label').forEach(label=>{label.style.color=effective.text;label.style.fill=effective.text;});});
+    meridianNodeGroups(svg).forEach(({el,eid})=>{const shape=primaryNodeShape(el);if(shape){if(_entityColors[eid])shape.style.setProperty('fill',_entityColors[eid],'important');else if(dark){const rgb=getComputedStyle(shape).fill.match(/\d+(?:\.\d+)?/g)?.slice(0,3).map(Number);if(rgb?.length===3){const base=[11,16,32];shape.style.setProperty('fill',`rgb(${rgb.map((v,i)=>Math.round(v*.3+base[i]*.7)).join(',')})`,'important');}}else shape.style.removeProperty('fill');const labelColor=readableTextOn(getComputedStyle(shape).fill);el.querySelectorAll('.nodeLabel,.label,span,p').forEach(label=>label.style.setProperty('color',labelColor,'important'));el.querySelectorAll('text').forEach(label=>label.style.setProperty('fill',labelColor,'important'));shape.style.setProperty('stroke',effective.border,'important');shape.style.strokeWidth=`${t.edgeWidth}px`;if(shape.tagName.toLowerCase()==='rect'){shape.setAttribute('rx',String(t.nodeRadius));shape.setAttribute('ry',String(t.nodeRadius));}}el.querySelectorAll('text,.nodeLabel,.label').forEach(label=>{label.style.color=effective.text;label.style.fill=effective.text;});});
     svg.querySelectorAll('g.edgeLabel').forEach(label=>label.style.color=effective.text);
     return;
   }
@@ -7683,7 +7977,7 @@ let _versionBlobUrls=[];
 function cleanVersionRecord(item){
   if(!item||typeof item.name!=='string'||typeof item.input!=='string')return null;
   const cleanMap=value=>Object.fromEntries(Object.entries(value&&typeof value==='object'?value:{}).filter(([key])=>key&&key!=='__proto__').map(([key,entry])=>[key,entry]));
-  return {id:String(item.id||`version-${Date.now()}`),name:item.name.slice(0,60),createdAt:Number(item.createdAt)||Date.now(),input:item.input.slice(0,500000),type:String(item.type||'LR'),theme:String(item.theme||'default'),svg:typeof item.svg==='string'&&item.svg.length<=1000000?item.svg:'',diagramSettings:item.diagramSettings&&typeof item.diagramSettings==='object'?item.diagramSettings:{},nodePositions:cleanMap(item.nodePositions),groupSizes:cleanMap(item.groupSizes),groupLayouts:cleanMap(item.groupLayouts),entityColors:cleanMap(item.entityColors),groupColors:cleanMap(item.groupColors),canvasLabels:Array.isArray(item.canvasLabels)?item.canvasLabels.slice(0,500):[],comments:Array.isArray(item.comments)?item.comments.slice(0,500):[]};
+  return {id:String(item.id||`version-${Date.now()}`),name:item.name.slice(0,60),createdAt:Number(item.createdAt)||Date.now(),input:item.input.slice(0,500000),type:String(item.type||'LR'),theme:String(item.theme||'default'),svg:typeof item.svg==='string'&&item.svg.length<=1000000?item.svg:'',diagramSettings:item.diagramSettings&&typeof item.diagramSettings==='object'?item.diagramSettings:{},nodePositions:cleanMap(item.nodePositions),groupSizes:cleanMap(item.groupSizes),groupLayouts:cleanMap(item.groupLayouts),entityColors:cleanMap(item.entityColors),groupColors:cleanMap(item.groupColors),canvasLabels:Array.isArray(item.canvasLabels)?item.canvasLabels.slice(0,500):[],sketch:Array.isArray(item.sketch)?item.sketch.slice(0,2000):[],comments:Array.isArray(item.comments)?item.comments.slice(0,500):[]};
 }
 function versionHistoryLoad(){if(_versionHistoryLoaded)return _versionHistory;try{const raw=JSON.parse(localStorage.getItem(VERSION_HISTORY_KEY)||'[]');_versionHistory=Array.isArray(raw)?raw.map(cleanVersionRecord).filter(Boolean).slice(-50):[];}catch{_versionHistory=[];}_versionHistoryLoaded=true;return _versionHistory;}
 function versionHistorySave(){persistSet(VERSION_HISTORY_KEY,JSON.stringify(_versionHistory.slice(-50)));}
@@ -7692,18 +7986,18 @@ function snapshotSvgText(){const svg=$preview.querySelector('svg');if(!svg)retur
 
 function captureVersionSnapshot(name,persist=true){
   posLoad();groupSizeLoad();groupLayoutLoad();entityColorLoad();groupColorLoad();canvasLabelLoad();reviewCommentsLoad();
-  const snapshot=cleanVersionRecord({id:`version-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,name:(String(name||'Snapshot').trim()||'Snapshot').slice(0,60),createdAt:Date.now(),input:$input.value,type:document.getElementById('diagramType').value,theme:document.getElementById('mermaidTheme').value,svg:snapshotSvgText(),diagramSettings:JSON.parse(JSON.stringify(_diagramSettings)),nodePositions:JSON.parse(JSON.stringify(_nodePositions)),groupSizes:JSON.parse(JSON.stringify(_groupSizes)),groupLayouts:JSON.parse(JSON.stringify(_groupLayouts)),entityColors:JSON.parse(JSON.stringify(_entityColors)),groupColors:JSON.parse(JSON.stringify(_groupColors)),canvasLabels:JSON.parse(JSON.stringify(_canvasLabels)),comments:JSON.parse(JSON.stringify(_reviewComments))});
+  const snapshot=cleanVersionRecord({id:`version-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,name:(String(name||'Snapshot').trim()||'Snapshot').slice(0,60),createdAt:Date.now(),input:$input.value,type:document.getElementById('diagramType').value,theme:currentDiagramTheme(),svg:snapshotSvgText(),diagramSettings:JSON.parse(JSON.stringify(_diagramSettings)),nodePositions:JSON.parse(JSON.stringify(_nodePositions)),groupSizes:JSON.parse(JSON.stringify(_groupSizes)),groupLayouts:JSON.parse(JSON.stringify(_groupLayouts)),entityColors:JSON.parse(JSON.stringify(_entityColors)),groupColors:JSON.parse(JSON.stringify(_groupColors)),canvasLabels:JSON.parse(JSON.stringify(_canvasLabels)),sketch:sketchElementsClone(),comments:JSON.parse(JSON.stringify(_reviewComments))});
   if(persist){_versionHistory.push(snapshot);_versionHistory=_versionHistory.slice(-50);versionHistorySave();renderVersionHistory();}return snapshot;
 }
 
 function renderVersionHistory(){versionHistoryLoad();const list=document.getElementById('versionList');if(!list)return;document.getElementById('versionSummary').textContent=`${_versionHistory.length} snapshot${_versionHistory.length===1?'':'s'}`;list.innerHTML=_versionHistory.length?[..._versionHistory].reverse().map(item=>`<article class="version-item" data-version-id="${esc(item.id)}"><div class="version-item-title"><span>${esc(item.name)}</span><span class="version-item-meta">${new Date(item.createdAt).toLocaleString()}</span></div><div class="version-item-meta">${esc(item.type)} · ${item.input.split(/\r?\n/).length} lines</div><div class="version-item-actions"><button class="present-btn" data-version-action="compare" type="button">Compare</button><button class="present-btn" data-version-action="restore" type="button">Restore</button><button class="present-btn" data-version-action="delete" type="button">Delete</button></div></article>`).join(''):'<div class="version-empty">No snapshots yet.</div>';}
 
 function restoreVersionSnapshot(id){const snapshot=_versionHistory.find(item=>item.id===id);if(!snapshot)return;captureVersionSnapshot(`Before restoring ${snapshot.name}`);const cleanFiniteMap=value=>Object.fromEntries(Object.entries(value||{}).filter(([,entry])=>entry&&Object.values(entry).every(number=>Number.isFinite(Number(number))&&Math.abs(Number(number))<=1e6)));
-  setDiagramType(normalizeDiagramType(snapshot.type));document.getElementById('mermaidTheme').value=[...document.getElementById('mermaidTheme').options].some(option=>option.value===snapshot.theme)?snapshot.theme:'default';
+  setDiagramType(normalizeDiagramType(snapshot.type));
   const ds=snapshot.diagramSettings||{};_diagramSettings={..._diagramSettings,fontSize:String(ds.fontSize||''),primaryColor:String(ds.primaryColor||''),primaryBorderColor:String(ds.primaryBorderColor||''),lineColor:String(ds.lineColor||''),edgeAnimation:EDGE_ANIMATION_VALUES.has(ds.edgeAnimation)?ds.edgeAnimation:'off',background:String(ds.background||''),preview:validatedPreviewSettings(ds.preview),componentProps:validatedComponentProps(ds.componentProps),designTokens:validatedDesignTokens(ds.designTokens)};
   _nodePositions=cleanFiniteMap(snapshot.nodePositions);_posLoaded=true;_groupSizes=cleanFiniteMap(snapshot.groupSizes);_groupSizesLoaded=true;_groupLayouts=cleanGroupLayouts(snapshot.groupLayouts);_groupLayoutsLoaded=true;
   _entityColors=Object.fromEntries(Object.entries(snapshot.entityColors||{}).filter(([,color])=>/^#[0-9a-f]{6}$/i.test(String(color))));_entityColorsLoaded=true;_groupColors=Object.fromEntries(Object.entries(snapshot.groupColors||{}).filter(([,color])=>/^#[0-9a-f]{6}$/i.test(String(color))));_groupColorsLoaded=true;
-  _canvasLabels=Array.isArray(snapshot.canvasLabels)?snapshot.canvasLabels.filter(label=>label&&typeof label.text==='string').slice(0,500):[];_canvasLabelsLoaded=true;_reviewComments=(snapshot.comments||[]).filter(comment=>comment&&typeof comment.text==='string').slice(0,500);_reviewCommentsLoaded=true;
+  _canvasLabels=Array.isArray(snapshot.canvasLabels)?snapshot.canvasLabels.filter(label=>label&&typeof label.text==='string').slice(0,500):[];_canvasLabelsLoaded=true;sketchReplace(snapshot.sketch||[],{render:false});_reviewComments=(snapshot.comments||[]).filter(comment=>comment&&typeof comment.text==='string').slice(0,500);_reviewCommentsLoaded=true;
   persistSet(POS_KEY,JSON.stringify(_nodePositions));persistSet(GROUP_SIZE_KEY,JSON.stringify(_groupSizes));persistSet(GROUP_LAYOUT_KEY,JSON.stringify(_groupLayouts));entityColorSave();groupColorSave();canvasLabelSave();reviewCommentsSave();saveSettings();
   $input.value=snapshot.input;pushHistory($input.value);saveToStorage();onInput();renderVersionHistory();toast(`Restored “${snapshot.name}”`);
 }
@@ -9717,6 +10011,7 @@ function applyPreviewSettings(svg = $preview.querySelector('svg')) {
   applyMinimapPreference();
   if (svg) applyComponentProperties(svg);
   if (svg) applyDesignTokens(svg);
+  if (svg) applyReadableNodeLabels(svg);
   if (svg) applyReviewPins(svg);
   applyResponsiveDensity();
   if (document.getElementById('layersPanel')?.classList.contains('vis')) refreshLayersPanel();
@@ -9904,7 +10199,8 @@ function refreshMinimap() {
   clone.setAttribute('aria-hidden', 'true');
   clone.setAttribute('focusable', 'false');
   clone.classList.add('meridian-minimap-svg');
-  clone.querySelectorAll('.meridian-group-toggle,.meridian-edge-animation,.edgeLabel,g.edgeLabel,defs,filter,marker').forEach(el => el.remove());
+  clone.querySelectorAll('.meridian-group-toggle,.meridian-edge-animation,.edgeLabel,g.edgeLabel,defs,filter,marker,#meridian-sketch-ui,.sketch-hit').forEach(el => el.remove());
+  clone.querySelectorAll('[id]').forEach(el => el.removeAttribute('id')); // no duplicate ids (e.g. sketch layer)
   clone.querySelectorAll('[filter]').forEach(el => el.removeAttribute('filter'));
   clone.querySelectorAll('[marker-start],[marker-mid],[marker-end]').forEach(el => {
     el.removeAttribute('marker-start');
@@ -10206,6 +10502,7 @@ function renderDesignBoard(code) {
     applyGroupColors(svgEl);
     applyEntityColors(svgEl);
     applyCanvasLabels(svgEl);
+    applySketchLayer(svgEl);
     applyEdgeAnimation(svgEl);
     applyPreviewSettings(svgEl);
     applySelectionVisuals(svgEl);
@@ -10242,23 +10539,17 @@ async function renderDiagram(code) {
   }
   try {
     const id = 'mg_' + Date.now();
-    const currentTheme = document.getElementById('mermaidTheme').value;
-    const _dv = {};
+    const currentTheme = currentDiagramTheme();
+    const _dv = { ...THEME_DIAGRAM_VARS[isDarkTheme() ? 'dark' : 'light'] };
     if (_diagramSettings.fontSize)           _dv.fontSize           = _diagramSettings.fontSize;
     if (_diagramSettings.primaryColor)       _dv.primaryColor       = _diagramSettings.primaryColor;
     if (_diagramSettings.primaryBorderColor) _dv.primaryBorderColor = _diagramSettings.primaryBorderColor;
     if (_diagramSettings.lineColor)          _dv.lineColor          = _diagramSettings.lineColor;
     if (_diagramSettings.background)         _dv.background         = _diagramSettings.background;
-    // When the app is in dark mode and no custom edge colour has been set, inject a
-    // visible default so Mermaid's light-themed edge colours (#333) don't disappear.
-    const _isDarkApp = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (_isDarkApp && !_diagramSettings.lineColor && ['default', 'neutral', 'forest'].includes(currentTheme)) {
-      _dv.lineColor = '#9ca3af';
-    }
     mermaid.initialize({
       ...BASE_MERMAID_CONFIG,
       theme: currentTheme,
-      ...(Object.keys(_dv).length ? { themeVariables: _dv } : {}),
+      themeVariables: _dv,
     });
     ensureMermaidIconPacks();
     const { svg } = await mermaid.render(id, code);
@@ -10284,6 +10575,7 @@ async function renderDiagram(code) {
     applyGroupColors(svgEl);
     applyEntityColors(svgEl);
     applyCanvasLabels(svgEl);
+    applySketchLayer(svgEl);
     applyEdgeAnimation(svgEl);
     applyPreviewSettings(svgEl);
     applySelectionVisuals(svgEl);
@@ -10423,9 +10715,6 @@ window.switchProvider = switchProvider;
 window.filterBySubcat = filterBySubcat;
 
 document.getElementById('diagramType').addEventListener('change', onInput);
-document.getElementById('mermaidTheme').addEventListener('change', () => {
-  if (lastCode) renderDiagram(lastCode);
-});
 
 // ════════════════════════════════════════════════════════════════
 //  COPY
@@ -10444,7 +10733,7 @@ function buildShareUrl() {
   const state = encodeState(
     $input.value,
     normalizeDiagramType(document.getElementById('diagramType').value),
-    document.getElementById('mermaidTheme').value
+    currentDiagramTheme()
   );
   return location.origin + location.pathname + '#d:' + state;
 }
@@ -10658,7 +10947,7 @@ function currentProjectBundle() {
     savedAt: new Date().toISOString(),
     input: $input.value,
     type: normalizeDiagramType(document.getElementById('diagramType').value),
-    theme: document.getElementById('mermaidTheme').value,
+    theme: currentDiagramTheme(),
     settings: {
       editor: cloneJson(_editorSettings),
       diagram: cloneJson(_diagramSettings),
@@ -10674,6 +10963,7 @@ function currentProjectBundle() {
     entityColors: Object.assign({}, _entityColors),
     groupColors: Object.assign({}, _groupColors),
     canvasLabels: _canvasLabels.slice(),
+    sketch: sketchElementsClone(),
     customIcons: loadCustomIcons(),
   };
 }
@@ -10715,7 +11005,7 @@ function parseProjectBundle(text, fileName = '') {
     version: PROJECT_VERSION,
     input: text,
     type: normalizeDiagramType(document.getElementById('diagramType').value),
-    theme: document.getElementById('mermaidTheme').value,
+    theme: currentDiagramTheme(),
     settings: {},
     nodePositions: {},
   };
@@ -10736,8 +11026,6 @@ function applyProjectBundle(bundle) {
   if (!bundle || typeof bundle !== 'object') throw new Error('Invalid project file');
   const input = typeof bundle.input === 'string' ? bundle.input : '';
   const type = normalizeDiagramType(bundle.type);
-  const theme = [...document.getElementById('mermaidTheme').options].some(o => o.value === bundle.theme)
-    ? bundle.theme : 'default';
 
   if (bundle.settings?.editor && typeof bundle.settings.editor === 'object') {
     _editorSettings = { ..._editorSettings, ...bundle.settings.editor };
@@ -10755,7 +11043,6 @@ function applyProjectBundle(bundle) {
   $input.value = input;
   _savedCursor = input.length;
   setDiagramType(type);
-  document.getElementById('mermaidTheme').value = theme;
 
   replaceLayoutBucketsForImport(type, bundle.layoutsByType, {
     nodePositions: bundle.nodePositions || bundle.positions,
@@ -10779,6 +11066,8 @@ function applyProjectBundle(bundle) {
     });
     groupColorSave();
   }
+
+  if (Array.isArray(bundle.sketch)) sketchReplace(bundle.sketch, { render: false });
 
   if (Array.isArray(bundle.canvasLabels)) {
     _canvasLabels = bundle.canvasLabels.filter(l =>
@@ -10876,7 +11165,7 @@ function gifNumber(value) {
 
 function sanitizeSvgCloneForCanvas(clone) {
   const NS = 'http://www.w3.org/2000/svg';
-  const textFill = document.documentElement.getAttribute('data-theme') === 'dark' ? '#e5e7eb' : '#1f2937';
+  const textFill = isDarkTheme() ? '#e5e7eb' : '#1f2937';
 
   clone.querySelectorAll('foreignObject').forEach(fo => {
     const label = (fo.textContent || '').replace(/\s+/g, ' ').trim();
@@ -11312,7 +11601,7 @@ document.getElementById('lcpMatchBg').addEventListener('click', () => {
   const lbl = _canvasLabels.find(l => String(l.id) === _lcpActiveLid);
   if (lbl) {
     lbl.bgColor = 'transparent';
-    lbl.textColor = document.documentElement.getAttribute('data-theme') !== 'light' ? '#d1d5db' : '#374151';
+    lbl.textColor = isDarkTheme() ? '#d1d5db' : '#374151';
     canvasLabelSave();
     document.getElementById('lcpBgColor').value = '#111827';
     document.getElementById('lcpTextColor').value = lbl.textColor;
@@ -11352,15 +11641,18 @@ document.addEventListener('keydown', e => {
 });
 
 // Canvas click in label-add mode: place new label
+// Capture phase: the SVG's own capture-phase click handler (node context menu)
+// would otherwise swallow the click before it bubbles back up here.
 document.getElementById('zoomWrapper').addEventListener('click', e => {
   if (!_labelAddMode) return;
   const svg = $preview.querySelector('svg');
   if (!svg) return;
+  e.stopPropagation();
   const pt = svg.createSVGPoint();
   pt.x = e.clientX; pt.y = e.clientY;
   const svgPt = pt.matrixTransform(svg.getScreenCTM().inverse());
   _placeLabelAt(svgPt.x, svgPt.y);
-});
+}, true);
 
 // ── Group context panel handlers ─────────────────────────────────
 document.getElementById('gcpColorPicker').addEventListener('input', e => {
@@ -11615,7 +11907,6 @@ function loadFromHash(skipText) {
   if (state.t && !isSupportedDiagramType(state.t)) return false;
   if (!skipText && state.i)  $input.value = state.i;
   setDiagramType(state.t);
-  if (state.th) document.getElementById('mermaidTheme').value = state.th;
   return true;
 }
 
@@ -11647,6 +11938,7 @@ const MeridianDB = (() => {
     'meridian_layouts_by_type_v1': { store: 'layout',  key: 'layoutsByType' },   // { [diagramType]: { nodePositions, groupSizes, groupLayouts } }
     'meridian_collapsed_v1':     { store: 'layout',    key: 'collapsedGroups' }, // [groupId]
     'meridian_canvas_labels_v1': { store: 'layout',    key: 'canvasLabels' },    // [{ id, text, x, y, … }]
+    'meridian_sketch_v1':        { store: 'layout',    key: 'sketch' },          // [{ id, type, x, y, w, h, points?, text?, … }]
     'meridian_presentation_views_v1': { store: 'layout', key: 'presentationViews' },
     'meridian_review_comments_v1': { store: 'layout', key: 'reviewComments' },
     'meridian_version_history_v1': { store: 'documents', key: 'versionHistory' },
@@ -11879,7 +12171,7 @@ function saveToStorage() {
     persistSet(LS_KEY, JSON.stringify({
       input: $input.value,
       type:  normalizeDiagramType(document.getElementById('diagramType').value),
-      theme: document.getElementById('mermaidTheme').value,
+      theme: currentDiagramTheme(),
       split: document.getElementById('leftPanel').style.width,
       zoom,
     }));
@@ -11894,14 +12186,6 @@ function loadFromStorage(skipText) {
     if (s.type && !isSupportedDiagramType(s.type)) return false;
     if (!skipText && s.input) $input.value = s.input;
     setDiagramType(s.type);
-    if (s.theme) {
-      document.getElementById('mermaidTheme').value = s.theme;
-    } else {
-      // No saved diagram theme: default to 'dark' when the app is in dark mode.
-      if (document.documentElement.getAttribute('data-theme') === 'dark') {
-        document.getElementById('mermaidTheme').value = 'dark';
-      }
-    }
     if (s.split) document.getElementById('leftPanel').style.width = s.split;
     if (s.zoom)  setZoom(s.zoom);
     return true;
@@ -11991,7 +12275,7 @@ function commandPaletteItems() {
     {id:'export-gif',group:'Export',icon:'↓',label:'Export animated GIF',keywords:'download motion',run:()=>document.getElementById('downloadGif').click()},
     {id:'settings-open',group:'Settings',icon:'⚙',label:'Open settings',keywords:'appearance editor diagram',run:openSettings},
     {id:'settings-history',group:'Settings',icon:'◷',label:'Open version history',keywords:'snapshots compare restore',run:()=>document.getElementById('versionHistoryBtn').click()},
-    {id:'settings-theme',group:'Settings',icon:'◐',label:'Toggle light or dark theme',keywords:'appearance',run:()=>document.getElementById('themeToggle').click()},
+    {id:'settings-theme',group:'Settings',icon:'◐',label:'Toggle light or dark theme',keywords:'appearance',run:toggleAppTheme},
     {id:'node-add',group:'Nodes',icon:'＋',label:'Add application node',keywords:'create insert',run:()=>insertPrefix('app:')},
   ];
   const templates=Object.keys(TEMPLATES).map(key=>({id:`template-${key}`,group:'Templates',icon:'▤',label:`Load ${commandTitle(key)} template`,keywords:key,run:()=>loadTemplate(key)}));
@@ -12299,7 +12583,7 @@ function rebuildTokenColorGrid() {
   const grid = document.getElementById('tokenColorGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  const preset    = EDITOR_THEMES[_editorSettings.theme] || EDITOR_THEMES.meridian;
+  const preset    = activeEditorPreset();
   const tOverride = _editorSettings.tokenColors || {};
   const TYPES = ['env','app','db','server','instance','interface','config','batch','watcher','ftp','net','domain','subdomain'];
   TYPES.forEach(type => {
@@ -12552,7 +12836,7 @@ function initSettingsPanel() {
     const snapshot = {
       input: $input.value,
       type: normalizeDiagramType(document.getElementById('diagramType').value),
-      theme: document.getElementById('mermaidTheme').value,
+      theme: currentDiagramTheme(),
       split: document.getElementById('leftPanel').style.width,
       zoom,
     };
@@ -12564,15 +12848,15 @@ function initSettingsPanel() {
     _entityColors = {}; _entityColorsLoaded = true;
     _groupColors = {}; _groupColorsLoaded = true;
     _canvasLabels = []; _canvasLabelsLoaded = true;
+    sketchReplace([], { persist: false, render: false });
     _collapsedGroups.clear();
 
     [LS_KEY, POS_KEY, GROUP_SIZE_KEY, GROUP_LAYOUT_KEY, LAYOUT_BY_TYPE_KEY, LS_COLLAPSED_KEY,
-     LABEL_KEY, ENTITY_COLOR_KEY, GROUP_COLOR_KEY].forEach(persistRemove);
+     LABEL_KEY, SKETCH_KEY, ENTITY_COLOR_KEY, GROUP_COLOR_KEY].forEach(persistRemove);
     await MeridianDB.clearAll();
 
     $input.value = snapshot.input;
     setDiagramType(snapshot.type);
-    document.getElementById('mermaidTheme').value = snapshot.theme;
     if (snapshot.split) document.getElementById('leftPanel').style.width = snapshot.split;
     setZoom(snapshot.zoom);
     saveSettings();
@@ -12593,10 +12877,11 @@ function initSettingsPanel() {
     // In-memory state
     _nodePositions = {}; _groupSizes = {}; _groupLayouts = {};
     _entityColors = {}; _groupColors = {}; _canvasLabels = [];
+    sketchReplace([], { persist: false, render: false });
     _collapsedGroups.clear();
     // Both storage tiers — each persistRemove() also deletes the IndexedDB record
     [LS_KEY, POS_KEY, GROUP_SIZE_KEY, GROUP_LAYOUT_KEY, LAYOUT_BY_TYPE_KEY, LS_COLLAPSED_KEY,
-     LABEL_KEY, ENTITY_COLOR_KEY, GROUP_COLOR_KEY].forEach(persistRemove);
+     LABEL_KEY, SKETCH_KEY, ENTITY_COLOR_KEY, GROUP_COLOR_KEY].forEach(persistRemove);
     await MeridianDB.clearAll(); // sweep anything the key list doesn't know about
     loadTemplate('microservices');
     refreshStorageInfo();
@@ -12658,33 +12943,44 @@ document.addEventListener('keydown', (e) => {
 // ════════════════════════════════════════════════════════════════
 //  APP THEME
 // ════════════════════════════════════════════════════════════════
-(function initAppTheme() {
-  const KEY = 'meridian-app-theme';
-  const html = document.documentElement;
+// One function owns light/dark: setAppTheme(). Everything theme-dependent
+// (app chrome CSS, Mermaid theme + edge/label colours, editor palette, canvas
+// labels, sketch ink) reads isDarkTheme() and is refreshed from here.
+const APP_THEME_KEY = 'meridian-app-theme';
+
+function isDarkTheme() {
+  return document.documentElement.getAttribute('data-theme') !== 'light';
+}
+
+function currentDiagramTheme() {
+  return isDarkTheme() ? 'dark' : 'default';
+}
+
+function setAppTheme(theme, { save = true, rerender = true } = {}) {
+  const next = theme === 'light' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
   const icon  = document.getElementById('themeIcon');
   const label = document.getElementById('themeLabel');
+  if (icon)  icon.textContent  = next === 'light' ? '☀️' : '🌙';
+  if (label) label.textContent = next === 'light' ? 'Light' : 'Dark';
+  const cp = document.getElementById('cpTheme');
+  if (cp) cp.value = next;
+  if (save) { try { localStorage.setItem(APP_THEME_KEY, next); } catch (_) {} }
+  applyEditorTheme();
+  if (rerender && typeof lastCode !== 'undefined' && lastCode) renderDiagram(lastCode);
+  document.dispatchEvent(new CustomEvent('meridian-theme', { detail: { theme: next } }));
+  return next;
+}
 
-  function apply(theme, save) {
-    html.setAttribute('data-theme', theme);
-    if (icon)  icon.textContent  = theme === 'light' ? '☀️' : '🌙';
-    if (label) label.textContent = theme === 'light' ? 'Light' : 'Dark';
-    if (save) localStorage.setItem(KEY, theme);
-  }
+function toggleAppTheme() {
+  return setAppTheme(isDarkTheme() ? 'light' : 'dark');
+}
 
-  const saved = localStorage.getItem(KEY) || 'dark';
-  apply(saved, false);
-
-  document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    apply(next, true);
-    // Sync the Mermaid diagram theme: default ↔ dark (only when using the paired defaults).
-    const mt = document.getElementById('mermaidTheme');
-    if (mt && (mt.value === 'default' || mt.value === 'dark')) {
-      mt.value = next === 'dark' ? 'dark' : 'default';
-    }
-    // Re-render so edge colours update immediately.
-    if (typeof lastCode !== 'undefined' && lastCode) renderDiagram(lastCode);
-  });
+(function initAppTheme() {
+  let saved = 'dark';
+  try { saved = localStorage.getItem(APP_THEME_KEY) || 'dark'; } catch (_) {}
+  setAppTheme(saved, { save: false, rerender: false });
+  document.getElementById('themeToggle').addEventListener('click', toggleAppTheme);
 })();
 
 // ════════════════════════════════════════════════════════════════
@@ -12742,7 +13038,7 @@ function libSaveCurrent() {
   if (!title) { toast('Enter a diagram name first'); document.getElementById('libNameInput').focus(); return; }
   const items = libLoad();
   const type  = normalizeDiagramType(document.getElementById('diagramType').value);
-  const theme = document.getElementById('mermaidTheme').value;
+  const theme = currentDiagramTheme();
   const existing = items.findIndex(d => d.title.toLowerCase() === title.toLowerCase());
   const entry = { id: Date.now().toString(36), title, input: $input.value, type, theme, savedAt: Date.now() };
   if (existing >= 0) { items[existing] = entry; } else { items.unshift(entry); }
@@ -12763,7 +13059,6 @@ function libOpen(idx) {
   }
   $input.value = d.input;
   setDiagramType(d.type);
-  document.getElementById('mermaidTheme').value = d.theme;
   pushHistory($input.value);
   onInput();
   closeLibrary();
@@ -13058,7 +13353,7 @@ function canvasLabelReset() {
 }
 
 function _labelColors(label = {}) {
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const dark = isDarkTheme();
   const def = dark
     ? { fill: '#2a2616', stroke: '#d97706', text: '#fde68a', del: '#7f1d1d', delText: '#fca5a5' }
     : { fill: '#fef9c3', stroke: '#d97706', text: '#1e293b', del: '#ef4444', delText: '#ffffff' };
@@ -13073,7 +13368,7 @@ function _labelColors(label = {}) {
 }
 
 function _bgMatchColor() {
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const dark = isDarkTheme();
   return dark ? '#111827' : '#f9fafb';
 }
 
@@ -13270,7 +13565,7 @@ function _openLabelColorPop(e, lid, labelG, svg) {
   _lcpActiveLid = lid; _lcpActiveSvg = svg; _lcpActiveG = labelG;
 
   const pop = document.getElementById('labelColorPop');
-  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const dark = isDarkTheme();
   const defBg   = dark ? '#2a2616' : '#fef9c3';
   const defText = dark ? '#fde68a' : '#1e293b';
 
@@ -13337,6 +13632,896 @@ function _placeLabelAt(svgX, svgY) {
   // Immediately open editor for the new label
   _openLabelEditor(newG, lbl, svg);
 }
+
+// ════════════════════════════════════════════════════════════════
+//  SKETCH LAYER — Excalidraw-style whiteboard on the Live Preview
+// ════════════════════════════════════════════════════════════════
+// Elements live in the diagram SVG's user space (they pan/zoom/export with
+// the diagram) inside <g id="meridian-sketch-layer">. In the Select tool all
+// Meridian interactions work as before; sketch elements are picked only when
+// their own hit area is clicked. Drawing tools swallow pointerdown in the
+// capture phase, which also suppresses Meridian's mouse handlers.
+const SKETCH_KEY = 'meridian_sketch_v1';
+const SKETCH_NS = 'http://www.w3.org/2000/svg';
+const SKETCH_FONT = "'Segoe Print','Bradley Hand','Chalkboard SE','Comic Sans MS',cursive";
+const SKETCH_TYPES = new Set(['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'freedraw', 'text']);
+const SKETCH_LINEAR = new Set(['arrow', 'line', 'freedraw']);
+const SKETCH_DRAW_TOOLS = new Set(['rectangle', 'diamond', 'ellipse', 'arrow', 'line', 'freedraw', 'text']);
+const SKETCH_TOOLS = [
+  { id: 'hand',      key: 'h',            title: 'Hand: pan the canvas (H)', icon: '<path d="M8 13V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 6.5a1.5 1.5 0 0 1 3 0V12M17 9a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.8-2.4L4.6 14.4a1.5 1.5 0 0 1 2.4-1.8L8 14"/>' },
+  { id: 'select',    key: 'v', num: '1', title: 'Select: Meridian nodes and sketches (V or 1)', icon: '<path d="M6 3l12 8.5-5.5 1.2L9.5 19z"/>' },
+  { id: 'rectangle', key: 'r', num: '2', title: 'Rectangle (R or 2)', icon: '<rect x="4" y="6" width="16" height="12" rx="2"/>' },
+  { id: 'diamond',   key: 'd', num: '3', title: 'Diamond (D or 3)', icon: '<path d="M12 3.5l8.5 8.5-8.5 8.5L3.5 12z"/>' },
+  { id: 'ellipse',   key: 'o', num: '4', title: 'Ellipse (O or 4)', icon: '<ellipse cx="12" cy="12" rx="8.5" ry="7"/>' },
+  { id: 'arrow',     key: 'a', num: '5', title: 'Arrow (A or 5)', icon: '<path d="M5 19L19 5M11 5h8v8"/>' },
+  { id: 'line',      key: 'l', num: '6', title: 'Line (L or 6)', icon: '<path d="M5 19L19 5"/>' },
+  { id: 'freedraw',  key: 'p', num: '7', title: 'Draw (P or 7)', icon: '<path d="M4 19c2.5-.5 3.5-4 6-6.5s5.5-5.5 9-7.5c-1.5 3.5-4.5 6-7 8.5S7.5 18 4 19z"/>' },
+  { id: 'text',      key: 't', num: '8', title: 'Text (T or 8)', icon: '<path d="M5 7V5h14v2M12 5v14M9 19h6"/>' },
+  { id: 'eraser',    key: 'e', num: '9', title: 'Eraser (E or 9)', icon: '<path d="M15.5 4l4.5 4.5-10 10H6l-3-3z M9.5 10l4.5 4.5M10 18.5h10"/>' },
+];
+// Palette keys resolve per theme so ink stays readable in light and dark.
+const SKETCH_STROKES = {
+  auto:   { light: '#1e1e1e', dark: '#e5e7eb', name: 'Ink' },
+  red:    { light: '#e03131', dark: '#ff8787', name: 'Red' },
+  green:  { light: '#2f9e44', dark: '#69db7c', name: 'Green' },
+  blue:   { light: '#1971c2', dark: '#74c0fc', name: 'Blue' },
+  orange: { light: '#e8590c', dark: '#ffa94d', name: 'Orange' },
+  violet: { light: '#9c36b5', dark: '#da77f2', name: 'Violet' },
+};
+const SKETCH_FILLS = {
+  red:    { light: '#ffc9c9', dark: '#5c2020', name: 'Red' },
+  green:  { light: '#b2f2bb', dark: '#1f4d2b', name: 'Green' },
+  blue:   { light: '#a5d8ff', dark: '#1c3d5a', name: 'Blue' },
+  yellow: { light: '#ffec99', dark: '#5c4a12', name: 'Yellow' },
+  violet: { light: '#eebefa', dark: '#47215a', name: 'Violet' },
+};
+const SKETCH_UI_KEY = 'meridian_sketch_ui_v1';
+
+const _sketch = {
+  elements: [], loaded: false, tool: 'select', locked: false, collapsed: false,
+  selected: new Set(), undo: [], redo: [], context: false, swallowClick: false, editor: null,
+  style: { stroke: 'auto', fill: 'none', fillStyle: 'hachure', strokeWidth: 2, strokeStyle: 'solid', roughness: 1, opacity: 100, fontSize: 20 },
+};
+
+function skClamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+function skRound(v) { return Math.round(v * 10) / 10; }
+function sketchId() { return `sk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`; }
+function sketchSeed() { return 1 + Math.floor(Math.random() * 2 ** 30); }
+function sketchSvg() { return $preview.querySelector('svg'); }
+
+function sketchColor(key, table) {
+  if (!key || key === 'none') return null;
+  if (/^#[0-9a-f]{6}$/i.test(key)) return key;
+  const entry = table[key];
+  return entry ? entry[isDarkTheme() ? 'dark' : 'light'] : null;
+}
+function sketchInk(el) { return sketchColor(el.stroke, SKETCH_STROKES) || sketchColor('auto', SKETCH_STROKES); }
+
+function sketchSanitize(list) {
+  if (!Array.isArray(list)) return [];
+  const num = v => (Number.isFinite(Number(v)) ? Number(v) : 0);
+  const color = (v, table, fallback) => (typeof v === 'string' && (/^#[0-9a-f]{6}$/i.test(v) || v in table || v === 'none') ? v : fallback);
+  return list.filter(el => el && SKETCH_TYPES.has(el.type)).slice(0, 2000).map(el => {
+    const out = {
+      id: String(el.id || sketchId()).slice(0, 64), type: el.type,
+      x: num(el.x), y: num(el.y), w: Math.abs(num(el.w)), h: Math.abs(num(el.h)),
+      stroke: color(el.stroke, SKETCH_STROKES, 'auto'),
+      fill: SKETCH_LINEAR.has(el.type) ? 'none' : color(el.fill, SKETCH_FILLS, 'none'),
+      fillStyle: ['hachure', 'cross-hatch', 'solid'].includes(el.fillStyle) ? el.fillStyle : 'hachure',
+      strokeWidth: skClamp(num(el.strokeWidth) || 2, 1, 8),
+      strokeStyle: ['solid', 'dashed', 'dotted'].includes(el.strokeStyle) ? el.strokeStyle : 'solid',
+      roughness: skClamp(num(el.roughness), 0, 2.5),
+      opacity: skClamp(num(el.opacity) || 100, 10, 100),
+      seed: Math.floor(num(el.seed)) || sketchSeed(),
+    };
+    if (SKETCH_LINEAR.has(el.type)) out.points = (Array.isArray(el.points) ? el.points : []).slice(0, 5000).map(p => [num(p?.[0]), num(p?.[1])]);
+    if (el.type === 'text') { out.text = String(el.text || '').slice(0, 5000); out.fontSize = skClamp(num(el.fontSize) || 20, 8, 160); }
+    return out;
+  }).filter(el => (el.type === 'text' ? el.text.trim() : !SKETCH_LINEAR.has(el.type) || el.points.length >= 2));
+}
+
+function sketchLoad() {
+  if (_sketch.loaded) return _sketch.elements;
+  try { _sketch.elements = sketchSanitize(JSON.parse(localStorage.getItem(SKETCH_KEY) || '[]')); }
+  catch { _sketch.elements = []; }
+  _sketch.loaded = true;
+  return _sketch.elements;
+}
+function sketchSave() { persistSet(SKETCH_KEY, JSON.stringify(_sketch.elements)); }
+function sketchSnapshot() { return JSON.stringify(_sketch.elements); }
+function sketchPushUndo(before) {
+  _sketch.undo.push(before);
+  if (_sketch.undo.length > 100) _sketch.undo.shift();
+  _sketch.redo = [];
+  syncSketchToolbar();
+}
+function sketchRestore(json) {
+  _sketch.elements = sketchSanitize(JSON.parse(json));
+  const ids = new Set(_sketch.elements.map(el => el.id));
+  _sketch.selected = new Set([..._sketch.selected].filter(id => ids.has(id)));
+  sketchSave();
+  renderSketchLayer();
+  syncSketchToolbar();
+}
+function sketchUndo() {
+  if (!_sketch.undo.length) return false;
+  _sketch.redo.push(sketchSnapshot());
+  sketchRestore(_sketch.undo.pop());
+  return true;
+}
+function sketchRedo() {
+  if (!_sketch.redo.length) return false;
+  _sketch.undo.push(sketchSnapshot());
+  sketchRestore(_sketch.redo.pop());
+  return true;
+}
+// Replace every sketch element (project import, version restore, storage reset).
+function sketchReplace(list, { persist = true, render = true } = {}) {
+  _sketch.elements = sketchSanitize(list);
+  _sketch.loaded = true;
+  _sketch.selected.clear();
+  _sketch.undo = [];
+  _sketch.redo = [];
+  if (persist) sketchSave();
+  if (render) renderSketchLayer();
+  syncSketchToolbar();
+}
+function sketchElementsClone() { return JSON.parse(JSON.stringify(sketchLoad())); }
+
+let _sketchMeasureCtx = null;
+function sketchMeasure(el) {
+  _sketchMeasureCtx = _sketchMeasureCtx || document.createElement('canvas').getContext('2d');
+  _sketchMeasureCtx.font = `${el.fontSize}px ${SKETCH_FONT}`;
+  const lines = String(el.text || '').split('\n');
+  el.w = Math.max(8, ...lines.map(line => _sketchMeasureCtx.measureText(line).width));
+  el.h = lines.length * el.fontSize * 1.25;
+}
+
+function sketchBounds(el) {
+  if (el.points && el.points.length) {
+    const xs = el.points.map(p => p[0]), ys = el.points.map(p => p[1]);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y };
+  }
+  return { x: el.x, y: el.y, w: el.w, h: el.h };
+}
+
+function sketchFreePath(pts) {
+  const f = v => skRound(v);
+  if (pts.length < 3) return `M${f(pts[0][0])} ${f(pts[0][1])} L${f(pts[pts.length - 1][0])} ${f(pts[pts.length - 1][1])}`;
+  let d = `M${f(pts[0][0])} ${f(pts[0][1])}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+    d += ` Q${f(x0)} ${f(y0)} ${f((x0 + x1) / 2)} ${f((y0 + y1) / 2)}`;
+  }
+  const last = pts[pts.length - 1];
+  return `${d} L${f(last[0])} ${f(last[1])}`;
+}
+
+function sketchArrowHead(el) {
+  const pts = el.points;
+  const [x2, y2] = pts[pts.length - 1];
+  let [x1, y1] = pts[pts.length - 2];
+  const segLen = Math.hypot(x2 - x1, y2 - y1);
+  if (!segLen) return null;
+  const ang = Math.atan2(y2 - y1, x2 - x1);
+  const len = Math.min(segLen * 0.45, 12 + el.strokeWidth * 4);
+  const a = 0.45;
+  return [
+    [x2 - len * Math.cos(ang - a), y2 - len * Math.sin(ang - a)],
+    [x2, y2],
+    [x2 - len * Math.cos(ang + a), y2 - len * Math.sin(ang + a)],
+  ];
+}
+
+function skSvgEl(tag, attrs = {}) {
+  const node = document.createElementNS(SKETCH_NS, tag);
+  Object.entries(attrs).forEach(([k, v]) => { if (v !== undefined && v !== null) node.setAttribute(k, String(v)); });
+  return node;
+}
+
+// Plain-SVG fallback when rough.js could not load (offline).
+function sketchPlainShape(el, stroke, fill, dash) {
+  const common = { stroke, 'stroke-width': el.strokeWidth, fill: fill || 'none', 'stroke-dasharray': dash ? dash.join(' ') : null, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+  if (el.type === 'rectangle') return skSvgEl('rect', { x: el.x, y: el.y, width: el.w, height: el.h, rx: 4, ...common });
+  if (el.type === 'ellipse') return skSvgEl('ellipse', { cx: el.x + el.w / 2, cy: el.y + el.h / 2, rx: el.w / 2, ry: el.h / 2, ...common });
+  if (el.type === 'diamond') return skSvgEl('polygon', { points: `${el.x + el.w / 2},${el.y} ${el.x + el.w},${el.y + el.h / 2} ${el.x + el.w / 2},${el.y + el.h} ${el.x},${el.y + el.h / 2}`, ...common });
+  return skSvgEl('polyline', { points: el.points.map(p => p.join(',')).join(' '), ...common, fill: 'none' });
+}
+
+function sketchElementNode(el, svg) {
+  const g = skSvgEl('g', { class: 'sketch-el', 'data-sketch-id': el.id, 'data-sketch-type': el.type, opacity: el.opacity / 100 });
+  const draw = skSvgEl('g', { class: 'sketch-draw' });
+  const stroke = sketchInk(el);
+  const fill = sketchColor(el.fill, SKETCH_FILLS);
+  const dash = el.strokeStyle === 'dashed' ? [8, 8 + el.strokeWidth] : el.strokeStyle === 'dotted' ? [1.5, 6 + el.strokeWidth] : null;
+  const rc = window.rough && typeof window.rough.svg === 'function' ? window.rough.svg(svg) : null;
+  const opts = {
+    seed: el.seed, roughness: el.roughness, bowing: 1, stroke, strokeWidth: el.strokeWidth,
+    fill: fill || undefined, fillStyle: el.fillStyle, fillWeight: Math.max(0.5, el.strokeWidth / 2),
+    hachureGap: 4 + el.strokeWidth * 2, strokeLineDash: dash || undefined, disableMultiStroke: !!dash,
+  };
+  const lineOpts = { ...opts, fill: undefined };
+  const { x, y, w, h } = el;
+  let hitD = '';
+  let filled = !!fill;
+  switch (el.type) {
+    case 'rectangle':
+      draw.appendChild(rc ? rc.rectangle(x, y, w, h, opts) : sketchPlainShape(el, stroke, fill, dash));
+      hitD = `M${x} ${y}h${w}v${h}h${-w}z`;
+      break;
+    case 'diamond': {
+      const pts = [[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]];
+      draw.appendChild(rc ? rc.polygon(pts, opts) : sketchPlainShape(el, stroke, fill, dash));
+      hitD = `M${pts.map(p => p.join(' ')).join('L')}z`;
+      break;
+    }
+    case 'ellipse': {
+      const rx = w / 2, ry = h / 2, cx = x + rx, cy = y + ry;
+      draw.appendChild(rc ? rc.ellipse(cx, cy, w, h, opts) : sketchPlainShape(el, stroke, fill, dash));
+      hitD = `M${cx - rx} ${cy}a${rx} ${ry} 0 1 0 ${2 * rx} 0a${rx} ${ry} 0 1 0 ${-2 * rx} 0z`;
+      break;
+    }
+    case 'line':
+    case 'arrow': {
+      draw.appendChild(rc ? rc.linearPath(el.points, lineOpts) : sketchPlainShape(el, stroke, null, dash));
+      if (el.type === 'arrow') {
+        const head = sketchArrowHead(el);
+        if (head) draw.appendChild(rc ? rc.linearPath(head, { ...lineOpts, strokeLineDash: undefined, disableMultiStroke: false })
+          : skSvgEl('polyline', { points: head.map(p => p.join(',')).join(' '), stroke, 'stroke-width': el.strokeWidth, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+      }
+      hitD = `M${el.points.map(p => p.join(' ')).join('L')}`;
+      filled = false;
+      break;
+    }
+    case 'freedraw':
+      hitD = sketchFreePath(el.points);
+      draw.appendChild(skSvgEl('path', { d: hitD, stroke, 'stroke-width': el.strokeWidth * 1.4, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-dasharray': dash ? dash.join(' ') : null }));
+      filled = false;
+      break;
+    case 'text': {
+      sketchMeasure(el);
+      const text = skSvgEl('text', { x, y, fill: stroke, 'font-size': el.fontSize, 'font-family': SKETCH_FONT, style: 'white-space:pre' });
+      String(el.text).split('\n').forEach((line, i) => {
+        const span = skSvgEl('tspan', { x, dy: i === 0 ? el.fontSize : el.fontSize * 1.25 });
+        span.textContent = line || ' ';
+        text.appendChild(span);
+      });
+      draw.appendChild(text);
+      hitD = `M${x} ${y}h${el.w}v${el.h}h${-el.w}z`;
+      filled = true;
+      break;
+    }
+    default: break;
+  }
+  g.appendChild(draw);
+  g.appendChild(skSvgEl('path', {
+    class: `sketch-hit${filled ? ' filled' : ''}`, d: hitD, fill: 'transparent', stroke: 'transparent',
+    'stroke-width': Math.max(12, el.strokeWidth + 10), 'stroke-linecap': 'round', 'stroke-linejoin': 'round',
+  }));
+  return g;
+}
+
+function sketchLayer(svg) {
+  let layer = svg.querySelector('#meridian-sketch-layer');
+  if (!layer) { layer = skSvgEl('g', { id: 'meridian-sketch-layer' }); svg.appendChild(layer); }
+  return layer;
+}
+
+function renderSketchLayer(svg = sketchSvg()) {
+  if (!svg) return;
+  sketchLoad();
+  svg.querySelector('#meridian-sketch-layer')?.remove();
+  const layer = skSvgEl('g', { id: 'meridian-sketch-layer' });
+  svg.appendChild(layer);
+  _sketch.elements.forEach(el => layer.appendChild(sketchElementNode(el, svg)));
+  renderSketchSelection(svg);
+}
+// Called from renderDiagram()/renderDesignBoard() after every render.
+function applySketchLayer(svg) { renderSketchLayer(svg); }
+
+function sketchScale(svg) {
+  const m = svg?.getScreenCTM();
+  return m ? Math.hypot(m.a, m.b) || 1 : 1;
+}
+function sketchPoint(svg, e) {
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+  return { x: p.x, y: p.y };
+}
+
+function sketchSelectedElements() { return _sketch.elements.filter(el => _sketch.selected.has(el.id)); }
+
+function renderSketchSelection(svg = sketchSvg()) {
+  syncSketchProps();
+  if (!svg) return;
+  svg.querySelector('#meridian-sketch-ui')?.remove();
+  const sel = sketchSelectedElements();
+  if (!sel.length) return;
+  const scale = sketchScale(svg);
+  const pad = 6 / scale;
+  const ui = skSvgEl('g', { id: 'meridian-sketch-ui' });
+  const boxes = sel.map(sketchBounds);
+  const x0 = Math.min(...boxes.map(b => b.x)) - pad, y0 = Math.min(...boxes.map(b => b.y)) - pad;
+  const x1 = Math.max(...boxes.map(b => b.x + b.w)) + pad, y1 = Math.max(...boxes.map(b => b.y + b.h)) + pad;
+  ui.appendChild(skSvgEl('rect', {
+    class: 'sketch-selection', x: x0, y: y0, width: x1 - x0, height: y1 - y0, fill: 'none',
+    stroke: '#6366f1', 'stroke-width': 1.25 / scale, 'stroke-dasharray': `${5 / scale} ${4 / scale}`,
+  }));
+  if (sel.length === 1) {
+    const s = 9 / scale;
+    [['nw', x0, y0], ['ne', x1, y0], ['sw', x0, y1], ['se', x1, y1]].forEach(([handle, hx, hy]) => {
+      ui.appendChild(skSvgEl('rect', {
+        class: 'sketch-handle', 'data-handle': handle, x: hx - s / 2, y: hy - s / 2, width: s, height: s, rx: 2 / scale,
+        fill: '#ffffff', stroke: '#6366f1', 'stroke-width': 1.5 / scale,
+      }));
+    });
+  }
+  svg.appendChild(ui);
+}
+function sketchClearSelection() {
+  if (!_sketch.selected.size) return;
+  _sketch.selected.clear();
+  renderSketchSelection();
+}
+
+function sketchTrack(onMove, onUp) {
+  const move = ev => onMove(ev);
+  const up = ev => {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', up);
+    window.removeEventListener('pointercancel', up);
+    onUp(ev);
+  };
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', up);
+  window.addEventListener('pointercancel', up);
+}
+
+function sketchConsume(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  _sketch.swallowClick = true;
+  _sketch.context = true;
+  const active = document.activeElement;
+  if (active && active !== document.body && !active.closest?.('#sketchToolbar,#sketchProps')) active.blur();
+}
+
+function sketchNewElement(type, p) {
+  const s = _sketch.style;
+  return {
+    id: sketchId(), type, x: p.x, y: p.y, w: 0, h: 0,
+    stroke: s.stroke, fill: SKETCH_LINEAR.has(type) || type === 'text' ? 'none' : s.fill, fillStyle: s.fillStyle,
+    strokeWidth: s.strokeWidth, strokeStyle: s.strokeStyle, roughness: type === 'text' ? 0 : s.roughness,
+    opacity: s.opacity, seed: sketchSeed(),
+    ...(SKETCH_LINEAR.has(type) ? { points: [[p.x, p.y], [p.x, p.y]] } : {}),
+    ...(type === 'text' ? { text: '', fontSize: s.fontSize } : {}),
+  };
+}
+
+function sketchStartDraw(e, svg, tool) {
+  const p0 = sketchPoint(svg, e);
+  const before = sketchSnapshot();
+  const el = sketchNewElement(tool, p0);
+  _sketch.elements.push(el);
+  _sketch.selected.clear();
+  renderSketchSelection(svg);
+  const layer = sketchLayer(svg);
+  let node = null;
+  const redraw = () => {
+    const next = sketchElementNode(el, svg);
+    if (node && node.isConnected) node.replaceWith(next); else layer.appendChild(next);
+    node = next;
+  };
+  redraw();
+  sketchTrack(ev => {
+    const p = sketchPoint(svg, ev);
+    if (tool === 'freedraw') {
+      const last = el.points[el.points.length - 1];
+      if (Math.hypot(p.x - last[0], p.y - last[1]) * sketchScale(svg) >= 1.5) el.points.push([skRound(p.x), skRound(p.y)]);
+    } else if (el.points) {
+      let q = p;
+      if (ev.shiftKey) {
+        const ang = Math.round(Math.atan2(p.y - p0.y, p.x - p0.x) / (Math.PI / 12)) * (Math.PI / 12);
+        const len = Math.hypot(p.x - p0.x, p.y - p0.y);
+        q = { x: p0.x + len * Math.cos(ang), y: p0.y + len * Math.sin(ang) };
+      }
+      el.points[1] = [skRound(q.x), skRound(q.y)];
+    } else {
+      let w = p.x - p0.x, h = p.y - p0.y;
+      if (ev.shiftKey) { const m = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * m; h = Math.sign(h || 1) * m; }
+      el.x = skRound(Math.min(p0.x, p0.x + w)); el.y = skRound(Math.min(p0.y, p0.y + h));
+      el.w = skRound(Math.abs(w)); el.h = skRound(Math.abs(h));
+    }
+    redraw();
+  }, () => {
+    const b = sketchBounds(el);
+    const tooSmall = el.points ? b.w < 2 && b.h < 2 : el.w < 3 || el.h < 3;
+    if (tooSmall) {
+      _sketch.elements = _sketch.elements.filter(item => item !== el);
+      node?.remove();
+      return;
+    }
+    sketchPushUndo(before);
+    _sketch.selected = new Set([el.id]);
+    sketchSave();
+    if (!_sketch.locked) setSketchTool('select', { keepSelection: true });
+    renderSketchLayer();
+  });
+}
+
+function sketchTranslate(el, orig, dx, dy) {
+  if (orig.points) el.points = orig.points.map(([px, py]) => [skRound(px + dx), skRound(py + dy)]);
+  el.x = skRound(orig.x + dx);
+  el.y = skRound(orig.y + dy);
+}
+
+function sketchStartMove(e, svg) {
+  const start = sketchPoint(svg, e);
+  const before = sketchSnapshot();
+  const sel = sketchSelectedElements();
+  const orig = sel.map(el => JSON.parse(JSON.stringify(el)));
+  const scale = sketchScale(svg);
+  let moved = false;
+  sketchTrack(ev => {
+    const p = sketchPoint(svg, ev);
+    const dx = p.x - start.x, dy = p.y - start.y;
+    if (!moved && Math.hypot(dx, dy) * scale < 3) return;
+    moved = true;
+    sel.forEach((el, i) => sketchTranslate(el, orig[i], dx, dy));
+    renderSketchLayer(svg);
+  }, () => {
+    if (!moved) return;
+    sketchPushUndo(before);
+    sketchSave();
+  });
+}
+
+function sketchScaleTo(el, orig, b0, nb) {
+  const sx = b0.w ? nb.w / b0.w : 1, sy = b0.h ? nb.h / b0.h : 1;
+  if (orig.points) {
+    el.points = orig.points.map(([px, py]) => [skRound(nb.x + (px - b0.x) * sx), skRound(nb.y + (py - b0.y) * sy)]);
+  } else if (el.type === 'text') {
+    el.fontSize = skClamp(skRound(orig.fontSize * sy), 8, 160);
+    el.x = skRound(nb.x); el.y = skRound(nb.y);
+  } else {
+    el.x = skRound(nb.x); el.y = skRound(nb.y); el.w = skRound(nb.w); el.h = skRound(nb.h);
+  }
+}
+
+function sketchStartResize(e, svg, handle) {
+  const [el] = sketchSelectedElements();
+  if (!el) return;
+  const before = sketchSnapshot();
+  const orig = JSON.parse(JSON.stringify(el));
+  const b0 = sketchBounds(orig);
+  const fx = handle.includes('w') ? b0.x + b0.w : b0.x;
+  const fy = handle.includes('n') ? b0.y + b0.h : b0.y;
+  let moved = false;
+  sketchTrack(ev => {
+    const p = sketchPoint(svg, ev);
+    const nb = { x: Math.min(fx, p.x), y: Math.min(fy, p.y), w: Math.max(4, Math.abs(p.x - fx)), h: Math.max(4, Math.abs(p.y - fy)) };
+    if (!b0.h) { nb.y = b0.y; nb.h = 0; }
+    if (!b0.w) { nb.x = b0.x; nb.w = 0; }
+    moved = true;
+    sketchScaleTo(el, orig, b0, nb);
+    renderSketchLayer(svg);
+  }, () => {
+    if (!moved) return;
+    sketchPushUndo(before);
+    sketchSave();
+  });
+}
+
+function sketchStartErase(e, svg) {
+  const before = sketchSnapshot();
+  const doomed = new Set();
+  const hit = ev => {
+    document.elementsFromPoint(ev.clientX, ev.clientY).forEach(node => {
+      const g = node.closest?.('#meridian-sketch-layer .sketch-el');
+      if (g && !doomed.has(g.dataset.sketchId)) { doomed.add(g.dataset.sketchId); g.setAttribute('opacity', '0.2'); }
+    });
+  };
+  hit(e);
+  sketchTrack(hit, () => {
+    if (!doomed.size) return;
+    _sketch.elements = _sketch.elements.filter(el => !doomed.has(el.id));
+    doomed.forEach(id => _sketch.selected.delete(id));
+    sketchPushUndo(before);
+    sketchSave();
+    renderSketchLayer(svg);
+  });
+}
+
+function sketchStartPan(e) {
+  const scroll = document.getElementById('previewScroll');
+  const anchor = { x: e.clientX, y: e.clientY, sl: scroll.scrollLeft, st: scroll.scrollTop };
+  sketchTrack(ev => {
+    scroll.scrollLeft = anchor.sl - (ev.clientX - anchor.x);
+    scroll.scrollTop = anchor.st - (ev.clientY - anchor.y);
+  }, () => {});
+}
+
+function sketchStartText(svg, p, existing = null) {
+  sketchCommitText();
+  const before = sketchSnapshot();
+  const el = existing || sketchNewElement('text', p);
+  const isNew = !existing;
+  if (isNew) _sketch.elements.push(el);
+  const node = svg.querySelector(`#meridian-sketch-layer [data-sketch-id="${CSS.escape(el.id)}"]`);
+  if (node) node.style.visibility = 'hidden';
+  _sketch.selected.clear();
+  renderSketchSelection(svg);
+  const scale = sketchScale(svg);
+  const pt = new DOMPoint(el.x, el.y).matrixTransform(svg.getScreenCTM());
+  const ta = document.createElement('textarea');
+  ta.className = 'sketch-text-editor';
+  ta.setAttribute('aria-label', 'Sketch text');
+  ta.spellcheck = false;
+  ta.value = el.text || '';
+  Object.assign(ta.style, { left: `${pt.x}px`, top: `${pt.y}px`, fontSize: `${el.fontSize * scale}px`, color: sketchInk(el) });
+  const fit = () => {
+    ta.style.width = '0px'; ta.style.height = '0px';
+    ta.style.width = `${ta.scrollWidth + 6}px`; ta.style.height = `${ta.scrollHeight + 2}px`;
+  };
+  ta.addEventListener('input', fit);
+  ta.addEventListener('keydown', ev => {
+    ev.stopPropagation();
+    if (ev.key === 'Escape' || (ev.key === 'Enter' && (ev.ctrlKey || ev.metaKey))) { ev.preventDefault(); sketchCommitText(); }
+  });
+  ta.addEventListener('blur', () => sketchCommitText());
+  document.body.appendChild(ta);
+  fit();
+  _sketch.editor = { ta, el, isNew, before, original: el.text || '' };
+  requestAnimationFrame(() => ta.focus());
+}
+
+function sketchCommitText() {
+  const ed = _sketch.editor;
+  if (!ed) return;
+  _sketch.editor = null;
+  const text = ed.ta.value.replace(/\s+$/, '');
+  ed.ta.remove();
+  if (!text.trim()) {
+    _sketch.elements = _sketch.elements.filter(el => el !== ed.el);
+    if (!ed.isNew) { sketchPushUndo(ed.before); sketchSave(); }
+  } else {
+    ed.el.text = text;
+    sketchMeasure(ed.el);
+    if (ed.isNew || text !== ed.original) { sketchPushUndo(ed.before); sketchSave(); }
+    _sketch.selected = new Set([ed.el.id]);
+  }
+  _sketch.context = true;
+  if (!_sketch.locked) setSketchTool('select', { keepSelection: true });
+  renderSketchLayer();
+}
+
+function sketchDeleteSelected() {
+  if (!_sketch.selected.size) return;
+  const before = sketchSnapshot();
+  _sketch.elements = _sketch.elements.filter(el => !_sketch.selected.has(el.id));
+  _sketch.selected.clear();
+  sketchPushUndo(before);
+  sketchSave();
+  renderSketchLayer();
+}
+
+function sketchDuplicateSelected() {
+  const sel = sketchSelectedElements();
+  if (!sel.length) return;
+  const before = sketchSnapshot();
+  const offset = 16 / sketchScale(sketchSvg());
+  const copies = sel.map(el => {
+    const copy = JSON.parse(JSON.stringify(el));
+    copy.id = sketchId();
+    copy.seed = sketchSeed();
+    sketchTranslate(copy, el, offset, offset);
+    return copy;
+  });
+  _sketch.elements.push(...copies);
+  _sketch.selected = new Set(copies.map(el => el.id));
+  sketchPushUndo(before);
+  sketchSave();
+  renderSketchLayer();
+}
+
+function sketchReorderSelected(toFront) {
+  if (!_sketch.selected.size) return;
+  const before = sketchSnapshot();
+  const sel = sketchSelectedElements();
+  const rest = _sketch.elements.filter(el => !_sketch.selected.has(el.id));
+  _sketch.elements = toFront ? [...rest, ...sel] : [...sel, ...rest];
+  sketchPushUndo(before);
+  sketchSave();
+  renderSketchLayer();
+}
+
+function sketchNudgeSelected(dx, dy) {
+  const before = sketchSnapshot();
+  sketchSelectedElements().forEach(el => sketchTranslate(el, JSON.parse(JSON.stringify(el)), dx, dy));
+  sketchPushUndo(before);
+  sketchSave();
+  renderSketchLayer();
+}
+
+function sketchClearAll() {
+  if (!sketchLoad().length) { toast('Sketch layer is already empty'); return; }
+  const before = sketchSnapshot();
+  _sketch.elements = [];
+  _sketch.selected.clear();
+  sketchPushUndo(before);
+  sketchSave();
+  renderSketchLayer();
+  toast('Sketch cleared · Ctrl+Z to undo');
+}
+
+function sketchApplyStyle(prop, value) {
+  const numeric = ['strokeWidth', 'roughness', 'opacity', 'fontSize'];
+  const v = numeric.includes(prop) ? Number(value) : value;
+  _sketch.style[prop] = v;
+  const sel = sketchSelectedElements();
+  if (sel.length) {
+    const before = sketchSnapshot();
+    sel.forEach(el => {
+      if (prop === 'fill' || prop === 'fillStyle') { if (!SKETCH_LINEAR.has(el.type) && el.type !== 'text') el[prop] = v; }
+      else if (prop === 'fontSize') { if (el.type === 'text') el.fontSize = v; }
+      else el[prop] = v;
+    });
+    sketchPushUndo(before);
+    sketchSave();
+    renderSketchLayer();
+  } else {
+    syncSketchProps();
+  }
+}
+
+function setSketchTool(tool, { keepSelection = false } = {}) {
+  if (!SKETCH_TOOLS.some(t => t.id === tool)) tool = 'select';
+  if (_sketch.editor && tool !== 'text') sketchCommitText();
+  _sketch.tool = tool;
+  document.getElementById('rightPanel')?.setAttribute('data-sketch-tool', tool);
+  if (tool !== 'select' && typeof _exitLabelAddMode === 'function' && _labelAddMode) _exitLabelAddMode();
+  if (!keepSelection && tool !== 'select') _sketch.selected.clear();
+  syncSketchToolbar();
+  renderSketchSelection();
+}
+
+function syncSketchToolbar() {
+  const bar = document.getElementById('sketchToolbar');
+  if (!bar) return;
+  bar.classList.toggle('collapsed', _sketch.collapsed);
+  bar.querySelectorAll('.sk-btn[data-sketch-tool]').forEach(btn => {
+    const on = btn.dataset.sketchTool === _sketch.tool;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-pressed', String(on));
+  });
+  const lock = bar.querySelector('[data-sketch-action="lock"]');
+  if (lock) { lock.classList.toggle('active', _sketch.locked); lock.setAttribute('aria-pressed', String(_sketch.locked)); }
+  const undo = bar.querySelector('[data-sketch-action="undo"]');
+  const redo = bar.querySelector('[data-sketch-action="redo"]');
+  if (undo) undo.disabled = !_sketch.undo.length;
+  if (redo) redo.disabled = !_sketch.redo.length;
+  const collapse = bar.querySelector('[data-sketch-action="collapse"]');
+  if (collapse) {
+    collapse.title = _sketch.collapsed ? 'Show sketch tools' : 'Hide sketch tools';
+    collapse.setAttribute('aria-expanded', String(!_sketch.collapsed));
+  }
+}
+
+function syncSketchProps() {
+  const panel = document.getElementById('sketchProps');
+  if (!panel) return;
+  const sel = sketchSelectedElements();
+  const drawing = SKETCH_DRAW_TOOLS.has(_sketch.tool);
+  const visible = !_sketch.collapsed && (drawing || sel.length > 0);
+  panel.classList.toggle('vis', visible);
+  if (!visible) return;
+  const ref = sel[0] || { ..._sketch.style, type: _sketch.tool };
+  const types = new Set(sel.length ? sel.map(el => el.type) : [_sketch.tool]);
+  const hasShape = [...types].some(t => ['rectangle', 'diamond', 'ellipse'].includes(t));
+  const hasText = types.has('text');
+  const onlyText = hasText && types.size === 1;
+  panel.querySelector('[data-skp-sec="fill"]').hidden = !hasShape;
+  panel.querySelector('[data-skp-sec="fillStyle"]').hidden = !hasShape;
+  panel.querySelector('[data-skp-sec="strokeWidth"]').hidden = onlyText;
+  panel.querySelector('[data-skp-sec="strokeStyle"]').hidden = onlyText;
+  panel.querySelector('[data-skp-sec="roughness"]').hidden = onlyText || types.has('freedraw') && types.size === 1;
+  panel.querySelector('[data-skp-sec="fontSize"]').hidden = !hasText;
+  panel.querySelector('[data-skp-sec="actions"]').hidden = !sel.length;
+  panel.querySelectorAll('[data-skp-prop]').forEach(btn => {
+    const prop = btn.dataset.skpProp;
+    btn.classList.toggle('active', String(ref[prop]) === btn.dataset.skpValue);
+  });
+  const custom = panel.querySelector('#sketchCustomStroke');
+  if (custom && /^#[0-9a-f]{6}$/i.test(ref.stroke)) custom.value = ref.stroke;
+  const opacity = panel.querySelector('#sketchOpacity');
+  if (opacity) opacity.value = String(ref.opacity ?? 100);
+}
+
+function sketchSaveUi() {
+  try { localStorage.setItem(SKETCH_UI_KEY, JSON.stringify({ collapsed: _sketch.collapsed, locked: _sketch.locked })); } catch (_) {}
+}
+
+function sketchKeyHandler(e) {
+  if (_sketch.editor) return;
+  const t = e.target;
+  if (t?.closest?.('input,textarea,select,[contenteditable="true"],.cm-editor')) return;
+  if (isInputFocused() || document.body.classList.contains('presentation-mode')) return;
+  if (!document.getElementById('helpModal')?.classList.contains('hidden')) return;
+  const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+  const k = (e.key || '').toLowerCase();
+  const hasSel = _sketch.selected.size > 0;
+  if (e.ctrlKey || e.metaKey) {
+    if (!_sketch.context && !hasSel) return;
+    if (k === 'z' && !e.shiftKey) { if (sketchUndo()) stop(); return; }
+    if (k === 'y' || (k === 'z' && e.shiftKey)) { if (sketchRedo()) stop(); return; }
+    if (k === 'd' && hasSel) { stop(); sketchDuplicateSelected(); return; }
+    if (k === 'a' && _sketch.context && _sketch.elements.length) { stop(); _sketch.selected = new Set(_sketch.elements.map(el => el.id)); renderSketchSelection(); }
+    return;
+  }
+  if (e.altKey) return;
+  if ((k === 'delete' || k === 'backspace') && hasSel) { stop(); sketchDeleteSelected(); return; }
+  if (k === 'escape') {
+    if (hasSel || _sketch.tool !== 'select') { sketchClearSelection(); setSketchTool('select'); }
+    return;
+  }
+  if (hasSel && k.startsWith('arrow')) {
+    stop();
+    const step = (e.shiftKey ? 10 : 1) / sketchScale(sketchSvg());
+    sketchNudgeSelected(k === 'arrowleft' ? -step : k === 'arrowright' ? step : 0, k === 'arrowup' ? -step : k === 'arrowdown' ? step : 0);
+    return;
+  }
+  if (e.shiftKey) return;
+  if (k === 'q') { stop(); _sketch.locked = !_sketch.locked; sketchSaveUi(); syncSketchToolbar(); return; }
+  const tool = SKETCH_TOOLS.find(item => item.key === k || item.num === e.key);
+  if (tool) { stop(); setSketchTool(tool.id); }
+}
+
+function onSketchPointerDown(e) {
+  _sketch.swallowClick = false;
+  if (_sketch.editor && !e.target.closest?.('.sketch-text-editor')) sketchCommitText();
+  if (e.button !== 0) return;
+  const svg = sketchSvg();
+  const tool = _sketch.tool;
+  if (tool === 'select') {
+    const handle = e.target.closest?.('#meridian-sketch-ui .sketch-handle');
+    const hitEl = e.target.closest?.('#meridian-sketch-layer .sketch-el');
+    if (!handle && !hitEl) {
+      _sketch.context = false;
+      sketchClearSelection();
+      return; // Meridian handles the event (node drag, panning, …)
+    }
+    sketchConsume(e);
+    if (handle) { sketchStartResize(e, svg, handle.dataset.handle); return; }
+    const id = hitEl.dataset.sketchId;
+    if (e.shiftKey) {
+      if (_sketch.selected.has(id)) _sketch.selected.delete(id); else _sketch.selected.add(id);
+    } else if (!_sketch.selected.has(id)) {
+      _sketch.selected = new Set([id]);
+    }
+    renderSketchSelection(svg);
+    if (_sketch.selected.has(id)) sketchStartMove(e, svg);
+    return;
+  }
+  sketchConsume(e);
+  if (tool === 'hand') { sketchStartPan(e); return; }
+  if (!svg) { toast('Render a diagram first, then sketch on top of it'); return; }
+  if (tool === 'eraser') { sketchStartErase(e, svg); return; }
+  if (tool === 'text') { sketchStartText(svg, sketchPoint(svg, e)); return; }
+  sketchStartDraw(e, svg, tool);
+}
+
+function sketchToolbarHtml() {
+  const icon = paths => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths}</svg>`;
+  const tools = SKETCH_TOOLS.map(t =>
+    `<button type="button" class="sk-btn" data-sketch-tool="${t.id}" title="${esc(t.title)}" aria-label="${esc(t.title)}" aria-pressed="false">${icon(t.icon)}${t.num ? `<span class="sk-key">${t.num}</span>` : ''}</button>`).join('');
+  return `
+    <button type="button" class="sk-btn" data-sketch-action="collapse" aria-label="Toggle sketch tools" aria-expanded="true">${icon('<path d="M4 20l4-1 11-11-3-3L5 16z M14 7l3 3"/>')}</button>
+    <span class="sk-group">
+      <span class="sk-sep"></span>
+      <button type="button" class="sk-btn" data-sketch-action="lock" title="Keep selected tool active after drawing (Q)" aria-label="Keep tool active" aria-pressed="false">${icon('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>')}</button>
+      <span class="sk-sep"></span>
+      ${tools}
+      <span class="sk-sep"></span>
+      <button type="button" class="sk-btn" data-sketch-action="undo" title="Undo sketch change (Ctrl+Z)" aria-label="Undo sketch change">${icon('<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/>')}</button>
+      <button type="button" class="sk-btn" data-sketch-action="redo" title="Redo sketch change (Ctrl+Y)" aria-label="Redo sketch change">${icon('<path d="M15 14l5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/>')}</button>
+      <button type="button" class="sk-btn" data-sketch-action="clear" title="Clear all sketches" aria-label="Clear all sketches">${icon('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>')}</button>
+    </span>`;
+}
+
+function sketchPropsHtml() {
+  const opt = (prop, value, inner, title, extraClass = '') =>
+    `<button type="button" class="skp-opt ${extraClass}" data-skp-prop="${prop}" data-skp-value="${esc(String(value))}" title="${esc(title)}" aria-label="${esc(title)}">${inner}</button>`;
+  const strokeSw = Object.entries(SKETCH_STROKES).map(([key, c]) =>
+    opt('stroke', key, '', `Stroke: ${c.name}`, 'skp-swatch') .replace('class="skp-opt skp-swatch"', `class="skp-opt skp-swatch" style="background:${key === 'auto' ? 'var(--text-em)' : c.light}"`)).join('');
+  const fillSw = [opt('fill', 'none', '', 'Background: none', 'skp-swatch none'),
+    ...Object.entries(SKETCH_FILLS).map(([key, c]) =>
+      opt('fill', key, '', `Background: ${c.name}`, 'skp-swatch').replace('class="skp-opt skp-swatch"', `class="skp-opt skp-swatch" style="background:${c.light}"`))].join('');
+  const sec = (id, title, body) => `<div class="skp-sec" data-skp-sec="${id}"><div class="skp-title">${title}</div><div class="skp-row">${body}</div></div>`;
+  return [
+    sec('stroke', 'Stroke', `${strokeSw}<label class="skp-opt" title="Custom stroke colour"><input id="sketchCustomStroke" type="color" value="#1971c2" aria-label="Custom stroke colour"></label>`),
+    sec('fill', 'Background', fillSw),
+    sec('fillStyle', 'Fill', [['hachure', 'Hachure'], ['cross-hatch', 'Cross'], ['solid', 'Solid']].map(([v, l]) => opt('fillStyle', v, l, `Fill: ${l}`)).join('')),
+    sec('strokeWidth', 'Stroke width', [[1, 'Thin'], [2, 'Bold'], [4, 'Extra bold']].map(([v, l]) => opt('strokeWidth', v, `<svg width="18" height="10"><line x1="2" y1="5" x2="16" y2="5" stroke="currentColor" stroke-width="${v}" stroke-linecap="round"/></svg>`, `Stroke width: ${l}`)).join('')),
+    sec('strokeStyle', 'Stroke style', [['solid', '—'], ['dashed', '- -'], ['dotted', '···']].map(([v, l]) => opt('strokeStyle', v, l, `Stroke style: ${v}`)).join('')),
+    sec('roughness', 'Sloppiness', [[0, 'Architect'], [1, 'Artist'], [2, 'Cartoonist']].map(([v, l]) => opt('roughness', v, l, `Sloppiness: ${l}`)).join('')),
+    sec('fontSize', 'Font size', [[16, 'S'], [20, 'M'], [28, 'L'], [36, 'XL']].map(([v, l]) => opt('fontSize', v, l, `Font size: ${l}`)).join('')),
+    `<div class="skp-sec" data-skp-sec="opacity"><div class="skp-title">Opacity</div><input id="sketchOpacity" class="skp-range" type="range" min="10" max="100" step="10" value="100" aria-label="Opacity"></div>`,
+    sec('actions', 'Actions', [
+      `<button type="button" class="skp-opt" data-skp-action="duplicate" title="Duplicate (Ctrl+D)">Duplicate</button>`,
+      `<button type="button" class="skp-opt" data-skp-action="front" title="Bring to front">Front</button>`,
+      `<button type="button" class="skp-opt" data-skp-action="back" title="Send to back">Back</button>`,
+      `<button type="button" class="skp-opt" data-skp-action="delete" title="Delete (Del)">Delete</button>`,
+    ].join('')),
+  ].join('');
+}
+
+(function initSketchLayer() {
+  const bar = document.getElementById('sketchToolbar');
+  const panel = document.getElementById('sketchProps');
+  const scroll = document.getElementById('previewScroll');
+  if (!bar || !panel || !scroll) return;
+  try {
+    const ui = JSON.parse(localStorage.getItem(SKETCH_UI_KEY) || '{}');
+    _sketch.collapsed = !!ui.collapsed;
+    _sketch.locked = !!ui.locked;
+  } catch (_) {}
+  bar.innerHTML = sketchToolbarHtml();
+  panel.innerHTML = sketchPropsHtml();
+
+  bar.addEventListener('click', e => {
+    const toolBtn = e.target.closest('.sk-btn[data-sketch-tool]');
+    if (toolBtn) { setSketchTool(toolBtn.dataset.sketchTool); return; }
+    const action = e.target.closest('[data-sketch-action]')?.dataset.sketchAction;
+    if (action === 'lock') { _sketch.locked = !_sketch.locked; sketchSaveUi(); syncSketchToolbar(); }
+    if (action === 'undo') sketchUndo();
+    if (action === 'redo') sketchRedo();
+    if (action === 'clear') sketchClearAll();
+    if (action === 'collapse') {
+      _sketch.collapsed = !_sketch.collapsed;
+      if (_sketch.collapsed) setSketchTool('select');
+      sketchSaveUi();
+      syncSketchToolbar();
+      syncSketchProps();
+    }
+  });
+  panel.addEventListener('click', e => {
+    const opt = e.target.closest('[data-skp-prop]');
+    if (opt) { sketchApplyStyle(opt.dataset.skpProp, opt.dataset.skpValue); return; }
+    const action = e.target.closest('[data-skp-action]')?.dataset.skpAction;
+    if (action === 'duplicate') sketchDuplicateSelected();
+    if (action === 'delete') sketchDeleteSelected();
+    if (action === 'front') sketchReorderSelected(true);
+    if (action === 'back') sketchReorderSelected(false);
+  });
+  panel.querySelector('#sketchCustomStroke').addEventListener('change', e => sketchApplyStyle('stroke', e.target.value));
+  panel.querySelector('#sketchOpacity').addEventListener('change', e => sketchApplyStyle('opacity', e.target.value));
+
+  scroll.addEventListener('pointerdown', onSketchPointerDown, true);
+  scroll.addEventListener('click', e => {
+    if (!_sketch.swallowClick) return;
+    _sketch.swallowClick = false;
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  scroll.addEventListener('dblclick', e => {
+    const svg = sketchSvg();
+    if (!svg || _sketch.tool !== 'select') return;
+    const g = e.target.closest?.('#meridian-sketch-layer .sketch-el[data-sketch-type="text"]');
+    const el = g && _sketch.elements.find(item => item.id === g.dataset.sketchId);
+    if (!el) return;
+    e.preventDefault();
+    e.stopPropagation();
+    sketchStartText(svg, null, el);
+  }, true);
+  document.addEventListener('keydown', sketchKeyHandler, true);
+  document.addEventListener('focusin', e => { if (e.target.closest?.('.cm-editor')) _sketch.context = false; });
+  // Keep selection chrome out of exports and snapshots.
+  ['downloadSvg', 'downloadPng', 'downloadGif', 'versionSave'].forEach(id =>
+    document.getElementById(id)?.addEventListener('click', sketchClearSelection, true));
+  document.getElementById('zoomWrapper')?.addEventListener('transitionend', () => renderSketchSelection());
+  document.addEventListener('meridian-theme', () => { if (!sketchSvg()?.querySelector('#meridian-sketch-layer')) renderSketchLayer(); });
+  setSketchTool('select');
+})();
 
 // ════════════════════════════════════════════════════════════════
 //  isInputFocused helper  (used before adapter is built)
@@ -13540,20 +14725,6 @@ function boot(skipText) {
       if (!skipText) loadTemplate('microservices');
     }
   }
-
-  // Sync mermaid diagram theme to app theme when no explicit preference has been saved.
-  // "No preference saved" = the select is still on its HTML default ('default' / light).
-  // This covers both fresh installs and existing saved states that pre-date this feature.
-  (function syncMermaidThemeToAppTheme() {
-    const mt = document.getElementById('mermaidTheme');
-    if (!mt || mt.value !== 'default') return;   // already set to something else
-    const savedTheme = (() => {
-      try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}').theme; } catch { return null; }
-    })();
-    if (!savedTheme && document.documentElement.getAttribute('data-theme') === 'dark') {
-      mt.value = 'dark';
-    }
-  })();
 
   onInput();
   resetHistory();
